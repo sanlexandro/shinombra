@@ -11,16 +11,18 @@
 #include <stdint.h>
 #include <time.h>
 
+#include <inttypes.h>
+
 #include "../include/pw-screen-capture.h"
 
-static atomic_uintptr_t g_active_main_loop = 0;
+static atomic_uintptr_t _active_main_loop = 0;
 
 /**
  * @brief Ф-я остановки потока считывания
  */
 void screen_capture_stop_thread(void) {
     struct pw_main_loop *active_loop =
-        (struct pw_main_loop *)atomic_load(&g_active_main_loop);
+        (struct pw_main_loop *)atomic_load(&_active_main_loop);
 
     if (!active_loop) {
         return;
@@ -37,15 +39,6 @@ struct portal_data {
     GMainLoop *event_loop;  // вспомогательный цикл для D-Bus
     uint32_t video_node_id; // идентификатор видеоузла PipeWire
     gboolean ready;         // флаг готовности
-};
-
-// Данные приложения для захвата видео
-struct stream_data {
-    struct pw_main_loop *main_loop;     // основной цикл PipeWire
-    struct pw_stream *video_stream;     // видеопоток PipeWire
-    struct spa_video_info video_format; // информация о формате видео
-    int frame_count;                    // счётчик полученных кадров
-    struct portal_data *portal_data;    // данные портала (ДОЛЖНЫ ОСТАТЬСЯ!)
 };
 
 /**
@@ -65,8 +58,8 @@ static void on_state_changed(void *userdata, enum pw_stream_state old,
  *
  * @param userdata указатель на структуру stream_data с данными приложения
  */
-static void on_process(void *userdata) {
-    struct stream_data *stream_data = userdata;
+static void on_process(void *user_ctx) {
+    CaptureContext *ctx = user_ctx;
     struct pw_buffer *pipewire_buffer;  // буфер из PipeWire
     struct spa_buffer *spa_buffer_data; // данные буфера SPA
 
@@ -74,7 +67,7 @@ static void on_process(void *userdata) {
 
     // Получаем буфер из видеопотока
     if ((pipewire_buffer =
-             pw_stream_dequeue_buffer(stream_data->video_stream)) == NULL) {
+             pw_stream_dequeue_buffer(ctx->video_stream)) == NULL) {
         pw_log_warn("out of buffers: %m");
         return;
     }
@@ -82,7 +75,7 @@ static void on_process(void *userdata) {
     spa_buffer_data = pipewire_buffer->buffer;
     if (spa_buffer_data->datas[0].data == NULL) {
         printf("empty buffer\n");
-        pw_stream_queue_buffer(stream_data->video_stream, pipewire_buffer);
+        pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
         return;
     }
 
@@ -95,15 +88,15 @@ static void on_process(void *userdata) {
         uint8_t g = pixels[1];
         uint8_t r = pixels[2];
         printf("  Frame %d: size=%d, top-left R:%d G:%d B:%d\n",
-               stream_data->frame_count + 1,
+               ctx->frame_count + 1,
                spa_buffer_data->datas[0].chunk->size, r, g, b);
     }
 
     // Возвращаем буфер в видеопоток
-    pw_stream_queue_buffer(stream_data->video_stream, pipewire_buffer);
+    pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
 
     // Увеличиваем счётчик кадров
-    stream_data->frame_count++;
+    ctx->frame_count++;
 }
 
 /**
@@ -114,9 +107,9 @@ static void on_process(void *userdata) {
  * @param id идентификатор параметра, который изменился
  * @param param указатель на структуру параметра SPA или NULL
  */
-static void on_param_changed(void *userdata, uint32_t id,
+static void on_param_changed(void *user_ctx, uint32_t id,
                              const struct spa_pod *param) {
-    struct stream_data *stream_data = userdata;
+    CaptureContext *ctx = user_ctx;
 
     printf("on_param_changed called with id=%d\n", id);
 
@@ -140,33 +133,42 @@ static void on_param_changed(void *userdata, uint32_t id,
     printf("  Processing Format param\n");
 
     // Парсим основные параметры формата
-    if (spa_format_parse(param, &stream_data->video_format.media_type,
-                         &stream_data->video_format.media_subtype) < 0)
+    if (spa_format_parse(param, &ctx->video_format.media_type,
+                         &ctx->video_format.media_subtype) < 0)
         return;
 
     // Проверяем, что это видео в сыром формате
-    if (stream_data->video_format.media_type != SPA_MEDIA_TYPE_video ||
-        stream_data->video_format.media_subtype != SPA_MEDIA_SUBTYPE_raw)
+    if (ctx->video_format.media_type != SPA_MEDIA_TYPE_video ||
+        ctx->video_format.media_subtype != SPA_MEDIA_SUBTYPE_raw)
         return;
 
     // Парсим детальные параметры видео
-    if (spa_format_video_raw_parse(param, &stream_data->video_format.info.raw) <
+    if (spa_format_video_raw_parse(param, &ctx->video_format.info.raw) <
         0)
         return;
 
-    uint32_t video_format = stream_data->video_format.info.raw.format;
+    uint32_t video_format = ctx->video_format.info.raw.format;
     printf("Negotiated format: %d (%s)\n", video_format,
            spa_debug_type_find_name(spa_type_video_format, video_format));
 
     printf("got video format:\n");
-    printf("  format: %d (%s)\n", stream_data->video_format.info.raw.format,
+    printf("  format: %d (%s)\n", ctx->video_format.info.raw.format,
            spa_debug_type_find_name(spa_type_video_format,
-                                    stream_data->video_format.info.raw.format));
-    printf("  size: %dx%d\n", stream_data->video_format.info.raw.size.width,
-           stream_data->video_format.info.raw.size.height);
+                                    ctx->video_format.info.raw.format));
+    printf("  size: %dx%d\n", ctx->video_format.info.raw.size.width,
+           ctx->video_format.info.raw.size.height);
     printf("  framerate: %d/%d\n",
-           stream_data->video_format.info.raw.framerate.num,
-           stream_data->video_format.info.raw.framerate.denom);
+           ctx->video_format.info.raw.framerate.num,
+           ctx->video_format.info.raw.framerate.denom);
+
+    // Если получили адресс конфига, сохраняем
+    if (ctx->config) {
+        ctx->config->screen_height =
+            ctx->video_format.info.raw.size.height;
+        ctx->config->screen_width =
+            ctx->video_format.info.raw.size.width;
+        ctx->config->is_ready = true;
+    }
 }
 
 // Обработчики событий видеопотока
@@ -350,28 +352,32 @@ static void cleanup_portal_data(struct portal_data *portal_data) {
  * @param argv массив аргументов командной строки
  * @return 0 при успешном завершении, 1 в случае ошибки
  */
-int screen_capture_init(void) {
-    printf("Start test\n");
+CaptureContext *screen_capture_init(CaptureConfig *config) {
+    // Выделяем память под структуру контекста
+    CaptureContext *ctx = malloc(sizeof(CaptureContext));
+    // Сохраняем адрес конфига
+    ctx->config = config;
+
+    // ИНИЦИАЛИЗИРУЕМ PIPEWIRE
 
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
     struct portal_data *portal = get_screencast_session();
     if (!portal) {
         fprintf(stderr, "Failed to start screencast session\n");
-        return 1;
+        return NULL;
     }
 
     if (portal->video_node_id == 0) {
         fprintf(stderr, "Error: No valid PipeWire node_id from portal\n");
         cleanup_portal_data(portal);
-        return 1;
+        return NULL;
     }
 
     printf("Connecting PipeWire stream to node %u\n", portal->video_node_id);
 
     // Данные приложения для работы с видеопотоком
-    struct stream_data application_data = {0};
-    application_data.frame_count = 0;
-    application_data.portal_data = portal;
+    ctx->frame_count = 0;
+    ctx->portal_data = portal;
     const struct spa_pod *format_parameters[1]; // массив параметров формата
     uint8_t builder_buffer[1024]; // буфер для построения SPA объектов
     struct spa_pod_builder pod_builder =
@@ -382,8 +388,8 @@ int screen_capture_init(void) {
     pw_init(0, 0);
 
     // Создаём основной цикл PipeWire
-    application_data.main_loop = pw_main_loop_new(NULL);
-    atomic_store(&g_active_main_loop, (uintptr_t)application_data.main_loop);
+    ctx->main_loop = pw_main_loop_new(NULL);
+    atomic_store(&_active_main_loop, (uintptr_t)ctx->main_loop);
 
     // Устанавливаем свойства видеопотока
     stream_properties =
@@ -393,9 +399,9 @@ int screen_capture_init(void) {
     printf("PipeWire properties configured\n");
 
     // Создаём видеопоток и подключаем обработчики событий
-    application_data.video_stream = pw_stream_new_simple(
-        pw_main_loop_get_loop(application_data.main_loop), "video-capture",
-        stream_properties, &stream_events, &application_data);
+    ctx->video_stream = pw_stream_new_simple(
+        pw_main_loop_get_loop(ctx->main_loop), "video-capture",
+        stream_properties, &stream_events, ctx);
 
     printf("PipeWire stream created\n");
 
@@ -408,24 +414,29 @@ int screen_capture_init(void) {
     // Подключаем поток к целевому узлу
     // Явно указываем video_node_id с флагом DRIVER (не AUTOCONNECT), иначе
     // будет подключаться камера
-    pw_stream_connect(application_data.video_stream, PW_DIRECTION_INPUT,
+    pw_stream_connect(ctx->video_stream, PW_DIRECTION_INPUT,
                       portal->video_node_id,
                       PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS |
                           PW_STREAM_FLAG_DRIVER,
                       format_parameters, 1);
+    
+    return ctx;
+}
 
+void screen_capture_run(CaptureContext *ctx) {
     // Запускаем основной цикл
-    pw_main_loop_run(application_data.main_loop);
-    atomic_store(&g_active_main_loop, (uintptr_t)NULL);
+    pw_main_loop_run(ctx->main_loop);
+}
 
+void screen_capture_stop(CaptureContext *ctx) {
     // Освобождаем ресурсы
-    pw_stream_destroy(application_data.video_stream);
-    pw_main_loop_destroy(application_data.main_loop);
+    pw_stream_destroy(ctx->video_stream);
+    pw_main_loop_destroy(ctx->main_loop);
 
     // Закрываем и очищаем сессию портала только после остановки цикла
-    cleanup_portal_data(portal);
+    cleanup_portal_data(ctx->portal_data);
+
+    free(ctx);
 
     printf("End test\n");
-
-    return 0;
 }

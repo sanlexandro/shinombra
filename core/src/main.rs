@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use threads::screen_capture_thread::CaptureThread;
+use threads::screen_capture_thread::{CaptureThread, CaptureConfig};
 
 static KEEP_RUNNING: AtomicBool = AtomicBool::new(true);
 
@@ -15,11 +15,21 @@ fn main() {
     // Обработчик прерывания
     ctrlc::set_handler(ctrlc_func).expect("Some errors!");
 
+    let mut config = CaptureConfig {
+        screen_width: 0,
+        screen_height: 0,
+        is_ready: AtomicBool::new(false),
+    };
+
     let mut capture = CaptureThread::new();
 
-    capture.start();
+    capture.start(&mut config);
 
     while KEEP_RUNNING.load(Ordering::Relaxed) {}
+
+    println!("\n\n\n\n---\n");
+    println!("Width: {}", config.screen_width);
+    println!("Hieght: {}", config.screen_height);
 
     println!("Shutting down...");
 
