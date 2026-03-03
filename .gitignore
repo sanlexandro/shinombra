@@ -1,1 +1,4 @@
 build/
+/*/Cargo.lock
+/*/target/
+target/

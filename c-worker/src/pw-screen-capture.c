@@ -7,7 +7,28 @@
 
 #include <gio/gio.h>
 #include <libportal/portal.h>
+#include <stdatomic.h>
+#include <stdint.h>
 #include <time.h>
+
+#include "../include/pw-screen-capture.h"
+
+static atomic_uintptr_t g_active_main_loop = 0;
+
+/**
+ * @brief Ф-я остановки потока считывания
+ */
+void screen_capture_stop_thread(void) {
+    struct pw_main_loop *active_loop =
+        (struct pw_main_loop *)atomic_load(&g_active_main_loop);
+
+    if (!active_loop) {
+        return;
+    }
+
+    printf("Stopping capture loop...\n");
+    pw_main_loop_quit(active_loop);
+}
 
 // Контекст сессии захвата экрана через портал
 struct portal_data {
@@ -154,13 +175,6 @@ static const struct pw_stream_events stream_events = {
     .param_changed = on_param_changed, // при изменении параметров
     .process = on_process,             // при поступлении новых данных
     .state_changed = on_state_changed, // при смене состояния потока
-};
-
-// Контекст сессии захвата экрана через портал
-struct screencast_context {
-    GMainLoop *event_loop;      // основной цикл обработки событий
-    uint32_t video_node_id;     // идентификатор видеоузла PipeWire
-    gboolean operation_success; // результат операции
 };
 
 /**
@@ -314,7 +328,7 @@ struct portal_data *get_screencast_session(void) {
  *
  * @param portal_data указатель на структуру portal_data
  */
-void cleanup_portal_data(struct portal_data *portal_data) {
+static void cleanup_portal_data(struct portal_data *portal_data) {
     if (!portal_data)
         return;
 
@@ -336,7 +350,7 @@ void cleanup_portal_data(struct portal_data *portal_data) {
  * @param argv массив аргументов командной строки
  * @return 0 при успешном завершении, 1 в случае ошибки
  */
-int main(int argc, char *argv[]) {
+int screen_capture_init(void) {
     printf("Start test\n");
 
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
@@ -365,10 +379,11 @@ int main(int argc, char *argv[]) {
     struct pw_properties *stream_properties; // свойства видеопотока
 
     // Инициализируем PipeWire
-    pw_init(&argc, &argv);
+    pw_init(0, 0);
 
     // Создаём основной цикл PipeWire
     application_data.main_loop = pw_main_loop_new(NULL);
+    atomic_store(&g_active_main_loop, (uintptr_t)application_data.main_loop);
 
     // Устанавливаем свойства видеопотока
     stream_properties =
@@ -401,6 +416,7 @@ int main(int argc, char *argv[]) {
 
     // Запускаем основной цикл
     pw_main_loop_run(application_data.main_loop);
+    atomic_store(&g_active_main_loop, (uintptr_t)NULL);
 
     // Освобождаем ресурсы
     pw_stream_destroy(application_data.video_stream);

@@ -8,10 +8,10 @@ PKG_LIBS := $(shell pkg-config --libs $(REQUIRED_PKGS) 2>/dev/null || true)
 CFLAGS := -Wall -Wextra -O2 -fPIC $(PKG_CFLAGS)
 LDFLAGS := $(PKG_LIBS)
 
-SRC := src/pw-screen-capture.c
+SRC := pw-capture-video-test.c
 OBJ := $(SRC:.c=.o)
 BUILD_PATH := ../build
-BIN := $(BUILD_PATH)/pw-screen-capture
+BIN := $(BUILD_PATH)/pw-capture-video-test
 
 # Ensure required system pkg-config packages are available before building
 all: check-pkg $(BIN)

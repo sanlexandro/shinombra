@@ -1,0 +1,14 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+ctrlc = "3.4"
+
+threads = { path = "../threads" }
+
+[[bin]]
+name = "ambient-lighting"
+path = "src/main.rs"
