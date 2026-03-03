@@ -12,25 +12,9 @@
 #include <time.h>
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "../include/pw-screen-capture.h"
-
-static atomic_uintptr_t _active_main_loop = 0;
-
-/**
- * @brief Ф-я остановки потока считывания
- */
-void screen_capture_stop_thread(void) {
-    struct pw_main_loop *active_loop =
-        (struct pw_main_loop *)atomic_load(&_active_main_loop);
-
-    if (!active_loop) {
-        return;
-    }
-
-    printf("Stopping capture loop...\n");
-    pw_main_loop_quit(active_loop);
-}
 
 // Контекст сессии захвата экрана через портал
 struct portal_data {
@@ -39,6 +23,31 @@ struct portal_data {
     GMainLoop *event_loop;  // вспомогательный цикл для D-Bus
     uint32_t video_node_id; // идентификатор видеоузла PipeWire
     gboolean ready;         // флаг готовности
+};
+
+// Структура для хранения указателя на текущий кадр
+struct current_frame_t {
+    uint8_t *current_frame; // Указатель на DMA
+    bool on_process;        // Флаг занятости читающего (Consumer)
+    bool new_frame;         // Фдаг наличия нового кадра (Producer)
+    pthread_mutex_t lock;   // Мьютекс для синхронизации доступа к кадру
+    pthread_cond_t cond;    // Условная переменная для уведомления о новом кадре
+    struct pw_buffer
+        *last_pipewire_buffer; // последний буфер из видеопотока (для
+                               // освобождения после обработки)
+};
+
+// Контекст захвата экрана и обработки видеопотока
+struct capture_context {
+    capture_config_t *config; // указатель на структуру конфигурации
+
+    struct pw_main_loop *main_loop;
+    struct pw_stream *video_stream;     // видеопоток PipeWire
+    struct spa_video_info video_format; // информация о формате видео
+    struct portal_data *portal_data;    // данные портала (ДОЛЖНЫ ОСТАТЬСЯ!)
+
+    struct current_frame_t
+        frame_data; // указатель на структуру обмена указателем на кадр
 };
 
 /**
@@ -59,19 +68,26 @@ static void on_state_changed(void *userdata, enum pw_stream_state old,
  * @param userdata указатель на структуру stream_data с данными приложения
  */
 static void on_process(void *user_ctx) {
-    CaptureContext *ctx = user_ctx;
-    struct pw_buffer *pipewire_buffer;  // буфер из PipeWire
-    struct spa_buffer *spa_buffer_data; // данные буфера SPA
+    capture_context_t *ctx = user_ctx; // получили контекст
+    struct pw_buffer *pipewire_buffer; // буфер из PipeWire
 
     printf("on_process called\n");
 
     // Получаем буфер из видеопотока
-    if ((pipewire_buffer =
-             pw_stream_dequeue_buffer(ctx->video_stream)) == NULL) {
+    if ((pipewire_buffer = pw_stream_dequeue_buffer(ctx->video_stream)) ==
+        NULL) {
         pw_log_warn("out of buffers: %m");
         return;
     }
 
+    // Если процесс занят, то пропускаем кадр
+    if (ctx->frame_data.on_process) {
+        pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
+        return;
+    }
+
+    // Проверяем данные внутри буфера
+    struct spa_buffer *spa_buffer_data; // данные буфера SPA
     spa_buffer_data = pipewire_buffer->buffer;
     if (spa_buffer_data->datas[0].data == NULL) {
         printf("empty buffer\n");
@@ -81,22 +97,24 @@ static void on_process(void *user_ctx) {
 
     printf("got a frame of size %d\n", spa_buffer_data->datas[0].chunk->size);
 
-    // Определяем цвета пикселей
+    // Получаем массив пикселей
     uint8_t *pixels = spa_buffer_data->datas[0].data;
+
+    // И сохраняем в контекст
     if (pixels) {
-        uint8_t b = pixels[0];
-        uint8_t g = pixels[1];
-        uint8_t r = pixels[2];
-        printf("  Frame %d: size=%d, top-left R:%d G:%d B:%d\n",
-               ctx->frame_count + 1,
-               spa_buffer_data->datas[0].chunk->size, r, g, b);
+        // Лочим
+        pthread_mutex_lock(&ctx->frame_data.lock);
+
+        // Сохраняем указатель и поднимаем флаг
+        ctx->frame_data.current_frame = pixels;
+        ctx->frame_data.new_frame = true;
+
+        // Пробуждаем ожидающие потоки
+        pthread_cond_signal(&ctx->frame_data.cond);
+
+        // Отпускаем
+        pthread_mutex_unlock(&ctx->frame_data.lock);
     }
-
-    // Возвращаем буфер в видеопоток
-    pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
-
-    // Увеличиваем счётчик кадров
-    ctx->frame_count++;
 }
 
 /**
@@ -109,7 +127,7 @@ static void on_process(void *user_ctx) {
  */
 static void on_param_changed(void *user_ctx, uint32_t id,
                              const struct spa_pod *param) {
-    CaptureContext *ctx = user_ctx;
+    capture_context_t *ctx = user_ctx;
 
     printf("on_param_changed called with id=%d\n", id);
 
@@ -143,8 +161,7 @@ static void on_param_changed(void *user_ctx, uint32_t id,
         return;
 
     // Парсим детальные параметры видео
-    if (spa_format_video_raw_parse(param, &ctx->video_format.info.raw) <
-        0)
+    if (spa_format_video_raw_parse(param, &ctx->video_format.info.raw) < 0)
         return;
 
     uint32_t video_format = ctx->video_format.info.raw.format;
@@ -157,16 +174,13 @@ static void on_param_changed(void *user_ctx, uint32_t id,
                                     ctx->video_format.info.raw.format));
     printf("  size: %dx%d\n", ctx->video_format.info.raw.size.width,
            ctx->video_format.info.raw.size.height);
-    printf("  framerate: %d/%d\n",
-           ctx->video_format.info.raw.framerate.num,
+    printf("  framerate: %d/%d\n", ctx->video_format.info.raw.framerate.num,
            ctx->video_format.info.raw.framerate.denom);
 
     // Если получили адресс конфига, сохраняем
     if (ctx->config) {
-        ctx->config->screen_height =
-            ctx->video_format.info.raw.size.height;
-        ctx->config->screen_width =
-            ctx->video_format.info.raw.size.width;
+        ctx->config->screen_height = ctx->video_format.info.raw.size.height;
+        ctx->config->screen_width = ctx->video_format.info.raw.size.width;
         ctx->config->is_ready = true;
     }
 }
@@ -344,21 +358,19 @@ static void cleanup_portal_data(struct portal_data *portal_data) {
     g_free(portal_data);
 }
 
-/**
- * @brief Главная функция приложения
- * Инициализирует портал и PipeWire, создаёт видеопоток и подключается к узлу
- * захвата
- * @param argc количество аргументов командной строки
- * @param argv массив аргументов командной строки
- * @return 0 при успешном завершении, 1 в случае ошибки
- */
-CaptureContext *screen_capture_init(CaptureConfig *config) {
+// Инициализация, запуск и остановка захвата экрана
+capture_context_t *screen_capture_init(capture_config_t *config) {
+    // Проверяем, что указатель на конфиг не NULL
+    if (!config) {
+        return NULL;
+    }
+
     // Выделяем память под структуру контекста
-    CaptureContext *ctx = malloc(sizeof(CaptureContext));
+    capture_context_t *ctx = malloc(sizeof(capture_context_t));
     // Сохраняем адрес конфига
     ctx->config = config;
 
-    // ИНИЦИАЛИЗИРУЕМ PIPEWIRE
+    // --- ИНИЦИАЛИЗИРУЕМ PIPEWIRE --- //
 
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
     struct portal_data *portal = get_screencast_session();
@@ -376,7 +388,6 @@ CaptureContext *screen_capture_init(CaptureConfig *config) {
     printf("Connecting PipeWire stream to node %u\n", portal->video_node_id);
 
     // Данные приложения для работы с видеопотоком
-    ctx->frame_count = 0;
     ctx->portal_data = portal;
     const struct spa_pod *format_parameters[1]; // массив параметров формата
     uint8_t builder_buffer[1024]; // буфер для построения SPA объектов
@@ -389,7 +400,6 @@ CaptureContext *screen_capture_init(CaptureConfig *config) {
 
     // Создаём основной цикл PipeWire
     ctx->main_loop = pw_main_loop_new(NULL);
-    atomic_store(&_active_main_loop, (uintptr_t)ctx->main_loop);
 
     // Устанавливаем свойства видеопотока
     stream_properties =
@@ -419,16 +429,37 @@ CaptureContext *screen_capture_init(CaptureConfig *config) {
                       PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS |
                           PW_STREAM_FLAG_DRIVER,
                       format_parameters, 1);
-    
+
+    // --- ИНИЦИАЛИЗИРУЕМ СТРУКТУРУ ПЕРЕДАЧИ КАДРА --- //
+
+    ctx->frame_data.current_frame = NULL;
+    ctx->frame_data.on_process = true;
+    ctx->frame_data.new_frame = false;
+    pthread_mutex_init(&ctx->frame_data.lock, NULL);
+    pthread_cond_init(&ctx->frame_data.cond, NULL);
+    ctx->frame_data.last_pipewire_buffer = NULL;
+
     return ctx;
 }
 
-void screen_capture_run(CaptureContext *ctx) {
+// Запуск основного цикла для обработки видеопотока
+void screen_capture_run(capture_context_t *ctx) {
+    // Проверяем, что контекст не NULL
+    if (!ctx) {
+        return;
+    }
+
     // Запускаем основной цикл
     pw_main_loop_run(ctx->main_loop);
 }
 
-void screen_capture_stop(CaptureContext *ctx) {
+// Остановка захвата и освобождение ресурсов
+void screen_capture_stop(capture_context_t *ctx) {
+    // Проверяем, что контекст не NULL
+    if (!ctx) {
+        return;
+    }
+
     // Освобождаем ресурсы
     pw_stream_destroy(ctx->video_stream);
     pw_main_loop_destroy(ctx->main_loop);
@@ -439,4 +470,53 @@ void screen_capture_stop(CaptureContext *ctx) {
     free(ctx);
 
     printf("End test\n");
+}
+
+// Ф-я получения указателя на DMA
+uint8_t *wait_for_frame(capture_context_t *ctx) {
+    // Проверяем, что указатель на контекст не равен NULL
+    if (ctx == NULL) {
+        return NULL;
+    }
+
+    // Ждём пока Producer не завершит работу
+    while (!ctx->frame_data.new_frame) {
+        pthread_cond_wait(&ctx->frame_data.cond, &ctx->frame_data.lock);
+    }
+
+    // Помечаем, что начали работу
+    ctx->frame_data.on_process = true;
+    ctx->frame_data.new_frame = false;
+
+    // Сохраняем указатель
+    uint8_t *ptr = ctx->frame_data.current_frame;
+
+    // Отпускаем mutex
+    pthread_mutex_unlock(&ctx->frame_data.lock);
+
+    return ptr;
+}
+
+// Ф-я отпускающая указатель на DMA
+void release_frame(capture_context_t *ctx) {
+    // Проверяем, что указатель на контекст не равен NULL
+    if (ctx == NULL) {
+        return;
+    }
+
+    // Блокируем mutex
+    pthread_mutex_lock(&ctx->frame_data.lock);
+
+    // Помечаем, что работа окончена
+    ctx->frame_data.on_process = false;
+
+    // Если есть указатель на буфер
+    if (ctx->frame_data.last_pipewire_buffer) {
+        // Возвращаем буфер в видеопоток
+        pw_stream_queue_buffer(ctx->video_stream, ctx->frame_data.last_pipewire_buffer);
+        ctx->frame_data.last_pipewire_buffer = NULL;
+    }
+
+    // Отпускаем
+    pthread_mutex_unlock(&ctx->frame_data.lock);
 }
