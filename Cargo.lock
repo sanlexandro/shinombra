@@ -50,6 +50,7 @@ name = "core"
 version = "0.1.0"
 dependencies = [
  "ctrlc",
+ "ffi",
  "threads",
  "tokio",
 ]
@@ -85,6 +86,14 @@ checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "ffi"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "pkg-config",
 ]
 
 [[package]]
@@ -262,6 +271,7 @@ name = "threads"
 version = "0.1.0"
 dependencies = [
  "cc",
+ "ffi",
  "pkg-config",
  "tokio",
 ]

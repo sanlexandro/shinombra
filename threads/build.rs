@@ -6,7 +6,7 @@ fn main() {
     // Подготавливаем пути к папкам
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
     let mut c_file_path = PathBuf::from(manifest_dir);
-    c_file_path.push("../c-worker/src/pw-screen-capture.c");
+    c_file_path.push("../ffi/src/pw-bridge/src/pw-bridge.c");
 
     // Говорим пересобирать проект при изменении файла
     println!("cargo:rerun-if-changed={}", c_file_path.display());

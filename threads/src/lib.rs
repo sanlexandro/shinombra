@@ -1,3 +1,3 @@
 //! "Заголовочный файл" подключающий ф-ии для управления потоками
 
-pub mod screen_capture_thread;
+pub mod screen_capture; 

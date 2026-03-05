@@ -14,7 +14,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#include "../include/pw-screen-capture.h"
+#include "../include/pw-bridge.h"
 
 // Контекст сессии захвата экрана через портал
 struct portal_data {

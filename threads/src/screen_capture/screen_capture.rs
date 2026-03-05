@@ -1,32 +1,13 @@
 //! Модуль, управляющий потоком захвата экрана
 
-use std::os::raw::c_void;
-use std::sync::atomic::AtomicBool;
-use std::thread::JoinHandle;
-
-#[repr(C)]
-pub struct CaptureConfig {
-    pub screen_width: u32,    // Заполняет C (PipeWire)
-    pub screen_height: u32,   // Заполняет C (PipeWire)
-    pub is_ready: AtomicBool, // Флаг для синхронизации
-}
+use std::ffi::c_void;
+use ffi::bindings::*;
+use std::thread::{JoinHandle};
 
 #[repr(C)]
 pub struct CaptureThread {
-    handle: Option<JoinHandle<()>>,
-    ctx_ptr: *mut c_void,
-}
-
-// Используем ф-ии из `C-worker`
-extern "C" {
-    /// Ф-я инициализации захвата экрана
-    fn screen_capture_init(config: *mut CaptureConfig) -> *mut c_void;
-
-    /// Ф-я запуска захвата экрана
-    fn screen_capture_run(ctx: *mut c_void);
-
-    /// Ф-я остановки потока захвата экрана
-    fn screen_capture_stop(ctx:*mut c_void);
+    pub handle: Option<JoinHandle<()>>,
+    pub ctx_ptr: *mut c_void,
 }
 
 impl CaptureThread {

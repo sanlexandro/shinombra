@@ -1,5 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
-use threads::screen_capture_thread::{CaptureThread, CaptureConfig};
+use threads::screen_capture::screen_capture::{CaptureThread};
+use ffi::bindings::{CaptureConfig};
 
 static KEEP_RUNNING: AtomicBool = AtomicBool::new(true);
 

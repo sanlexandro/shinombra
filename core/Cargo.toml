@@ -8,6 +8,7 @@ tokio = { version = "1", features = ["full"] }
 ctrlc = "3.4"
 
 threads = { path = "../threads" }
+ffi = { path = "../ffi" }
 
 [[bin]]
 name = "ambient-lighting"
