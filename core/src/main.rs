@@ -1,6 +1,7 @@
+use algorithms::color_processor::color_processor::alg;
+use ffi::bindings::CaptureConfig;
 use std::sync::atomic::{AtomicBool, Ordering};
-use threads::screen_capture::screen_capture::{CaptureThread};
-use ffi::bindings::{CaptureConfig};
+use threads::screen_capture::screen_capture::CaptureThread;
 
 static KEEP_RUNNING: AtomicBool = AtomicBool::new(true);
 
@@ -26,7 +27,19 @@ fn main() {
 
     capture.start(&mut config);
 
-    while KEEP_RUNNING.load(Ordering::Relaxed) {}
+    // Ждем, пока флаг станет TRUE
+    while !config.is_ready.load(Ordering::Relaxed) {
+        // Спим 10мс, чтобы не грузить CPU
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+
+    while KEEP_RUNNING.load(Ordering::Relaxed) {
+        capture.request_frame(|data| {
+            // Теперь data — это безопасный &[u8]
+            // Вызываем твой алгоритм из другого модуля
+            alg(data, config.screen_width, config.screen_height);
+        });
+    }
 
     println!("\n\n\n\n---\n");
     println!("Width: {}", config.screen_width);

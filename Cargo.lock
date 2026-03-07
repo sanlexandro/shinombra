@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "algorithms"
+version = "0.1.0"
+
+[[package]]
 name = "bitflags"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -49,6 +53,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 name = "core"
 version = "0.1.0"
 dependencies = [
+ "algorithms",
  "ctrlc",
  "ffi",
  "threads",
@@ -270,6 +275,7 @@ dependencies = [
 name = "threads"
 version = "0.1.0"
 dependencies = [
+ "algorithms",
  "cc",
  "ffi",
  "pkg-config",

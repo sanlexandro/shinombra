@@ -80,12 +80,6 @@ static void on_process(void *user_ctx) {
         return;
     }
 
-    // Если процесс занят, то пропускаем кадр
-    if (ctx->frame_data.on_process) {
-        pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
-        return;
-    }
-
     // Проверяем данные внутри буфера
     struct spa_buffer *spa_buffer_data; // данные буфера SPA
     spa_buffer_data = pipewire_buffer->buffer;
@@ -102,11 +96,18 @@ static void on_process(void *user_ctx) {
 
     // И сохраняем в контекст
     if (pixels) {
-        // Лочим
+        // Лочим и проверяем, свободен ли consumer
         pthread_mutex_lock(&ctx->frame_data.lock);
+
+        if (ctx->frame_data.on_process) {
+            pthread_mutex_unlock(&ctx->frame_data.lock);
+            pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
+            return;
+        }
 
         // Сохраняем указатель и поднимаем флаг
         ctx->frame_data.current_frame = pixels;
+        ctx->frame_data.last_pipewire_buffer = pipewire_buffer;
         ctx->frame_data.new_frame = true;
 
         // Пробуждаем ожидающие потоки
@@ -181,7 +182,7 @@ static void on_param_changed(void *user_ctx, uint32_t id,
     if (ctx->config) {
         ctx->config->screen_height = ctx->video_format.info.raw.size.height;
         ctx->config->screen_width = ctx->video_format.info.raw.size.width;
-        ctx->config->is_ready = true;
+        atomic_store_explicit(&ctx->config->is_ready, true, memory_order_release);
     }
 }
 
@@ -433,7 +434,7 @@ capture_context_t *screen_capture_init(capture_config_t *config) {
     // --- ИНИЦИАЛИЗИРУЕМ СТРУКТУРУ ПЕРЕДАЧИ КАДРА --- //
 
     ctx->frame_data.current_frame = NULL;
-    ctx->frame_data.on_process = true;
+    ctx->frame_data.on_process = false;
     ctx->frame_data.new_frame = false;
     pthread_mutex_init(&ctx->frame_data.lock, NULL);
     pthread_cond_init(&ctx->frame_data.cond, NULL);
@@ -451,6 +452,14 @@ void screen_capture_run(capture_context_t *ctx) {
 
     // Запускаем основной цикл
     pw_main_loop_run(ctx->main_loop);
+
+    // Освобождаем ресурсы в том же потоке, где работал PipeWire loop
+    pw_stream_destroy(ctx->video_stream);
+    pw_main_loop_destroy(ctx->main_loop);
+    cleanup_portal_data(ctx->portal_data);
+    free(ctx);
+
+    printf("End test\n");
 }
 
 // Остановка захвата и освобождение ресурсов
@@ -460,16 +469,8 @@ void screen_capture_stop(capture_context_t *ctx) {
         return;
     }
 
-    // Освобождаем ресурсы
-    pw_stream_destroy(ctx->video_stream);
-    pw_main_loop_destroy(ctx->main_loop);
-
-    // Закрываем и очищаем сессию портала только после остановки цикла
-    cleanup_portal_data(ctx->portal_data);
-
-    free(ctx);
-
-    printf("End test\n");
+    // Просим loop завершиться; фактическая очистка выполняется в screen_capture_run
+    pw_main_loop_quit(ctx->main_loop);
 }
 
 // Ф-я получения указателя на DMA
@@ -478,6 +479,8 @@ uint8_t *wait_for_frame(capture_context_t *ctx) {
     if (ctx == NULL) {
         return NULL;
     }
+
+    pthread_mutex_lock(&ctx->frame_data.lock);
 
     // Ждём пока Producer не завершит работу
     while (!ctx->frame_data.new_frame) {

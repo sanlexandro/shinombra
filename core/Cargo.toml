@@ -7,6 +7,7 @@ edition = "2021"
 tokio = { version = "1", features = ["full"] }
 ctrlc = "3.4"
 
+algorithms = { path = "../algorithms" }
 threads = { path = "../threads" }
 ffi = { path = "../ffi" }
 

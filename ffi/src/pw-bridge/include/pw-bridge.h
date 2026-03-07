@@ -9,13 +9,14 @@
 
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 
 
 // Структура для хранения конфигурации захвата
 typedef struct {
     uint32_t screen_width;
     uint32_t screen_height;
-    bool is_ready;
+    atomic_bool is_ready;
 } capture_config_t;
 
 // Структура для хранения данных портала и состояния захвата
