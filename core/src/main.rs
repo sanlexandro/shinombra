@@ -1,4 +1,4 @@
-use algorithms::color_processor::color_processor::alg;
+use algorithms::color_processor::color_processor::{alg, CheckerboardConfig, ScreenConfig};
 use ffi::bindings::CaptureConfig;
 use std::sync::atomic::{AtomicBool, Ordering};
 use threads::screen_capture::screen_capture::CaptureThread;
@@ -33,11 +33,24 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
+    // Заполняем конфигурацию для обработки цвета
+    let screen_config = ScreenConfig {
+        frame_width: config.screen_width as usize,
+        frame_height: config.screen_height as usize,
+    };
+
+    let alg_config = CheckerboardConfig {
+        chunk_height: 50,
+        chunk_width: 50,
+        pixel_step: 5,
+        row_stride: 3,
+    };
+
     while KEEP_RUNNING.load(Ordering::Relaxed) {
         capture.request_frame(|data| {
             // Теперь data — это безопасный &[u8]
             // Вызываем твой алгоритм из другого модуля
-            alg(data, config.screen_width, config.screen_height);
+            alg(data, &screen_config, &alg_config);
         });
     }
 
