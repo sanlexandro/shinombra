@@ -64,9 +64,10 @@ fn main() {
 
     println!("\n\n\n\n---\n");
     println!("Width: {}", config.screen_width);
-    println!("Hieght: {}", config.screen_height);
+    println!("Height: {}", config.screen_height);
 
     println!("Shutting down...");
 
     capture.stop();
 }
+

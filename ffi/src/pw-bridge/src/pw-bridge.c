@@ -29,7 +29,7 @@ struct portal_data {
 struct current_frame_t {
     uint8_t *current_frame; // Указатель на DMA
     bool on_process;        // Флаг занятости читающего (Consumer)
-    bool new_frame;         // Фдаг наличия нового кадра (Producer)
+    bool new_frame;         // Флаг наличия нового кадра (Producer)
     pthread_mutex_t lock;   // Мьютекс для синхронизации доступа к кадру
     pthread_cond_t cond;    // Условная переменная для уведомления о новом кадре
     struct pw_buffer
@@ -178,7 +178,7 @@ static void on_param_changed(void *user_ctx, uint32_t id,
     printf("  framerate: %d/%d\n", ctx->video_format.info.raw.framerate.num,
            ctx->video_format.info.raw.framerate.denom);
 
-    // Если получили адресс конфига, сохраняем
+    // Если получили адрес конфига, сохраняем
     if (ctx->config) {
         ctx->config->screen_height = ctx->video_format.info.raw.size.height;
         ctx->config->screen_width = ctx->video_format.info.raw.size.width;
