@@ -1,4 +1,7 @@
-use algorithms::color_processor::color_processor::{alg, CheckerboardConfig, ScreenConfig};
+use algorithms::{
+    analytics::types::ColorHistogram,
+    processing::types::{CheckerboardConfig, CheckerboardScanner, ColorEngine, ScreenConfig},
+};
 use ffi::bindings::CaptureConfig;
 use std::sync::atomic::{AtomicBool, Ordering};
 use threads::screen_capture::screen_capture::CaptureThread;
@@ -46,11 +49,16 @@ fn main() {
         row_stride: 3,
     };
 
+    let processor = CheckerboardScanner::new(alg_config, screen_config);
+
+    let accumulator = ColorHistogram::new();
+
+    let mut color_engine = ColorEngine::new(processor, accumulator);
+
     while KEEP_RUNNING.load(Ordering::Relaxed) {
         capture.request_frame(|data| {
             // Теперь data — это безопасный &[u8]
-            // Вызываем твой алгоритм из другого модуля
-            alg(data, &screen_config, &alg_config);
+            color_engine.process_frame(data);
         });
     }
 

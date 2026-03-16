@@ -1,1 +1,3 @@
-pub mod color_processor;
+pub mod analytics;
+pub mod color;
+pub mod processing;
