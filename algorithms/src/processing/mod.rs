@@ -1,8 +1,8 @@
 //! Модуль обработки кадра
-//! 
+//!
 //! Данный модуль необходим для обработки кадра, посредством разделения его на
 //! фрагменты и обработки их в дальнейшем
-//! 
+//!
 //! Методы обработки фрагмента:
 //! - В шахматном порядке [types::CheckerboardScanner] - данный метод проходит
 //!   по фрагменту в жёстко фиксированном шахматном порядке. Дальнейшая работа с
@@ -10,11 +10,14 @@
 //!   [crate::analytics]
 
 pub mod checkerboard_chunk;
+pub mod configs;
 pub mod frame;
+pub mod measures;
 pub mod types;
 
-use super::processing::types::{CheckerboardScanner, Orientation};
+use super::processing::types::CheckerboardScanner;
 use crate::analytics::ColorAccumulator;
+use crate::processing::configs::ChunkTask;
 
 /// Трейт обработки фрагмента
 ///
@@ -27,18 +30,15 @@ pub trait ChunkProcessor {
     ///
     /// **Аргументы:**
     /// - `byte_frame`: &[[u8]]                  - указатель на кадр (массив
-    ///   пикселей) 
-    /// - `chunk_start_index`: [usize]           - индекс пикселя в массиве, с
-    ///   которого начинается фрагмент (*верхний правый угол*)
-    /// - `chunk_orientation`: [Orientation]     - ориентация фрагмента
+    ///   пикселей)
+    /// - `chunk_task`: [ChunkTask]              - "задание" фрагмента
     /// - `&mut accumulator`: [ColorAccumulator] - указатель на структуру
     ///   (метод) накопления данных для дальнейшего определения результирующего
     ///   цвета
     fn process_chunk<A: ColorAccumulator>(
         &self, // чтобы сканер был многоразовым
         byte_frame: &[u8],
-        chunk_start_index: usize,
-        chunk_orientation: Orientation,
+        chunk_task: ChunkTask,
         accumulator: &mut A, // для последующего определения
     );
 }
@@ -48,14 +48,12 @@ impl ChunkProcessor for CheckerboardScanner {
     fn process_chunk<A: ColorAccumulator>(
         &self,
         byte_frame: &[u8],
-        chunk_start_index: usize,
-        chunk_orientation: Orientation,
+        chunk_task: ChunkTask,
         accumulator: &mut A,
     ) {
         self.process_checkerboard_chunk(
             byte_frame,
-            chunk_start_index,
-            chunk_orientation,
+            chunk_task,
             accumulator,
         );
     }

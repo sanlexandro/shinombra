@@ -1,20 +1,62 @@
 //! Алгоритм обхода кадра
 
+use super::configs::*;
+use super::measures::calculate_mm_to_px_k;
+use super::types::*;
 use super::ChunkProcessor;
 use crate::analytics::ColorAccumulator;
 use crate::color::conversion::convert_hsv_to_rgb;
-use crate::color::types::{HSVPixel, RGBPixel};
-use crate::processing::types::{ColorEngine, Orientation};
+use crate::color::types::RGBPixel;
+use crate::processing::measures::calculate_px_x_y_to_bytes;
+use crate::units::*;
 
 /// KILLME
 /// Ф-я вывода цвета в консоль для отладки
 fn print_debug_color(rgb: RGBPixel) {
     // \x1b[48;2;R;G;Bm — цвет фона (TrueColor)
     // \x1b[0m — сброс
-    println!(
-        "\x1b[48;2;{};{};{}m      \x1b[0m Winner (RGB: {}, {}, {})",
-        rgb.red, rgb.green, rgb.blue, rgb.red, rgb.green, rgb.blue
+    print!(
+        "\x1b[48;2;{};{};{}m      \x1b[0m", // 6 пробелов
+        rgb.red, rgb.green, rgb.blue
     );
+}
+
+fn print_debug_frame(x_amount: usize, y_amount: usize, colors: &Vec<RGBPixel>) {
+    // Верхняя строка
+    print!("       "); // 7 пробелов
+    for idx in 0..x_amount {
+        print_debug_color(colors[idx]);
+        print!(" ");
+    }
+
+    // Количество фрагментов
+    let colors_amount = x_amount * 2 + y_amount * 2;
+
+    // Боковые стенки
+    for idx in 0..y_amount {
+        println!("");
+        println!("");
+        // Вывели кусок левой стенки
+        print_debug_color(colors[colors_amount - idx - 1]);
+        print!(" ");
+
+        for _ in 0..x_amount {
+            print!("       "); // 7 пробелов
+        }
+
+        // Вывели кусочек правой стенки
+        print_debug_color(colors[x_amount + idx]);
+    }
+
+    // Нижняя строчка
+    println!("");
+    print!("       "); // 7 пробелов
+    for idx in 0..x_amount {
+        print_debug_color(colors[colors_amount - y_amount - idx]);
+        print!(" ");
+    }
+
+    println!("");
 }
 
 /// Реализация методов ColorEngine
@@ -30,11 +72,206 @@ where
     /// **Аргументы:**
     /// - `processor`: [ChunkProcessor]    - метод обработки фрагмента
     /// - `accumulator`: [ColorAccumulator]- метод анализа цвета в фрагменте
-    pub fn new(processor: P, accumulator: A) -> Self {
+    pub fn new(
+        processor: P,
+        accumulator: A,
+        geometry: GeometryConfig,
+        screen_config: ScreenConfig,
+    ) -> Self {
+        let chunk_map = Self::init_chunk_map(geometry, screen_config);
+        let output_buffer = vec![RGBPixel::default(); chunk_map.len()];
+
+        // TODO:
+        // 1) добавить расчёт размеров фрагмента
         return Self {
-            processor: processor,
-            accumulator: accumulator,
+            processor,
+            accumulator,
+            chunk_map,
+            output_buffer,
         };
+    }
+
+    fn init_chunk_map(geometry: GeometryConfig, screen_config: ScreenConfig) -> Vec<ChunkTask> {
+        let mut chunk_map = Vec::<ChunkTask>::new();
+
+        // Координаты заданы в виде:
+        // ------> x
+        // |
+        // |
+        // y
+
+        //======================================//
+        // ====== К О Э Ф Ф И Ц И Е Н Т Ы ===== //
+        //======================================//
+        // Коэффициент по вертикали
+        let k_y =
+            calculate_mm_to_px_k(screen_config.frame_height_mm, screen_config.frame_height_px);
+        // Коэффициент по горизонтали (на случай нестандартных экранов)
+        let k_x = calculate_mm_to_px_k(screen_config.frame_width_mm, screen_config.frame_width_px);
+
+        //======================================//
+        // === О Б Щ И Е  К О Н С Т А Н Т Ы === //
+        //======================================//
+
+        // Длина блока светодиодов по вертикали в пикселях
+        let led_length_y_px = geometry.led_pos.led_length.as_pixels(k_y);
+        // Длина блока светодиодов по горизонтали в пикселях
+        let led_length_x_px = geometry.led_pos.led_length.as_pixels(k_x);
+
+        // Количество пикселей в строке
+        let px_in_row = screen_config.frame_width_px;
+
+        //======================================//
+        // ============= В Е Р Х ============== //
+        //======================================//
+        // Расчёт положения верхней ленты, начиная с верхнего левого угла
+
+        // x = просто `отступ от ленты до края экрана слева`
+        let start_up_x_px = geometry.led_pos.horizontal_offset.as_pixels(k_x);
+        // y = `отступ от грани экрана` - `глубина чтения к краям`
+        let start_up_y_px = Pixels::new(
+            ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_y).round() as usize,
+        );
+
+        for idx in 0..geometry.led_pos.horizontal_led_amount {
+            // Изменяем x, добавляя к `стартовому значению` произведение `длины
+            // блока светодиодов по x` и `порядкового номера блока`
+            let current_up_x_px = Pixels::new(start_up_x_px.0 + (led_length_x_px.0 * idx));
+
+            // `y` в данном случае не изменяется
+            chunk_map.push(ChunkTask {
+                // TODO: считывать кол-во полей в пикселе из конфига
+                start_index: calculate_px_x_y_to_bytes(
+                    current_up_x_px,
+                    start_up_y_px,
+                    px_in_row,
+                    4,
+                ),
+                orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
+            });
+        }
+
+        //======================================//
+        // ============ П Р А В О ============= //
+        //======================================//
+        // Расчёт положения правой ленты (если смотреть на экран монитора),
+        // начиная с левого верхнего угла
+
+        // x = `длина экрана` - `отступ от грани экрана` - `глубина чтения к центру`
+        let start_right_x_px = Pixels::new(
+            ((screen_config.frame_width_mm.0 - geometry.led_pos.gap.0 - geometry.reading.deep_in.0)
+                as f64
+                * k_x)
+                .round() as usize,
+        );
+
+        // y = просто `отступ от края экрана`
+        let start_right_y_px = geometry.led_pos.vertical_offset.as_pixels(k_y);
+
+        for idx in 0..geometry.led_pos.vertical_led_amount {
+            // Изменяем `y`, добавляя к `стартовому значению` произведение
+            // `длины блока светодиодов по y` и `порядкового номера блока`
+            let current_right_y_px = Pixels::new(start_right_y_px.0 + (led_length_y_px.0 * idx));
+
+            // `x` в данном случае не изменяется
+            chunk_map.push(ChunkTask {
+                // TODO: считывать кол-во полей в пикселе из конфига
+                start_index: calculate_px_x_y_to_bytes(
+                    start_right_x_px,
+                    current_right_y_px,
+                    px_in_row,
+                    4,
+                ),
+                orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
+            });
+        }
+
+        //======================================//
+        // =============== Н И З ============== //
+        //======================================//
+        // Расчёт положения нижней ленты, начиная с левого верхнего угла
+        // **самого правого блока**
+        // Здесь инвертируем порядок чтения. Читаем справа налево
+
+        // x = `ширина экрана` - `отступ от края экрана` - `ширина блока
+        // светодиодов`
+        let start_down_x_px = Pixels::new(
+            ((screen_config.frame_width_mm.0
+                - geometry.led_pos.horizontal_offset.0
+                - geometry.led_pos.led_length.0) as f64
+                * k_x)
+                .round() as usize,
+        );
+
+        // y = `длина экрана` - `отступ от грани экрана` - `глубина чтения к
+        // центру`
+        let start_down_y_px = Pixels::new(
+            ((screen_config.frame_height_mm.0 - geometry.led_pos.gap.0 - geometry.reading.deep_in.0)
+                as f64
+                * k_y)
+                .round() as usize,
+        );
+
+        for idx in 0..geometry.led_pos.horizontal_led_amount {
+            // Изменяем x, вычитая из `стартового значения` произведение `длины
+            // блока светодиодов по x` и `порядкового номера блока`
+            let current_down_x_px = Pixels::new(start_down_x_px.0 - (led_length_x_px.0 * idx));
+
+            // `y` в данном случае не изменяется
+            chunk_map.push(ChunkTask {
+                // TODO: считывать кол-во полей в пикселе из конфига
+                start_index: calculate_px_x_y_to_bytes(
+                    current_down_x_px,
+                    start_down_y_px,
+                    px_in_row,
+                    4,
+                ),
+                orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
+            });
+        }
+
+        //======================================//
+        // ============= Л Е В О ============== //
+        //======================================//
+        // Расчёт положения левой ленты (если смотреть на экран монитора),
+        // начиная с левого верхнего угла **самого нижнего блока**
+        // Здесь инвертируем порядок чтения. Читаем снизу вверх
+
+        // x = `отступ от грани экрана` - `глубина чтения к краям`
+        let start_left_x_px = Pixels::new(
+            ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_x).round() as usize,
+        );
+
+        // y = `высота экрана` - `отступ от края экрана` - `ширина блока
+        // светодиодов`
+        let start_left_y_px = Pixels::new(
+            ((screen_config.frame_height_mm.0
+                - geometry.led_pos.vertical_offset.0
+                - geometry.led_pos.led_length.0) as f64
+                * k_y)
+                .round() as usize,
+        );
+
+        for idx in 0..geometry.led_pos.vertical_led_amount {
+            // Изменяем `y`, вычитая из `стартового значения` произведение
+            // `длины блока светодиодов по y` и `порядкового номера блока`
+            let current_left_y_px = Pixels::new(start_left_y_px.0 - (led_length_y_px.0 * idx));
+
+            // `x` в данном случае не изменяется
+            chunk_map.push(ChunkTask {
+                // TODO: считывать кол-во полей в пикселе из конфига
+                start_index: calculate_px_x_y_to_bytes(
+                    start_left_x_px,
+                    current_left_y_px,
+                    px_in_row,
+                    4,
+                ),
+                orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
+            });
+        }
+
+        // Возвращаем рассчитанную карту
+        return chunk_map;
     }
 
     /// Обработка кадра
@@ -44,23 +281,47 @@ where
     ///
     /// **Аргументы:**
     /// - `byte_frame`: &[[u8]] - указатель на кадр (массив пикселей)
-    pub fn process_frame(&mut self, byte_frame: &[u8]) -> HSVPixel {
-        // Сбрасываем анализ
-        self.accumulator.clear();
+    ///
+    /// **Выходные поля:**
+    /// - &[[RGBPixel]] - указатель на вычисленный массив цветов
+    pub fn process_frame(&mut self, byte_frame: &[u8]) -> &[RGBPixel] {
+        // Обрабатываем каждый фрагмент, используя предоставленный метод и
+        // сохранённое в карте значение
+        for (chunk_task, led_color) in self.chunk_map.iter().zip(self.output_buffer.iter_mut()) {
+            // Сбрасываем анализ
+            self.accumulator.clear();
 
-        // Обрабатываем фрагмент, используя предоставленный метод
-        self.processor.process_chunk(
-            byte_frame,
-            0,
-            Orientation::Horizontal,
-            &mut self.accumulator,
-        );
+            // Вызываем обработчик кадра
+            self.processor
+                .process_chunk(byte_frame, *chunk_task, &mut self.accumulator);
 
-        // FIXME убери дебаг
-        let hsv = self.accumulator.get_winner();
+            // Сохраняем результат анализа
+            *led_color = convert_hsv_to_rgb(self.accumulator.get_winner());
+        }
 
-        print_debug_color(convert_hsv_to_rgb(hsv));
+        // KILLME
+        print_debug_frame(9, 5, &self.output_buffer);
 
-        return hsv;
+        return &self.output_buffer;
+    }
+}
+
+// FIXME
+impl GeometryConfig {
+    pub fn calculate_chunk_config(&self, screen_config: ScreenConfig) -> ChunkConfig {
+        // Коэффициент по вертикали
+        let k_y =
+            calculate_mm_to_px_k(screen_config.frame_height_mm, screen_config.frame_height_px);
+        // Коэффициент по горизонтали (на случай нестандартных экранов)
+        let k_x = calculate_mm_to_px_k(screen_config.frame_width_mm, screen_config.frame_width_px);
+
+        ChunkConfig {
+            // Ширина — это длина блока диодов (в px)
+            width: self.led_pos.led_length.as_pixels(k_x),
+            // Высота — это суммарная глубина захвата (в px)
+            height: Pixels::new(
+                ((self.reading.deep_in.0 + self.reading.deep_out.0) as f64 * k_y).round() as usize,
+            ),
+        }
     }
 }

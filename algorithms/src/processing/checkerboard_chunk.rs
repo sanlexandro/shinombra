@@ -1,16 +1,17 @@
 //! Алгоритм обработки фрагмента в жёстком шахматном порядке
-//! 
+//!
 //! Данный алгоритм обходит фрагмент в "шахматном порядке", пропуская большие
 //! области фрагмента. Он построен на предположении "на экране нет достаточно
 //! маленьких объектов, которые могут проскочить между сеткой". Шахматный
 //! алгоритм выигрывает по скорости другие, т.е. не требует больших вычислений,
 //! но может проигрывать в качестве, если размер сетки был выбран неправильно
 
-use super::types::{CheckerboardConfig, CheckerboardScanner, Orientation};
+use super::types::CheckerboardScanner;
 use crate::analytics::ColorAccumulator;
 use crate::color::conversion::convert_rgb_to_hsv;
 use crate::color::types::RGBPixel;
-use crate::processing::types::ScreenConfig;
+use crate::processing::configs::{CheckerboardConfig, ScreenConfig, ChunkTask};
+use crate::units::*;
 
 /// Реализация методов CheckerboardConfig
 impl CheckerboardConfig {
@@ -20,14 +21,14 @@ impl CheckerboardConfig {
     pub fn get_params_for(&self, orientation: Orientation) -> (usize, usize, usize, usize) {
         match orientation {
             Orientation::Horizontal => (
-                self.chunk_width,
-                self.chunk_height,
+                self.config.width.0,
+                self.config.height.0,
                 self.row_stride,
                 self.pixel_step,
             ),
             Orientation::Vertical => (
-                self.chunk_height,
-                self.chunk_width,
+                self.config.height.0,
+                self.config.width.0,
                 self.pixel_step,
                 self.row_stride,
             ),
@@ -53,31 +54,28 @@ impl CheckerboardScanner {
     /// анализа в предоставленный метод обработки цвета
     ///
     /// **Аргументы:**
-    /// - `byte_frame`: &[[u8]]                   - указатель на кадр (массив
+    /// - `byte_frame`: &[[u8]]                  - указатель на кадр (массив
     ///   пикселей)
-    /// - `chunk_start_index`: [usize]            - стартовый индекс пикселя, с
-    ///   которого начинается фрагмент (верхний левый угол)
-    /// - `chunk_orientation`: [Orientation]     - ориентация фрагмента
+    /// - `chunk_task`: [ChunkTask]              - "задание" фрагмента
     /// - `accumulator`: &mut [ColorAccumulator] - метод анализа цвета
     pub fn process_checkerboard_chunk<A: ColorAccumulator>(
         &self,
         byte_frame: &[u8],
-        chunk_start_index: usize,
-        chunk_orientation: Orientation,
+        chunk_task: ChunkTask,
         accumulator: &mut A,
     ) {
         // Определяем реальный размер строки в байтах
-        let row_width = self.screen_config.frame_width * 4;
+        let row_width = self.screen_config.frame_width_px.0 * 4;
 
         // В зависимости от положения кадра определяем его ширину и высоту
         let (chunk_width, chunk_height, row_stride, pixel_step) =
-            self.alg_config.get_params_for(chunk_orientation);
+            self.alg_config.get_params_for(chunk_task.orientation);
 
         // Цикл построчного чтения (читаем каждую `row_stride` строку)
         for row_idx in (0..chunk_height).step_by(row_stride) {
             // Вычисляем стартовый индекс строки (стартовый индекс + (ширина экрана
             // row_stride кол-во строк))
-            let row_start_index = chunk_start_index + row_width * row_idx;
+            let row_start_index = chunk_task.start_index + row_width * row_idx;
 
             // В зависимости от чётности строки начинаем строку либо с самого начала
             // либо со сдвигом на половину шага чтения строки
