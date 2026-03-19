@@ -10,7 +10,9 @@ use algorithms::{
     units::{Millimeters, Pixels},
 };
 use ffi::bindings::CaptureConfig;
+use serialport;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 use threads::screen_capture::screen_capture::CaptureThread;
 
 static KEEP_RUNNING: AtomicBool = AtomicBool::new(true);
@@ -43,13 +45,22 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
+    // Настройка порта
+    let mut port = serialport::new("/dev/ttyUSB0", 115200) // или "/dev/ttyUSB0"
+        .timeout(Duration::from_millis(10))
+        .open()
+        .expect("Failed to open port");
+
+    // Даем Arduino время на перезагрузку после открытия порта
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
     // Заполняем конфигурацию для обработки цвета
     let screen_config = ScreenConfig {
         frame_width_px: Pixels(config.screen_width as usize),
         frame_height_px: Pixels(config.screen_height as usize),
 
-        frame_width_mm: Millimeters(595),
-        frame_height_mm: Millimeters(335),
+        frame_width_mm: Millimeters(345),
+        frame_height_mm: Millimeters(195),
     };
 
     let geometry = GeometryConfig {
@@ -57,11 +68,11 @@ fn main() {
             gap: Millimeters(5),
             led_length: Millimeters(62),
 
-            horizontal_offset: Millimeters(18),
-            horizontal_led_amount: 9,
+            horizontal_offset: Millimeters(17),
+            horizontal_led_amount: 5,
 
-            vertical_offset: Millimeters(12),
-            vertical_led_amount: 5,
+            vertical_offset: Millimeters(4),
+            vertical_led_amount: 3,
         },
         reading: ScreenReadingConfig {
             deep_in: Millimeters(20),
@@ -84,7 +95,22 @@ fn main() {
     while KEEP_RUNNING.load(Ordering::Relaxed) {
         capture.request_frame(|data| {
             // Теперь data — это безопасный &[u8]
-            color_engine.process_frame(data);
+            // Получаем указатель на вектор цветов
+            let colors = color_engine.process_frame(data);
+
+            // Формируем пакет: [Префикс] + [RGB данные]
+            let mut payload = Vec::with_capacity(2 + colors.len() * 3);
+            payload.extend_from_slice(b"AD"); // Magic Word (AmbiData)
+
+            // Сохраняем для отправки
+            for color in colors {
+                payload.push(color.red);
+                payload.push(color.green);
+                payload.push(color.blue);
+            }
+
+            // Отправляем всё одним махом
+            port.write_all(&payload).ok();
         });
     }
 

@@ -300,28 +300,8 @@ where
         }
 
         // KILLME
-        print_debug_frame(9, 5, &self.output_buffer);
+        print_debug_frame(5, 3, &self.output_buffer);
 
         return &self.output_buffer;
-    }
-}
-
-// FIXME
-impl GeometryConfig {
-    pub fn calculate_chunk_config(&self, screen_config: ScreenConfig) -> ChunkConfig {
-        // Коэффициент по вертикали
-        let k_y =
-            calculate_mm_to_px_k(screen_config.frame_height_mm, screen_config.frame_height_px);
-        // Коэффициент по горизонтали (на случай нестандартных экранов)
-        let k_x = calculate_mm_to_px_k(screen_config.frame_width_mm, screen_config.frame_width_px);
-
-        ChunkConfig {
-            // Ширина — это длина блока диодов (в px)
-            width: self.led_pos.led_length.as_pixels(k_x),
-            // Высота — это суммарная глубина захвата (в px)
-            height: Pixels::new(
-                ((self.reading.deep_in.0 + self.reading.deep_out.0) as f64 * k_y).round() as usize,
-            ),
-        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::units::*;
+use crate::{processing::measures::calculate_mm_to_px_k, units::*};
 
 /// Информация о дисплее
 ///
@@ -22,7 +22,7 @@ pub struct ScreenConfig {
 /// грани, а также, что все кусочки имеют приблизительно одинаковое расстояние
 /// до края экрана
 ///
-/// **Поля:** Всё в
+/// **Поля:**
 /// - `gap`: [Millimeters]               - расстояние от центра ленты (т.е.
 ///   приблизительно от центра самого диода) до края экрана
 /// - `vertical_offset`: [Millimeters]   - расстояние от края вертикальной ленты
@@ -69,7 +69,7 @@ pub struct GeometryConfig {
 }
 
 /// Информация о размере фрагмента
-/// 
+///
 /// **Поля:**
 /// - `width`: [Pixels]  - ширина горизонтального фрагмента
 /// - `height`: [Pixels] - высота горизонтального фрагмента
@@ -102,4 +102,31 @@ pub struct CheckerboardConfig {
 pub struct ChunkTask {
     pub start_index: usize,
     pub orientation: Orientation,
+}
+
+// Реализация методов GeometryConfig
+impl GeometryConfig {
+    /// Расчёт конфигурации фрагмента
+    ///
+    /// Данный метод необходим для определения конфигурации фрагмента, исходя из
+    /// данных, переданных пользователю
+    ///
+    /// **Аргументы:**
+    /// - `screen_config`: [ScreenConfig] - информация об экране
+    pub fn calculate_chunk_config(&self, screen_config: ScreenConfig) -> ChunkConfig {
+        // Коэффициент по вертикали
+        let k_y =
+            calculate_mm_to_px_k(screen_config.frame_height_mm, screen_config.frame_height_px);
+        // Коэффициент по горизонтали (на случай нестандартных экранов)
+        let k_x = calculate_mm_to_px_k(screen_config.frame_width_mm, screen_config.frame_width_px);
+
+        ChunkConfig {
+            // Ширина — это длина блока диодов (в px)
+            width: self.led_pos.led_length.as_pixels(k_x),
+            // Высота — это суммарная глубина захвата (в px)
+            height: Pixels::new(
+                ((self.reading.deep_in.0 + self.reading.deep_out.0) as f64 * k_y).round() as usize,
+            ),
+        }
+    }
 }

@@ -1,4 +1,7 @@
 {
     "cmake.sourceDirectory": "/home/sanlexandro/Documents/ambient_lighting/c-capture",
-    "cSpell.enabled": true
+    "cSpell.enabled": true,
+    "cSpell.words": [
+        "serialport"
+    ]
 }
