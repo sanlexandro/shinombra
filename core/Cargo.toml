@@ -6,11 +6,11 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 ctrlc = "3.4"
-serialport = "4.3.0"
 
 algorithms = { path = "../algorithms" }
 threads = { path = "../threads" }
 ffi = { path = "../ffi" }
+hardware_output = { path = "../hardware_output" }
 
 [[bin]]
 name = "ambient-lighting"

@@ -10,9 +10,8 @@ use algorithms::{
     units::{Millimeters, Pixels},
 };
 use ffi::bindings::CaptureConfig;
-use serialport;
+use hardware_output::serial::types::SerialDriver;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 use threads::screen_capture::screen_capture::CaptureThread;
 
 static KEEP_RUNNING: AtomicBool = AtomicBool::new(true);
@@ -44,15 +43,6 @@ fn main() {
         // Спим 10мс, чтобы не грузить CPU
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
-
-    // Настройка порта
-    let mut port = serialport::new("/dev/ttyUSB0", 115200) // или "/dev/ttyUSB0"
-        .timeout(Duration::from_millis(10))
-        .open()
-        .expect("Failed to open port");
-
-    // Даем Arduino время на перезагрузку после открытия порта
-    std::thread::sleep(std::time::Duration::from_secs(2));
 
     // Заполняем конфигурацию для обработки цвета
     let screen_config = ScreenConfig {
@@ -92,25 +82,15 @@ fn main() {
 
     let mut color_engine = ColorEngine::new(processor, accumulator, geometry, screen_config);
 
+    let mut hardware_output = SerialDriver::new("/dev/ttyUSB0", 115200);
+
     while KEEP_RUNNING.load(Ordering::Relaxed) {
         capture.request_frame(|data| {
             // Теперь data — это безопасный &[u8]
             // Получаем указатель на вектор цветов
             let colors = color_engine.process_frame(data);
 
-            // Формируем пакет: [Префикс] + [RGB данные]
-            let mut payload = Vec::with_capacity(2 + colors.len() * 3);
-            payload.extend_from_slice(b"AD"); // Magic Word (AmbiData)
-
-            // Сохраняем для отправки
-            for color in colors {
-                payload.push(color.red);
-                payload.push(color.green);
-                payload.push(color.blue);
-            }
-
-            // Отправляем всё одним махом
-            port.write_all(&payload).ok();
+            hardware_output.internal_send(colors);
         });
     }
 

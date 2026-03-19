@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core", "ffi", "algorithms", "threads"]
+members = ["core", "ffi", "algorithms", "threads", "hardware_output"]
 
 [profile.release]
 opt-level = 3

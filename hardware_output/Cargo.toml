@@ -1,0 +1,12 @@
+[package]
+name = "hardware_output"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "hardware_output"
+path = "src/lib.rs"
+
+[dependencies]
+serialport = "4.3.0"
+algorithms = { path = "../algorithms" }
