@@ -10,55 +10,6 @@ use crate::color::types::RGBPixel;
 use crate::processing::measures::calculate_px_x_y_to_bytes;
 use crate::units::*;
 
-/// KILLME
-/// Ф-я вывода цвета в консоль для отладки
-fn print_debug_color(rgb: RGBPixel) {
-    // \x1b[48;2;R;G;Bm — цвет фона (TrueColor)
-    // \x1b[0m — сброс
-    print!(
-        "\x1b[48;2;{};{};{}m      \x1b[0m", // 6 пробелов
-        rgb.red, rgb.green, rgb.blue
-    );
-}
-
-fn print_debug_frame(x_amount: usize, y_amount: usize, colors: &Vec<RGBPixel>) {
-    // Верхняя строка
-    print!("       "); // 7 пробелов
-    for idx in 0..x_amount {
-        print_debug_color(colors[idx]);
-        print!(" ");
-    }
-
-    // Количество фрагментов
-    let colors_amount = x_amount * 2 + y_amount * 2;
-
-    // Боковые стенки
-    for idx in 0..y_amount {
-        println!("");
-        println!("");
-        // Вывели кусок левой стенки
-        print_debug_color(colors[colors_amount - idx - 1]);
-        print!(" ");
-
-        for _ in 0..x_amount {
-            print!("       "); // 7 пробелов
-        }
-
-        // Вывели кусочек правой стенки
-        print_debug_color(colors[x_amount + idx]);
-    }
-
-    // Нижняя строчка
-    println!("");
-    print!("       "); // 7 пробелов
-    for idx in 0..x_amount {
-        print_debug_color(colors[colors_amount - y_amount - idx]);
-        print!(" ");
-    }
-
-    println!("");
-}
-
 /// Реализация методов ColorEngine
 impl<P, A> ColorEngine<P, A>
 where
@@ -298,9 +249,6 @@ where
             // Сохраняем результат анализа
             *led_color = convert_hsv_to_rgb(self.accumulator.get_winner());
         }
-
-        // KILLME
-        print_debug_frame(5, 3, &self.output_buffer);
 
         return &self.output_buffer;
     }

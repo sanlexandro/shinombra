@@ -1,10 +1,11 @@
 //! Общий интерфейс для отправки данных на устройства
 
 pub mod serial;
+pub mod debug;
 
 use algorithms::color::types::RGBPixel;
 
-use crate::serial::types::SerialDriver;
+use crate::{debug::types::DebugDriver, serial::types::SerialDriver};
 
 /// Трейт отправки данных на устройства
 /// 
@@ -25,5 +26,12 @@ pub trait HardwareOutput {
 impl HardwareOutput for SerialDriver {
     fn send_colors(&mut self, colors: &[RGBPixel]) {
         self.internal_send(colors);
+    }
+}
+
+/// Реализация трейта HardwareOutput для DebugDriver
+impl HardwareOutput for DebugDriver {
+    fn send_colors(&mut self, colors: &[RGBPixel]) {
+        self.print_debug_frame(colors);
     }
 }

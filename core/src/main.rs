@@ -10,7 +10,7 @@ use algorithms::{
     units::{Millimeters, Pixels},
 };
 use ffi::bindings::CaptureConfig;
-use hardware_output::serial::types::SerialDriver;
+use hardware_output::{HardwareOutput, debug::types::DebugDriver, serial::types::SerialDriver};
 use std::sync::atomic::{AtomicBool, Ordering};
 use threads::screen_capture::screen_capture::CaptureThread;
 
@@ -82,7 +82,8 @@ fn main() {
 
     let mut color_engine = ColorEngine::new(processor, accumulator, geometry, screen_config);
 
-    let mut hardware_output = SerialDriver::new("/dev/ttyUSB0", 115200);
+    // let mut hardware_output = SerialDriver::new("/dev/ttyUSB0", 115200);
+    let mut hardware_output = DebugDriver::new(5, 3);
 
     while KEEP_RUNNING.load(Ordering::Relaxed) {
         capture.request_frame(|data| {
@@ -90,7 +91,7 @@ fn main() {
             // Получаем указатель на вектор цветов
             let colors = color_engine.process_frame(data);
 
-            hardware_output.internal_send(colors);
+            hardware_output.send_colors(colors);
         });
     }
 

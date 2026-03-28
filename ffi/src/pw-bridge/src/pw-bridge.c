@@ -16,6 +16,12 @@
 
 #include "../include/pw-bridge.h"
 
+#ifdef DEBUG_FFI
+    #define LOG_FFI(...) prin-tf(__VA_ARGS__)
+#else
+    #define LOG_FFI(...)
+#endif
+
 // Контекст сессии захвата экрана через портал
 struct portal_data {
     XdpSession *session;    // сессия портала (ДОЛЖНА БЫТЬ ОТКРЫТА!)
@@ -55,10 +61,11 @@ struct capture_context {
  */
 static void on_state_changed(void *userdata, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
-    printf("Stream state changed: %d -> %d", old, state);
-    if (error)
-        printf(" (error: %s)", error);
-    printf("\n");
+    LOG_FFI("Stream state changed: %d -> %d", old, state);
+    if (error){
+        LOG_FFI(" (error: %s)", error);
+    }
+    LOG_FFI("\n");
 }
 
 /**
@@ -71,7 +78,7 @@ static void on_process(void *user_ctx) {
     capture_context_t *ctx = user_ctx; // получили контекст
     struct pw_buffer *pipewire_buffer; // буфер из PipeWire
 
-    printf("on_process called\n");
+    LOG_FFI("on_process called\n");
 
     // Получаем буфер из видеопотока
     if ((pipewire_buffer = pw_stream_dequeue_buffer(ctx->video_stream)) ==
@@ -84,12 +91,12 @@ static void on_process(void *user_ctx) {
     struct spa_buffer *spa_buffer_data; // данные буфера SPA
     spa_buffer_data = pipewire_buffer->buffer;
     if (spa_buffer_data->datas[0].data == NULL) {
-        printf("empty buffer\n");
+        LOG_FFI("empty buffer\n");
         pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
         return;
     }
 
-    printf("got a frame of size %d\n", spa_buffer_data->datas[0].chunk->size);
+    LOG_FFI("got a frame of size %d\n", spa_buffer_data->datas[0].chunk->size);
 
     // Получаем массив пикселей
     uint8_t *pixels = spa_buffer_data->datas[0].data;
@@ -130,26 +137,26 @@ static void on_param_changed(void *user_ctx, uint32_t id,
                              const struct spa_pod *param) {
     capture_context_t *ctx = user_ctx;
 
-    printf("on_param_changed called with id=%d\n", id);
+    LOG_FFI("on_param_changed called with id=%d\n", id);
 
     if (param == NULL) {
-        printf("  param is NULL\n");
+        LOG_FFI("  param is NULL\n");
         return;
     }
 
     // Обрабатываем доступные форматы
     if (id == SPA_PARAM_EnumFormat) {
-        printf("  Available format (EnumFormat)\n");
+        LOG_FFI("  Available format (EnumFormat)\n");
         return;
     }
 
     // Нас интересуют только параметры формата
     if (id != SPA_PARAM_Format) {
-        printf("  Ignoring param type %d\n", id);
+        LOG_FFI("  Ignoring param type %d\n", id);
         return;
     }
 
-    printf("  Processing Format param\n");
+    LOG_FFI("  Processing Format param\n");
 
     // Парсим основные параметры формата
     if (spa_format_parse(param, &ctx->video_format.media_type,
@@ -166,16 +173,16 @@ static void on_param_changed(void *user_ctx, uint32_t id,
         return;
 
     uint32_t video_format = ctx->video_format.info.raw.format;
-    printf("Negotiated format: %d (%s)\n", video_format,
+    LOG_FFI("Negotiated format: %d (%s)\n", video_format,
            spa_debug_type_find_name(spa_type_video_format, video_format));
 
-    printf("got video format:\n");
-    printf("  format: %d (%s)\n", ctx->video_format.info.raw.format,
+    LOG_FFI("got video format:\n");
+    LOG_FFI("  format: %d (%s)\n", ctx->video_format.info.raw.format,
            spa_debug_type_find_name(spa_type_video_format,
                                     ctx->video_format.info.raw.format));
-    printf("  size: %dx%d\n", ctx->video_format.info.raw.size.width,
+    LOG_FFI("  size: %dx%d\n", ctx->video_format.info.raw.size.width,
            ctx->video_format.info.raw.size.height);
-    printf("  framerate: %d/%d\n", ctx->video_format.info.raw.framerate.num,
+    LOG_FFI("  framerate: %d/%d\n", ctx->video_format.info.raw.framerate.num,
            ctx->video_format.info.raw.framerate.denom);
 
     // Если получили адрес конфига, сохраняем
@@ -213,17 +220,17 @@ static void on_session_start_response(GObject *source, GAsyncResult *result,
 
     // Проверяем, успешно ли запустилась сессия
     if (!xdp_session_start_finish(session, result, NULL)) {
-        fprintf(stderr, "Failed to start screencast session\n");
+        LOG_FFI(stderr, "Failed to start screencast session\n");
         g_main_loop_quit(portal_data->event_loop);
         return;
     }
 
-    printf("Screencast session started successfully\n");
+    LOG_FFI("Screencast session started successfully\n");
 
     // Получаем информацию о видеопотоках из сессии портала
     video_streams = xdp_session_get_streams(session);
     if (video_streams == NULL) {
-        fprintf(stderr, "No streams available from portal\n");
+        LOG_FFI(stderr, "No streams available from portal\n");
         g_main_loop_quit(portal_data->event_loop);
         return;
     }
@@ -233,10 +240,10 @@ static void on_session_start_response(GObject *source, GAsyncResult *result,
     if (g_variant_iter_next(&stream_iterator, "(u@a{sv})", &video_node_id,
                             NULL)) {
         portal_data->video_node_id = video_node_id;
-        printf("Got PipeWire node_id from portal: %u\n", video_node_id);
+        LOG_FFI("Got PipeWire node_id from portal: %u\n", video_node_id);
         portal_data->ready = TRUE;
     } else {
-        fprintf(stderr, "Failed to parse portal streams\n");
+        LOG_FFI(stderr, "Failed to parse portal streams\n");
         portal_data->ready = FALSE;
     }
 
@@ -261,12 +268,12 @@ static void on_create_screencast_response(GObject *source, GAsyncResult *result,
     // Получаем результат создания сессии
     session = xdp_portal_create_screencast_session_finish(portal, result, NULL);
     if (!session) {
-        fprintf(stderr, "Failed to create screencast session\n");
+        LOG_FFI(stderr, "Failed to create screencast session\n");
         g_main_loop_quit(portal_data->event_loop);
         return;
     }
 
-    printf("Screencast session created, starting...\n");
+    LOG_FFI("Screencast session created, starting...\n");
 
     // ВАЖНО: сохраняем сессию для длительного использования!
     portal_data->session = session;
@@ -303,7 +310,7 @@ struct portal_data *get_screencast_session(void) {
     // Создаём соединение с порталом
     portal = xdp_portal_new();
     if (!portal) {
-        fprintf(stderr, "Failed to create portal connection\n");
+        LOG_FFI(stderr, "Failed to create portal connection\n");
         g_main_loop_unref(portal_data->event_loop);
         g_free(portal_data);
         return NULL;
@@ -311,7 +318,7 @@ struct portal_data *get_screencast_session(void) {
 
     portal_data->portal = portal;
 
-    printf("Waiting for user to select screen/window...\n");
+    LOG_FFI("Waiting for user to select screen/window...\n");
 
     // Создаём сессию захвата экрана с параметрами:
     // - показываем мониторы и окна
@@ -326,14 +333,14 @@ struct portal_data *get_screencast_session(void) {
     g_main_loop_run(portal_data->event_loop);
 
     if (!portal_data->ready) {
-        fprintf(stderr, "Failed to get screencast session\n");
+        LOG_FFI(stderr, "Failed to get screencast session\n");
         g_object_unref(portal);
         g_main_loop_unref(portal_data->event_loop);
         g_free(portal_data);
         return NULL;
     }
 
-    printf("Portal screencast setup complete, PipeWire node_id=%u\n",
+    LOG_FFI("Portal screencast setup complete, PipeWire node_id=%u\n",
            portal_data->video_node_id);
 
     // ВАЖНО: портал, сессия и event_loop остаются ОТКРЫТЫМИ!
@@ -376,17 +383,17 @@ capture_context_t *screen_capture_init(capture_config_t *config) {
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
     struct portal_data *portal = get_screencast_session();
     if (!portal) {
-        fprintf(stderr, "Failed to start screencast session\n");
+        LOG_FFI(stderr, "Failed to start screencast session\n");
         return NULL;
     }
 
     if (portal->video_node_id == 0) {
-        fprintf(stderr, "Error: No valid PipeWire node_id from portal\n");
+        LOG_FFI(stderr, "Error: No valid PipeWire node_id from portal\n");
         cleanup_portal_data(portal);
         return NULL;
     }
 
-    printf("Connecting PipeWire stream to node %u\n", portal->video_node_id);
+    LOG_FFI("Connecting PipeWire stream to node %u\n", portal->video_node_id);
 
     // Данные приложения для работы с видеопотоком
     ctx->portal_data = portal;
@@ -407,14 +414,14 @@ capture_context_t *screen_capture_init(capture_config_t *config) {
         pw_properties_new(PW_KEY_MEDIA_TYPE, "Video", PW_KEY_MEDIA_CATEGORY,
                           "Capture", PW_KEY_MEDIA_ROLE, "Screen", NULL);
 
-    printf("PipeWire properties configured\n");
+    LOG_FFI("PipeWire properties configured\n");
 
     // Создаём видеопоток и подключаем обработчики событий
     ctx->video_stream = pw_stream_new_simple(
         pw_main_loop_get_loop(ctx->main_loop), "video-capture",
         stream_properties, &stream_events, ctx);
 
-    printf("PipeWire stream created\n");
+    LOG_FFI("PipeWire stream created\n");
 
     // Задаём формат видео: принимаем любой сырой видеоформат
     format_parameters[0] = spa_pod_builder_add_object(
@@ -459,7 +466,7 @@ void screen_capture_run(capture_context_t *ctx) {
     cleanup_portal_data(ctx->portal_data);
     free(ctx);
 
-    printf("End test\n");
+    LOG_FFI("End test\n");
 }
 
 // Остановка захвата и освобождение ресурсов
