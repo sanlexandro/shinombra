@@ -4,5 +4,14 @@
     "cSpell.words": [
         "Ambi",
         "serialport"
-    ]
+    ],
+    "rust-analyzer.procMacro.enable": true,
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml",
+        "./cfg_test/Cargo.toml"
+    ],
+    "rust-analyzer.procMacro.attributes.enable": true,
+    "rust-analyzer.diagnostics.disabled": ["unresolved-proc-macro"],
+    "rust-analyzer.cargo.sysroot": "discover"
 }
