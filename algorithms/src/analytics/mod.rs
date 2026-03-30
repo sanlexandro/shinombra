@@ -12,6 +12,7 @@
 
 pub mod histogram;
 pub mod types;
+pub mod registry;
 
 use crate::color::types::HSVPixel;
 

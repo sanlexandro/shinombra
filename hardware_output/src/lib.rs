@@ -2,6 +2,7 @@
 
 pub mod serial;
 pub mod debug;
+pub mod registry;
 
 use algorithms::color::types::RGBPixel;
 

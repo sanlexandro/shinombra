@@ -6,9 +6,9 @@ pub enum Orientation {
 }
 
 /// Кортежная структура для работы с миллиметрами
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Millimeters(pub u32);
 
 /// Кортежная структура для работы с пикселями
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Pixels(pub usize);

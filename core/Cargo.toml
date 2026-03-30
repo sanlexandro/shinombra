@@ -11,6 +11,7 @@ algorithms = { path = "../algorithms" }
 threads = { path = "../threads" }
 ffi = { path = "../ffi" }
 hardware_output = { path = "../hardware_output" }
+config-gen = {path = "../infra/config-gen"} 
 
 [[bin]]
 name = "ambient-lighting"

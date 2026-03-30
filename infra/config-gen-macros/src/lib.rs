@@ -4,6 +4,8 @@ use std::collections::HashSet;
 use std::fs;
 use syn::{parse::Parse, parse::ParseStream, parse_macro_input, File, Item, LitStr, Token};
 
+// TODO! Комментарии к коду!
+
 #[proc_macro] // Обрати внимание: это просто proc_macro, не attribute
 pub fn include_shadow(input: TokenStream) -> TokenStream {
     // 1. Получаем путь из макроса include_shadow!("path/to/file.rs")
@@ -149,7 +151,14 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                 Item::Struct(s) => {
                     let name = &s.ident;
                     let shadow_name = quote::format_ident!("{}Shadow", name);
-                    let name_str = name.to_string();
+                    // преобразуем имя к snake_case
+                    let mut name_str = name.to_string();
+                    for (i, ch) in name.to_string().chars().enumerate() {
+                        if ch.is_uppercase() && i != 0 {
+                            name_str.push('_');
+                        }
+                        name_str.push(ch.to_ascii_lowercase());
+                    }
                     let vis = &s.vis;
 
                     // Генерируем поля для Shadow, трансформируя типы
@@ -200,16 +209,43 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                         syn::Fields::Unit => quote! { Self },
                     };
 
-                    final_tokens.push(quote! {
-                        #s // Оригинал (чистый)
+                    // Генерируем From для ссылки &Shadow -> Original
+                    let from_ref_body = match &s.fields {
+                        syn::Fields::Named(f) => {
+                            let mapping = f.named.iter().map(|field| {
+                                let f_name = &field.ident;
+                                // Здесь фокус: если поле — это тоже Shadow-структура,
+                                // мы вызываем .clone().into() или .into(), если это примитив
+                                quote! { #f_name: shadow.#f_name.clone().into() }
+                            });
+                            quote! { Self { #( #mapping, )* } }
+                        }
+                        syn::Fields::Unnamed(f) => {
+                            let mapping = (0..f.unnamed.len()).map(|i| {
+                                let idx = syn::Index::from(i);
+                                quote! { shadow.#idx.clone().into() }
+                            });
+                            quote! { Self ( #( #mapping ),* ) }
+                        }
+                        syn::Fields::Unit => quote! { Self },
+                    };
 
-                        #[derive(::config_gen::__private::serde::Deserialize, Default)]
+                    final_tokens.push(quote! {
+                        #[derive(::config_gen::__private::serde::Deserialize, Default, Clone)] // Добавили Clone
                         #[serde(crate = "::config_gen::__private::serde", rename = #name_str)]
                         #vis struct #shadow_name #shadow_fields
 
+                        // Конвертация по значению (потребляет Shadow)
                         impl From<#shadow_name> for #name {
                             fn from(shadow: #shadow_name) -> Self {
                                 #from_body
+                            }
+                        }
+
+                        // Конвертация по ссылке (удобно для твоего "let")
+                        impl From<&#shadow_name> for #name {
+                            fn from(shadow: &#shadow_name) -> Self {
+                                #from_ref_body
                             }
                         }
                     });
@@ -217,7 +253,14 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                 syn::Item::Enum(ref e) => {
                     let name = &e.ident;
                     let shadow_name = quote::format_ident!("{}Shadow", name);
-                    let name_str = name.to_string();
+                    // преобразуем имя к snake_case
+                    let mut name_str = name.to_string();
+                    for (i, ch) in name.to_string().chars().enumerate() {
+                        if ch.is_uppercase() && i != 0 {
+                            name_str.push('_');
+                        }
+                        name_str.push(ch.to_ascii_lowercase());
+                    }
                     let vis = &e.vis;
 
                     // Получаем список идентификаторов
@@ -226,9 +269,7 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                     // Разделяем на первый и остальные
                     if let Some((first_variant, rest_variants)) = variant_idents.split_first() {
                         final_tokens.push(quote! {
-                            #e // Оригинал
-
-                            #[derive(::config_gen::__private::serde::Deserialize, Default)]
+                            #[derive(::config_gen::__private::serde::Deserialize, Default, Clone, Copy)]
                             #[serde(crate = "::config_gen::__private::serde", rename = #name_str)]
                             #vis enum #shadow_name {
                                 #[default]
@@ -254,7 +295,17 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
 
     // Внутри макроса, когда собрали все all_struct_names
     let fields = all_struct_names.iter().map(|name| {
-        let field_name = quote::format_ident!("{}", name.to_lowercase()); // Простой snake_case
+        let field_name = quote::format_ident!("{}", {
+            // преобразуем имя к snake_case
+            let mut snake = String::new();
+            for (i, ch) in name.chars().enumerate() {
+                if ch.is_uppercase() && i != 0 {
+                    snake.push('_');
+                }
+                snake.push(ch.to_ascii_lowercase());
+            }
+            snake
+        }); // Простой snake_case
         let ty = quote::format_ident!("{}Shadow", name);
         quote! { pub #field_name: Option<#ty> }
     });

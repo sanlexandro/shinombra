@@ -14,6 +14,8 @@ pub mod configs;
 pub mod frame;
 pub mod measures;
 pub mod types;
+pub mod configs_logic;
+pub mod registry;
 
 use super::processing::types::CheckerboardScanner;
 use crate::analytics::ColorAccumulator;

@@ -1,6 +1,6 @@
 //! Реализация связи с железом по Serial
 
-use crate::serial::types::SerialDriver;
+use crate::serial::{config::SerialDriverConfig, types::SerialDriver};
 use algorithms::color::types::RGBPixel;
 use serialport;
 use std::time::Duration;
@@ -12,9 +12,9 @@ impl SerialDriver {
     /// **Аргументы:**
     /// - `port_path`: &[str] - путь к устройству (например, "/dev/ttyUSB0")
     /// - `baud_rate`: [u32]  - скорость обмена данными
-    pub fn new(port_path: &str, baud_rate: u32) -> Self {
+    pub fn new(config: SerialDriverConfig) -> Self {
         // Настройка порта
-        let port = serialport::new(port_path, baud_rate)
+        let port = serialport::new(config.port_path, config.baud_rate)
             .timeout(Duration::from_millis(10))
             .open()
             .expect("Failed to open port");

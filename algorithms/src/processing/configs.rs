@@ -1,11 +1,11 @@
-use crate::{processing::measures::calculate_mm_to_px_k, units::*};
+use crate::units::*;
 
 /// Информация о дисплее
 ///
 /// **Поля:**
 /// - `frame_width`: [Pixels]  - ширина кадра в пикселях
 /// - `frame_height`: [Pixels] - высота кадра в пикселях
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug)]
 pub struct ScreenConfig {
     pub frame_width_px: Pixels,
     pub frame_height_px: Pixels,
@@ -37,6 +37,7 @@ pub struct ScreenConfig {
 ///
 /// Под блоком светодиодов подразумевается n светодиодов (n > 0), которые
 /// физически соединены на ленте и не могут управляться отдельно друг от друга
+#[derive(Default, Debug, Clone, Copy)]
 pub struct LedPositionConfig {
     pub gap: Millimeters,
     pub vertical_offset: Millimeters,
@@ -52,6 +53,7 @@ pub struct LedPositionConfig {
 /// **Поля:** всё в [Millimeters]
 /// - `deep_in`  - глубина чтения к центру экрана от центра ленты
 /// - `deep_out` - глубина чтения экрана к краям экрана от центра ленты
+#[derive(Default, Debug, Clone, Copy)]
 pub struct ScreenReadingConfig {
     pub deep_in: Millimeters,
     pub deep_out: Millimeters,
@@ -63,6 +65,7 @@ pub struct ScreenReadingConfig {
 /// - `led_pos`: [LedPositionConfig]   - информация о физическом расположении
 ///   ленты
 /// - `reading`: [ScreenReadingConfig] - информация о настройках чтения дисплея
+#[derive(Clone, Copy)]
 pub struct GeometryConfig {
     pub led_pos: LedPositionConfig,
     pub reading: ScreenReadingConfig,
@@ -73,6 +76,7 @@ pub struct GeometryConfig {
 /// **Поля:**
 /// - `width`: [Pixels]  - ширина горизонтального фрагмента
 /// - `height`: [Pixels] - высота горизонтального фрагмента
+#[derive(Default)]
 pub struct ChunkConfig {
     pub width: Pixels,
     pub height: Pixels,
@@ -84,6 +88,7 @@ pub struct ChunkConfig {
 /// - `config`: [ChunkConfig] - конфигурация фрагмента
 /// - `pixel_step`: [usize]   - шаг чтения пикселей строки
 /// - `row_stride`: [usize]   - шаг чтения строк
+#[derive(Default)]
 pub struct CheckerboardConfig {
     pub config: ChunkConfig,
     pub pixel_step: usize,
@@ -102,31 +107,4 @@ pub struct CheckerboardConfig {
 pub struct ChunkTask {
     pub start_index: usize,
     pub orientation: Orientation,
-}
-
-// Реализация методов GeometryConfig
-impl GeometryConfig {
-    /// Расчёт конфигурации фрагмента
-    ///
-    /// Данный метод необходим для определения конфигурации фрагмента, исходя из
-    /// данных, переданных пользователю
-    ///
-    /// **Аргументы:**
-    /// - `screen_config`: [ScreenConfig] - информация об экране
-    pub fn calculate_chunk_config(&self, screen_config: ScreenConfig) -> ChunkConfig {
-        // Коэффициент по вертикали
-        let k_y =
-            calculate_mm_to_px_k(screen_config.frame_height_mm, screen_config.frame_height_px);
-        // Коэффициент по горизонтали (на случай нестандартных экранов)
-        let k_x = calculate_mm_to_px_k(screen_config.frame_width_mm, screen_config.frame_width_px);
-
-        ChunkConfig {
-            // Ширина — это длина блока диодов (в px)
-            width: self.led_pos.led_length.as_pixels(k_x),
-            // Высота — это суммарная глубина захвата (в px)
-            height: Pixels::new(
-                ((self.reading.deep_in.0 + self.reading.deep_out.0) as f64 * k_y).round() as usize,
-            ),
-        }
-    }
 }

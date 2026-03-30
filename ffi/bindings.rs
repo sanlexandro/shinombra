@@ -1,13 +1,25 @@
 //! Подключение ф-ий из C
 
-use std::os::raw::{c_void};
-use std::sync::atomic::{AtomicBool};
+use std::os::raw::c_void;
+use std::sync::atomic::AtomicBool;
 
 #[repr(C)]
 pub struct CaptureConfig {
     pub screen_width: u32,    // Заполняет C (PipeWire)
     pub screen_height: u32,   // Заполняет C (PipeWire)
     pub is_ready: AtomicBool, // Флаг для синхронизации
+}
+
+// TODO! Комментарии к коду!
+
+impl CaptureConfig {
+    pub fn new() -> Self {
+        return Self {
+            screen_width: 0,
+            screen_height: 0,
+            is_ready: AtomicBool::new(false),
+        };
+    }
 }
 
 // Используем ф-ии из `C-worker`
@@ -19,11 +31,11 @@ extern "C" {
     pub fn screen_capture_run(ctx: *mut c_void);
 
     /// Ф-я остановки потока захвата экрана
-    pub fn screen_capture_stop(ctx:*mut c_void);
+    pub fn screen_capture_stop(ctx: *mut c_void);
 
     /// Ф-я получения указателя DMA
-    pub fn wait_for_frame(ctx:*mut c_void) -> *mut u8;
+    pub fn wait_for_frame(ctx: *mut c_void) -> *mut u8;
 
     /// Ф-я освобождения кадра DMA
-    pub fn release_frame(ctx:*mut c_void);
+    pub fn release_frame(ctx: *mut c_void);
 }

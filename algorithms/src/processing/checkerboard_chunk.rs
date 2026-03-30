@@ -10,7 +10,7 @@ use super::types::CheckerboardScanner;
 use crate::analytics::ColorAccumulator;
 use crate::color::conversion::convert_rgb_to_hsv;
 use crate::color::types::RGBPixel;
-use crate::processing::configs::{CheckerboardConfig, ScreenConfig, ChunkTask};
+use crate::processing::configs::{CheckerboardConfig, ChunkTask, ScreenConfig};
 use crate::units::*;
 
 /// Реализация методов CheckerboardConfig

@@ -6,6 +6,8 @@ pub mod __private {
     pub use toml;
 }
 
+// TODO! Комментарии к коду!
+
 pub trait TomlLoader: Sized {
     fn load_from_string(data: &str) -> Result<Self, String>;
 }
