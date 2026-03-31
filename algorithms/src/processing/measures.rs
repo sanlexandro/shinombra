@@ -6,6 +6,8 @@
 //! - миллиметрами [super::types::Millimeters]
 //! - пикселями [super::types::Pixels]
 
+use std::fmt;
+
 use crate::units::*;
 
 /// Реализация методов для Millimeters
@@ -27,6 +29,13 @@ impl Millimeters {
     /// - `mm_to_px_k`: [f64] - коэффициент преобразования миллиметров в пиксели
     pub fn as_pixels(&self, mm_to_px_k: f64) -> Pixels {
         return Pixels((self.0 as f64 * mm_to_px_k).round() as usize);
+    }
+}
+
+// TODO! комментарии
+impl fmt::Display for Millimeters {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0) // Выводим просто число
     }
 }
 

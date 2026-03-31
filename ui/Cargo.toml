@@ -1,0 +1,24 @@
+[package]
+name = "ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
+tower-http = { version = "0.5", features = ["fs"] }
+askama = { version = "0.12", features = ["with-axum"] }
+askama_axum = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+urlencoding = "2.1"
+toml = "0.8"
+
+algorithms = { path = "../algorithms" }
+hardware_output = { path = "../hardware_output" }
+config-gen = {path = "../infra/config-gen"} 
+ambient_core = {path = "../core", package = "core"}
+
+[[bin]]
+name = "ambient-lighting-ui"
+path = "src/main.rs"

@@ -1,28 +1,22 @@
 [settings]
 chunk_processor_type = "Checkerboard"
 analytics_type = "ColorHistogram"
-hardware_output_type = "SerialDriver"
+hardware_output_type = "DebugDriver"
 
 [screen_reading_config]
-deep_in = 20
-deep_out = 0
+deep_in = 330
+deep_out = 145
 
 [led_position_config]
-gap = 5
-led_length = 62
-horizontal_offset = 17
-horizontal_led_amount = 5
-vertical_offset = 4
-vertical_led_amount = 3
+gap = 200
+vertical_offset = 108
+horizontal_offset = 64
+led_length = 67
+vertical_led_amount = 7
+horizontal_led_amount = 14
 
 [screen_config]
-frame_width_mm = 345
-frame_height_mm = 195
-
-[checkerboard_config]
-pixel_step = 5
-row_stride = 3
-
-[serial_driver_config]
-port_path = "/dev/ttyUSB0"
-baud_rate = 115200
+frame_width_px = 0
+frame_height_px = 0
+frame_width_mm = 620
+frame_height_mm = 610

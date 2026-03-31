@@ -3,8 +3,8 @@ use algorithms::{
     processing::{configs::*, registry::*, types::*, ChunkProcessor},
     units::*,
 };
+use ambient_core::config::Settings;
 use config_gen::{__private::*, *};
-use core::config::Settings;
 use ffi::bindings::CaptureConfig;
 use hardware_output::{
     debug::types::DebugDriver,

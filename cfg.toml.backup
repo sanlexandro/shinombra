@@ -1,0 +1,28 @@
+[settings]
+chunk_processor_type = "Checkerboard"
+analytics_type = "ColorHistogram"
+hardware_output_type = "SerialDriver"
+
+[screen_reading_config]
+deep_in = 20
+deep_out = 0
+
+[led_position_config]
+gap = 5
+led_length = 62
+horizontal_offset = 17
+horizontal_led_amount = 5
+vertical_offset = 4
+vertical_led_amount = 3
+
+[screen_config]
+frame_width_mm = 345
+frame_height_mm = 195
+
+[checkerboard_config]
+pixel_step = 5
+row_stride = 3
+
+[serial_driver_config]
+port_path = "/dev/ttyUSB0"
+baud_rate = 115200

@@ -69,7 +69,7 @@ pub fn include_shadow(input: TokenStream) -> TokenStream {
                 expanded_items.push(quote! {
                     #item // Оригинал
 
-                    #[derive(::config_gen::__private::serde::Deserialize, Default)]
+                    #[derive(::config_gen::__private::serde::Deserialize, ::config_gen::__private::serde::Serialize, Default)]
                     #[serde(crate = "::config_gen::__private::serde")]
                     #expanded
                 });
@@ -230,10 +230,36 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                         syn::Fields::Unit => quote! { Self },
                     };
 
+                    // Подготавливаем тело для From<Original> for Shadow
+                    let to_shadow_body = match &s.fields {
+                        syn::Fields::Named(f) => {
+                            let mapping = f.named.iter().map(|field| {
+                                let f_name = &field.ident;
+                                quote! { #f_name: orig.#f_name.into() }
+                            });
+                            quote! { Self { #( #mapping, )* } }
+                        }
+                        syn::Fields::Unnamed(f) => {
+                            let mapping = (0..f.unnamed.len()).map(|i| {
+                                let idx = syn::Index::from(i);
+                                quote! { orig.#idx.into() }
+                            });
+                            quote! { Self ( #( #mapping ),* ) }
+                        }
+                        syn::Fields::Unit => quote! { Self },
+                    };
+
                     final_tokens.push(quote! {
-                        #[derive(::config_gen::__private::serde::Deserialize, Default, Clone)] // Добавили Clone
+                        #[derive(::config_gen::__private::serde::Deserialize, ::config_gen::__private::serde::Serialize, Default, Clone, Debug, PartialEq)]
                         #[serde(crate = "::config_gen::__private::serde", rename = #name_str)]
                         #vis struct #shadow_name #shadow_fields
+
+                        // Impl Display для использования в шаблонах
+                        impl std::fmt::Display for #shadow_name {
+                            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                                write!(f, "{:?}", self)
+                            }
+                        }
 
                         // Конвертация по значению (потребляет Shadow)
                         impl From<#shadow_name> for #name {
@@ -246,6 +272,13 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                         impl From<&#shadow_name> for #name {
                             fn from(shadow: &#shadow_name) -> Self {
                                 #from_ref_body
+                            }
+                        }
+
+                        // И в обратную сторону
+                        impl From<#name> for #shadow_name {
+                            fn from(orig: #name) -> Self {
+                                #to_shadow_body
                             }
                         }
                     });
@@ -269,7 +302,7 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                     // Разделяем на первый и остальные
                     if let Some((first_variant, rest_variants)) = variant_idents.split_first() {
                         final_tokens.push(quote! {
-                            #[derive(::config_gen::__private::serde::Deserialize, Default, Clone, Copy)]
+                            #[derive(::config_gen::__private::serde::Deserialize, ::config_gen::__private::serde::Serialize, Default, Clone, Copy, Debug, PartialEq)]
                             #[serde(crate = "::config_gen::__private::serde", rename = #name_str)]
                             #vis enum #shadow_name {
                                 #[default]
@@ -277,10 +310,27 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                                 #( #rest_variants ),*
                             }
 
+                            // Impl Display для использования в шаблонах
+                            impl std::fmt::Display for #shadow_name {
+                                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                                    match self {
+                                        #( #shadow_name::#variant_idents => write!(f, "{}", stringify!(#variant_idents)) ),*
+                                    }
+                                }
+                            }
+
                             impl From<#shadow_name> for #name {
                                 fn from(shadow: #shadow_name) -> Self {
                                     match shadow {
                                         #( #shadow_name::#variant_idents => #name::#variant_idents ),*
+                                    }
+                                }
+                            }
+
+                            impl From<#name> for #shadow_name {
+                                fn from(orig: #name) -> Self {
+                                    match orig {
+                                        #( #name::#variant_idents => #shadow_name::#variant_idents ),*
                                     }
                                 }
                             }
@@ -311,7 +361,7 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
     });
 
     final_tokens.push(quote! {
-        #[derive(::config_gen::__private::serde::Deserialize, Default)]
+        #[derive(::config_gen::__private::serde::Deserialize, ::config_gen::__private::serde::Serialize, Default)]
         #[serde(crate = "::config_gen::__private::serde")]
         pub struct FullConfigShadow {
             #( #fields, )*
