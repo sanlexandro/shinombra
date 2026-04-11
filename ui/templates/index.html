@@ -486,7 +486,7 @@
                     <!-- Выбор типа обработки фрагмента -->
                     <div class="slider-group">
                         <label class="label-qde">Тип обработки фрагмента</label>
-                        <select name="settings.chunk_processor_type" class="enum-select" data-current="{{ settings.chunk_processor_type }}">
+                        <select name="settings.chunk_processor_type" class="enum-select" data-current="{{ settings.chunk_processor_type }}" onchange="updateConditionalSections()">
                             <option value="Checkerboard">Checkerboard (шахматный)</option>
                         </select>
                     </div>
@@ -519,40 +519,7 @@
                 <div class="config-grid">
                     {% match checkerboard_config %}
                     {% when Some(cb) %}
-                    <!-- Ширина фрагмента -->
-                    <div class="slider-group">
-                        <label class="label-qde">Ширина фрагмента (px)</label>
-                        <div class="slider-with-input">
-                            <div class="slider-container">
-                                <input type="range" name="checkerboard_config.config.width"
-                                       min="1" max="500" step="1"
-                                       value="{{ cb.config.width }}"
-                                       class="slider-qde">
-                            </div>
-                            <input type="number" name="checkerboard_config.config.width"
-                                   min="1" max="500" step="1"
-                                   value="{{ cb.config.width }}"
-                                   class="input-qde number-input">
-                        </div>
-                    </div>
-
-                    <!-- Высота фрагмента -->
-                    <div class="slider-group">
-                        <label class="label-qde">Высота фрагмента (px)</label>
-                        <div class="slider-with-input">
-                            <div class="slider-container">
-                                <input type="range" name="checkerboard_config.config.height"
-                                       min="1" max="500" step="1"
-                                       value="{{ cb.config.height }}"
-                                       class="slider-qde">
-                            </div>
-                            <input type="number" name="checkerboard_config.config.height"
-                                   min="1" max="500" step="1"
-                                   value="{{ cb.config.height }}"
-                                   class="input-qde number-input">
-                        </div>
-                    </div>
-
+                    
                     <!-- Шаг пикселей -->
                     <div class="slider-group">
                         <label class="label-qde">Шаг чтения пикселей</label>
@@ -587,7 +554,7 @@
                         </div>
                     </div>
                     {% when None %}
-                    <p class="text-slate-400">Конфигурация не загружена</p>
+                    <p class="text-slate-400">❌ Конфигурация не загружена (None)</p>
                     {% endmatch %}
                 </div>
             </div>
@@ -888,13 +855,22 @@
         // ================================================================
         function updateConditionalSections() {
             const hardwareType = document.querySelector('[name="settings.hardware_output_type"]').value;
+            const chunkProcessorType = document.querySelector('[name="settings.chunk_processor_type"]').value;
             const serialSection = document.getElementById('serialSection');
+            const checkerboardSection = document.getElementById('checkerboardSection');
 
             // Показываем Serial секцию только если выбран SerialDriver
             if (hardwareType === 'SerialDriver') {
                 serialSection.classList.add('visible');
             } else {
                 serialSection.classList.remove('visible');
+            }
+
+            // Показываем Checkerboard секцию только если выбран Checkerboard процессор
+            if (chunkProcessorType === 'Checkerboard') {
+                checkerboardSection.classList.add('visible');
+            } else {
+                checkerboardSection.classList.remove('visible');
             }
         }
 

@@ -16,10 +16,12 @@
 
 #include "../include/pw-bridge.h"
 
+// #define DEBUG_FFI
+
 #ifdef DEBUG_FFI
-    #define LOG_FFI(...) prin-tf(__VA_ARGS__)
+    #define LOG_FFI(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
 #else
-    #define LOG_FFI(...)
+    #define LOG_FFI(fmt, ...) // Ничего не делаем
 #endif
 
 // Контекст сессии захвата экрана через портал
@@ -220,7 +222,7 @@ static void on_session_start_response(GObject *source, GAsyncResult *result,
 
     // Проверяем, успешно ли запустилась сессия
     if (!xdp_session_start_finish(session, result, NULL)) {
-        LOG_FFI(stderr, "Failed to start screencast session\n");
+        LOG_FFI("Failed to start screencast session\n");
         g_main_loop_quit(portal_data->event_loop);
         return;
     }
@@ -230,7 +232,7 @@ static void on_session_start_response(GObject *source, GAsyncResult *result,
     // Получаем информацию о видеопотоках из сессии портала
     video_streams = xdp_session_get_streams(session);
     if (video_streams == NULL) {
-        LOG_FFI(stderr, "No streams available from portal\n");
+        LOG_FFI("No streams available from portal\n");
         g_main_loop_quit(portal_data->event_loop);
         return;
     }
@@ -243,7 +245,7 @@ static void on_session_start_response(GObject *source, GAsyncResult *result,
         LOG_FFI("Got PipeWire node_id from portal: %u\n", video_node_id);
         portal_data->ready = TRUE;
     } else {
-        LOG_FFI(stderr, "Failed to parse portal streams\n");
+        LOG_FFI("Failed to parse portal streams\n");
         portal_data->ready = FALSE;
     }
 
@@ -268,7 +270,7 @@ static void on_create_screencast_response(GObject *source, GAsyncResult *result,
     // Получаем результат создания сессии
     session = xdp_portal_create_screencast_session_finish(portal, result, NULL);
     if (!session) {
-        LOG_FFI(stderr, "Failed to create screencast session\n");
+        LOG_FFI("Failed to create screencast session\n");
         g_main_loop_quit(portal_data->event_loop);
         return;
     }
@@ -310,7 +312,7 @@ struct portal_data *get_screencast_session(void) {
     // Создаём соединение с порталом
     portal = xdp_portal_new();
     if (!portal) {
-        LOG_FFI(stderr, "Failed to create portal connection\n");
+        LOG_FFI("Failed to create portal connection\n");
         g_main_loop_unref(portal_data->event_loop);
         g_free(portal_data);
         return NULL;
@@ -333,7 +335,7 @@ struct portal_data *get_screencast_session(void) {
     g_main_loop_run(portal_data->event_loop);
 
     if (!portal_data->ready) {
-        LOG_FFI(stderr, "Failed to get screencast session\n");
+        LOG_FFI("Failed to get screencast session\n");
         g_object_unref(portal);
         g_main_loop_unref(portal_data->event_loop);
         g_free(portal_data);
@@ -383,12 +385,12 @@ capture_context_t *screen_capture_init(capture_config_t *config) {
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
     struct portal_data *portal = get_screencast_session();
     if (!portal) {
-        LOG_FFI(stderr, "Failed to start screencast session\n");
+        LOG_FFI("Failed to start screencast session\n");
         return NULL;
     }
 
     if (portal->video_node_id == 0) {
-        LOG_FFI(stderr, "Error: No valid PipeWire node_id from portal\n");
+        LOG_FFI("Error: No valid PipeWire node_id from portal\n");
         cleanup_portal_data(portal);
         return NULL;
     }

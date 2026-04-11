@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Двухфакторная аутентификация</title>
+    <style>
+        * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+        
+        .auth-container {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 60px 48px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .auth-title {
+            color: #0ea5e9;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .auth-subtitle {
+            color: #94a3b8;
+            font-size: 15px;
+            text-align: center;
+            margin-bottom: 40px;
+            line-height: 1.4;
+        }
+
+        .code-input {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            padding: 18px 16px;
+            color: #e2e8f0;
+            font-size: 24px;
+            letter-spacing: 12px;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-bottom: 32px;
+            width: 100%;
+            height: 60px;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+            background: rgba(30, 41, 59, 1);
+        }
+
+        .code-input::placeholder {
+            color: #64748b;
+            letter-spacing: 8px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 16px 24px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3);
+            height: 54px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(14, 165, 233, 0.4);
+            background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .info-text {
+            color: #94a3b8;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 28px;
+            line-height: 1.6;
+        }
+
+        .icon {
+            font-size: 56px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .loading {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(14, 165, 233, 0.3);
+            border-top-color: #0ea5e9;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading.active {
+            display: inline-block;
+        }
+
+        form {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="icon">🔐</div>
+        
+        <div class="auth-title">Код доступа</div>
+        <div class="auth-subtitle">Введите 6-значный код из Telegram</div>
+
+        <form id="verifyForm" method="POST" action="/verify-code">
+            <input
+                type="text"
+                name="code"
+                class="code-input"
+                placeholder="000000"
+                maxlength="6"
+                inputmode="numeric"
+                pattern="[0-9]{6}"
+                required
+                autofocus
+            >
+
+            <button type="submit" class="submit-btn">
+                <span id="buttonText">Проверить</span>
+                <span class="loading" id="loading"></span>
+            </button>
+
+            <div class="info-text">
+                ✓ Код отправлен в ваш Telegram<br>
+                Код действителен 60 минут
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('verifyForm');
+        const codeInput = document.querySelector('input[name="code"]');
+        const buttonText = document.getElementById('buttonText');
+        const loading = document.getElementById('loading');
+
+        console.log('[2FA] Форма загружена:', form, codeInput);
+
+        // Ограничиваем ввод только цифрами
+        codeInput.addEventListener('input', (e) => {
+            const oldVal = e.target.value;
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            console.log('[2FA] Input:', oldVal, '->', e.target.value);
+            
+            // Автоматически отправляем при полном коде
+            if (e.target.value.length === 6) {
+                console.log('[2FA] Код полный (6 цифр), отправляю форму');
+                form.submit();
+            }
+        });
+
+        form.addEventListener('submit', (e) => {
+            const code = codeInput.value;
+            console.log('[2FA] submit event, code=' + code);
+            buttonText.textContent = 'Проверка...';
+            loading.classList.add('active');
+            codeInput.disabled = true;
+        });
+
+        // Проверяем что цифр корректное количество
+        codeInput.addEventListener('focus', () => {
+            console.log('[2FA] Focus event');
+        });
+    </script>
+</body>
+</html>
