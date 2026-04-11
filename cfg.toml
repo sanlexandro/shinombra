@@ -1,6 +1,7 @@
 [settings]
 chunk_processor_type = "Checkerboard"
 analytics_type = "ColorHistogram"
+filter_type = "EmaFilter"
 hardware_output_type = "SerialDriver"
 
 [screen_reading_config]

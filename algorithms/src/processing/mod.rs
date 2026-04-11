@@ -18,7 +18,7 @@ pub mod configs_logic;
 pub mod registry;
 
 use super::processing::types::CheckerboardScanner;
-use crate::analytics::ColorAccumulator;
+use crate::analytics::ColorAnalyst;
 use crate::processing::configs::ChunkTask;
 
 /// Трейт обработки фрагмента
@@ -34,29 +34,29 @@ pub trait ChunkProcessor {
     /// - `byte_frame`: &[[u8]]                  - указатель на кадр (массив
     ///   пикселей)
     /// - `chunk_task`: [ChunkTask]              - "задание" фрагмента
-    /// - `&mut accumulator`: [ColorAccumulator] - указатель на структуру
+    /// - `&mut analyst`: [ColorAnalyst] - указатель на структуру
     ///   (метод) накопления данных для дальнейшего определения результирующего
     ///   цвета
-    fn process_chunk<A: ColorAccumulator>(
+    fn process_chunk<Analyst: ColorAnalyst>(
         &self, // чтобы сканер был многоразовым
         byte_frame: &[u8],
         chunk_task: ChunkTask,
-        accumulator: &mut A, // для последующего определения
+        analyst: &mut Analyst, // для последующего определения
     );
 }
 
 /// Реализация трейта для CheckerboardScanner
 impl ChunkProcessor for CheckerboardScanner {
-    fn process_chunk<A: ColorAccumulator>(
+    fn process_chunk<Analyst: ColorAnalyst>(
         &self,
         byte_frame: &[u8],
         chunk_task: ChunkTask,
-        accumulator: &mut A,
+        analyst: &mut Analyst,
     ) {
         self.process_checkerboard_chunk(
             byte_frame,
             chunk_task,
-            accumulator,
+            analyst,
         );
     }
 }

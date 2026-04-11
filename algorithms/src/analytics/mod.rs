@@ -16,12 +16,12 @@ pub mod registry;
 
 use crate::color::types::HSVPixel;
 
-/// Трейт обработки цвета
+/// Трейт анализа цвета
 ///
 /// **Методы:**
 /// - `add_data`   - добавление данных для анализа
 /// - `get_winner` - вычисление результата анализа
-pub trait ColorAccumulator: Clone {
+pub trait ColorAnalyst: Clone {
     /// Сброс (очистка) анализа
     fn clear(&mut self);
 
@@ -41,7 +41,7 @@ pub trait ColorAccumulator: Clone {
 }
 
 // Реализация трейта для ColorHistogram
-impl ColorAccumulator for types::ColorHistogram {
+impl ColorAnalyst for types::ColorHistogram {
     fn clear(&mut self) {
         self.clear();
     }

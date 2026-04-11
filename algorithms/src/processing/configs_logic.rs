@@ -28,6 +28,11 @@ impl GeometryConfig {
             ),
         }
     }
+
+    /// Расчёт количества светодиодов в ленте
+    pub fn calculate_leds_amount(&self) -> usize {
+        return (self.led_pos.horizontal_led_amount + self.led_pos.vertical_led_amount) * 2;
+    }
 }
 
 // TODO! Комментарии к коду!

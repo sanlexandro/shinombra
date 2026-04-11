@@ -1,7 +1,7 @@
 //! Объявление различных вариантов аналитики цвета
 
 #[derive(Debug)]
-pub enum ColorAccumulatorType {
+pub enum ColorAnalystType {
     ColorHistogram
 }
 

@@ -1,10 +1,11 @@
-use algorithms::{analytics::registry::*, processing::registry::*};
+use algorithms::{analytics::registry::*, filters::registry::ColorFilterType, processing::registry::*};
 use hardware_output::registry::*;
 
 #[derive(Debug)]
 pub struct Settings {
     pub chunk_processor_type: ChunkProcessorType,
-    pub analytics_type: ColorAccumulatorType,
+    pub analytics_type: ColorAnalystType,
+    pub filter_type: ColorFilterType,
     pub hardware_output_type: HardwareOutputType,
 }
 

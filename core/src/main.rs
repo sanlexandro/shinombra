@@ -1,5 +1,6 @@
 use algorithms::{
-    analytics::{registry::*, types::*, ColorAccumulator},
+    analytics::{registry::*, types::*, ColorAnalyst},
+    filters::{registry::*, types::*, ColorFilter},
     processing::{configs::*, registry::*, types::*, ChunkProcessor},
     units::*,
 };
@@ -12,7 +13,7 @@ use hardware_output::{
     serial::{config::SerialDriverConfig, types::SerialDriver},
     HardwareOutput,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{sync::atomic::{AtomicBool, Ordering}};
 use threads::screen_capture::screen_capture::CaptureThread;
 
 include_shadow_all!(
@@ -20,6 +21,7 @@ include_shadow_all!(
     "./algorithms/src/processing/configs.rs",
     "./algorithms/src/processing/registry.rs",
     "./algorithms/src/analytics/registry.rs",
+    "./algorithms/src/filters/registry.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
     "./hardware_output/src/serial/config.rs"
@@ -107,6 +109,7 @@ fn main() {
     capture_thread.stop();
 }
 
+/// 1-я ступень - выбор обработчика фрагментов
 fn stage_1_select_chunk_processor(
     settings: Settings,
     shadow_root: FullConfigShadow,
@@ -130,7 +133,7 @@ fn stage_1_select_chunk_processor(
 
             // TODO! Проверка конфига!!
 
-            stage_2_select_color_accumulator(
+            stage_2_select_color_analyst(
                 settings,
                 shadow_root,
                 geometry_config,
@@ -142,51 +145,81 @@ fn stage_1_select_chunk_processor(
     }
 }
 
-fn stage_2_select_color_accumulator<P>(
+/// 2-я ступень - выбор анализатора цвета в фрагменте
+fn stage_2_select_color_analyst<Processor>(
     settings: Settings,
     shadow_root: FullConfigShadow,
     geometry_config: GeometryConfig,
     screen_config: ScreenConfig,
     capture_thread: &CaptureThread,
-    processor: P,
+    processor: Processor,
 ) where
-    P: ChunkProcessor,
+    Processor: ChunkProcessor,
 {
     match settings.analytics_type {
-        ColorAccumulatorType::ColorHistogram => {
-            let accumulator = ColorHistogram::new();
+        ColorAnalystType::ColorHistogram => {
+            let analyst = ColorHistogram::new();
 
-            stage_3_select_hardware_driver(
+            stage_3_select_filter(
                 settings,
                 shadow_root,
                 geometry_config,
                 screen_config,
                 capture_thread,
                 processor,
-                accumulator,
+                analyst,
             );
         }
     }
 }
 
-fn stage_3_select_hardware_driver<P, A>(
+/// 3-я ступень - выбор фильтра для результирующего цвета
+fn stage_3_select_filter<Processor, Analyst>(
     settings: Settings,
     shadow_root: FullConfigShadow,
     geometry_config: GeometryConfig,
     screen_config: ScreenConfig,
     capture_thread: &CaptureThread,
-    processor: P,
-    accumulator: A,
+    processor: Processor,
+    analyst: Analyst,
 ) where
-    P: ChunkProcessor,
-    A: ColorAccumulator,
+    Processor: ChunkProcessor,
+    Analyst: ColorAnalyst,
 {
-    let color_engine = ColorEngine::new(
-        processor,
-        accumulator,
-        geometry_config.clone(),
-        screen_config,
-    );
+    match settings.filter_type {
+        ColorFilterType::EmaFilter => {
+            let filter = EmaFilter::new(geometry_config.calculate_leds_amount());
+
+            stage_4_select_hardware_driver(
+                settings,
+                shadow_root,
+                geometry_config,
+                screen_config,
+                capture_thread,
+                processor,
+                analyst,
+                filter,
+            );
+        }
+    }
+}
+
+/// 4-я ступень - выбор вывода на устройство
+fn stage_4_select_hardware_driver<Processor, Analyst, Filter>(
+    settings: Settings,
+    shadow_root: FullConfigShadow,
+    geometry_config: GeometryConfig,
+    screen_config: ScreenConfig,
+    capture_thread: &CaptureThread,
+    processor: Processor,
+    analyst: Analyst,
+    filter: Filter,
+) where
+    Processor: ChunkProcessor,
+    Analyst: ColorAnalyst,
+    Filter: ColorFilter,
+{
+    let color_engine = ColorEngine::new(processor, analyst, filter, geometry_config.clone(), screen_config);
 
     match settings.hardware_output_type {
         HardwareOutputType::DebugDriver => {
@@ -214,14 +247,16 @@ fn stage_3_select_hardware_driver<P, A>(
     }
 }
 
-fn run_ambient_loop<P, A, D>(
-    mut color_engine: ColorEngine<P, A>,
-    mut hardware_output: D,
+/// Запуск цикла обработки
+fn run_ambient_loop<Processor, Analyst, Filter, Output>(
+    mut color_engine: ColorEngine<Processor, Analyst, Filter>,
+    mut hardware_output: Output,
     capture_thread: &CaptureThread,
 ) where
-    P: ChunkProcessor,
-    A: ColorAccumulator,
-    D: HardwareOutput,
+    Processor: ChunkProcessor,
+    Analyst: ColorAnalyst,
+    Filter: ColorFilter,
+    Output: HardwareOutput,
 {
     println!("Система запущена!");
 

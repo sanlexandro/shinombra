@@ -1,6 +1,7 @@
 use algorithms::{
     analytics::registry::*,
     processing::{configs::*, registry::*},
+    filters::registry::*,
     units::*,
 };
 use ambient_core::config::Settings;
@@ -30,6 +31,7 @@ include_shadow_all!(
     "./algorithms/src/processing/configs.rs",
     "./algorithms/src/processing/registry.rs",
     "./algorithms/src/analytics/registry.rs",
+    "./algorithms/src/filters/registry.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
     "./hardware_output/src/serial/config.rs"

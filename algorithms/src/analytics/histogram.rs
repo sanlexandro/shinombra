@@ -9,12 +9,14 @@ impl ColorBin {
     ///
     /// Создаёт сектор с 0-ым весом.
     pub fn new() -> Self {
-        Self { weight: 0 }
+        Self { weight: 0, votes: 0, sum_pixel: HSVPixel::black() }
     }
 
     /// Сброс информации о сегменте
     pub fn clear(&mut self) {
         self.weight = 0;
+        self.votes = 0;
+        self.sum_pixel = HSVPixel::black();
     }
 }
 
@@ -59,8 +61,15 @@ impl ColorHistogram {
         // Определяем номер сектора
         let bin_idx = (hsv_pixel.hue / 10.0) as usize; // TODO: считывание размера сектора из конфига
 
-        // Сохраняем голос
-        self.bins[bin_idx].weight += weight;
+        let result_bin = &mut self.bins[bin_idx];
+
+        // Сохраняем голос и сумму по цвету
+        result_bin.weight += weight;
+        result_bin.votes += 1;
+
+        result_bin.sum_pixel.hue += hsv_pixel.hue;
+        result_bin.sum_pixel.saturation += hsv_pixel.saturation;
+        result_bin.sum_pixel.value += hsv_pixel.value;
     }
     /// Определение сектора-победителя
     ///
@@ -89,14 +98,20 @@ impl ColorHistogram {
             };
         }
 
-        // Рассчитываем Hue как центр сектора
-        // Т.к. индекс 0 — это 0-10°, центр будет 5°
-        let hue = (winner_idx as f32 * 10.0) + 5.0; // TODO: считывание размера сектора из конфига
+        let hue = winner_bin.sum_pixel.hue / winner_bin.votes as f32;
+        let saturation = winner_bin.sum_pixel.saturation / winner_bin.votes as f32;
+        let value = winner_bin.sum_pixel.value / winner_bin.votes as f32;
 
-        HSVPixel {
-            hue,
-            saturation: 1.0, // TODO: Усреднение цвета в сегменте
-            value: 255.0,    // TODO: Усреднение цвета в сегменте (пока макс. яркость)
-        }
+        return HSVPixel { hue, saturation, value };
+
+        // // Рассчитываем Hue как центр сектора
+        // // Т.к. индекс 0 — это 0-10°, центр будет 5°
+        // let hue = (winner_idx as f32 * 10.0) + 5.0; // TODO: считывание размера сектора из конфига
+
+        // HSVPixel {
+        //     hue,
+        //     saturation: 1.0, // TODO: Усреднение цвета в сегменте
+        //     value: 255.0,    // TODO: Усреднение цвета в сегменте (пока макс. яркость)
+        // }
     }
 }

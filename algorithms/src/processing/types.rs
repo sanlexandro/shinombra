@@ -1,7 +1,7 @@
 //! Структуры обработки кадра и фрагментов
 //!
 use super::configs::*;
-use crate::{analytics::ColorAccumulator, color::types::RGBPixel, processing::ChunkProcessor};
+use crate::{analytics::ColorAnalyst, color::types::RGBPixel, filters::ColorFilter, processing::ChunkProcessor};
 
 /// Движок обработки кадров
 ///
@@ -11,17 +11,20 @@ use crate::{analytics::ColorAccumulator, color::types::RGBPixel, processing::Chu
 ///
 /// **Поля:**
 /// - `processor`: [ChunkProcessor]     - метод обхода фрагмента
-/// - `accumulator`: [ColorAccumulator] - метод анализа цвета в фрагменте
+/// - `analyst`: [ColorAnalyst]         - метод анализа цвета в фрагменте
+/// - `filter`: [ColorFilter]           - метод фильтрации результатов анализа
 /// - `chunk_map`: [ChunkTask]          - карта фрагментов (рассчитывается при
 ///   инициализации)
 /// - `output_buffer`: [Vec<RGBPixel>]  - вектор с вычисленными результатами
-pub struct ColorEngine<P, A>
+pub struct ColorEngine<Processor, Analyst, Filter>
 where
-    P: ChunkProcessor,
-    A: ColorAccumulator,
+    Processor: ChunkProcessor,
+    Analyst: ColorAnalyst,
+    Filter: ColorFilter,
 {
-    pub(crate) processor: P,
-    pub(crate) accumulator: A, // TODO: сделать вектор гистограмм
+    pub(crate) processor: Processor,
+    pub(crate) analyst: Analyst,
+    pub(crate) filter: Filter,
     pub(crate) chunk_map: Vec<ChunkTask>,
     pub(crate) output_buffer: Vec<RGBPixel>,
 }

@@ -4,17 +4,19 @@ use super::configs::*;
 use super::measures::calculate_mm_to_px_k;
 use super::types::*;
 use super::ChunkProcessor;
-use crate::analytics::ColorAccumulator;
+use crate::analytics::ColorAnalyst;
 use crate::color::conversion::convert_hsv_to_rgb;
 use crate::color::types::RGBPixel;
+use crate::filters::ColorFilter;
 use crate::processing::measures::calculate_px_x_y_to_bytes;
 use crate::units::*;
 
 /// Реализация методов ColorEngine
-impl<P, A> ColorEngine<P, A>
+impl<Processor, Analyst, Filter> ColorEngine<Processor, Analyst, Filter>
 where
-    P: ChunkProcessor,
-    A: ColorAccumulator,
+    Processor: ChunkProcessor,
+    Analyst: ColorAnalyst,
+    Filter: ColorFilter
 {
     /// Конструктор
     ///
@@ -22,21 +24,23 @@ where
     ///
     /// **Аргументы:**
     /// - `processor`: [ChunkProcessor]    - метод обработки фрагмента
-    /// - `accumulator`: [ColorAccumulator]- метод анализа цвета в фрагменте
+    /// - `analyst`: [ColorAnalyst]- метод анализа цвета в фрагменте
     pub fn new(
-        processor: P,
-        accumulator: A,
+        processor: Processor,
+        analyst: Analyst,
+        filter: Filter,
         geometry: GeometryConfig,
         screen_config: ScreenConfig,
     ) -> Self {
         let chunk_map = Self::init_chunk_map(geometry, screen_config);
-        let output_buffer = vec![RGBPixel::default(); chunk_map.len()];
+        let output_buffer = vec![RGBPixel::black(); chunk_map.len()];
 
         // TODO:
         // 1) добавить расчёт размеров фрагмента
         return Self {
             processor,
-            accumulator,
+            analyst,
+            filter,
             chunk_map,
             output_buffer,
         };
@@ -240,16 +244,16 @@ where
         // сохранённое в карте значение
         for (chunk_task, led_color) in self.chunk_map.iter().zip(self.output_buffer.iter_mut()) {
             // Сбрасываем анализ
-            self.accumulator.clear();
+            self.analyst.clear();
 
             // Вызываем обработчик кадра
             self.processor
-                .process_chunk(byte_frame, *chunk_task, &mut self.accumulator);
+                .process_chunk(byte_frame, *chunk_task, &mut self.analyst);
 
             // Сохраняем результат анализа
-            *led_color = convert_hsv_to_rgb(self.accumulator.get_winner());
+            *led_color = convert_hsv_to_rgb(self.analyst.get_winner());
         }
 
-        return &self.output_buffer;
+        return self.filter.apply(&self.output_buffer);
     }
 }

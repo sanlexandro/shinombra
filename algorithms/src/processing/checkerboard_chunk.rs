@@ -7,7 +7,7 @@
 //! но может проигрывать в качестве, если размер сетки был выбран неправильно
 
 use super::types::CheckerboardScanner;
-use crate::analytics::ColorAccumulator;
+use crate::analytics::ColorAnalyst;
 use crate::color::conversion::convert_rgb_to_hsv;
 use crate::color::types::RGBPixel;
 use crate::processing::configs::{CheckerboardConfig, ChunkTask, ScreenConfig};
@@ -57,12 +57,12 @@ impl CheckerboardScanner {
     /// - `byte_frame`: &[[u8]]                  - указатель на кадр (массив
     ///   пикселей)
     /// - `chunk_task`: [ChunkTask]              - "задание" фрагмента
-    /// - `accumulator`: &mut [ColorAccumulator] - метод анализа цвета
-    pub fn process_checkerboard_chunk<A: ColorAccumulator>(
+    /// - `analyst`: &mut [ColorAnalyst] - метод анализа цвета
+    pub fn process_checkerboard_chunk<Analyst: ColorAnalyst>(
         &self,
         byte_frame: &[u8],
         chunk_task: ChunkTask,
-        accumulator: &mut A,
+        analyst: &mut Analyst,
     ) {
         // Определяем реальный размер строки в байтах
         let row_width = self.screen_config.frame_width_px.0 * 4;
@@ -104,7 +104,7 @@ impl CheckerboardScanner {
                 let hsv = convert_rgb_to_hsv(rgb);
 
                 // Проводим голосование
-                accumulator.add_data(hsv);
+                analyst.add_data(hsv);
             }
         }
     }
