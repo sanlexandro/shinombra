@@ -13,10 +13,6 @@ ffi = { path = "../ffi" }
 hardware_output = { path = "../hardware_output" }
 config-gen = {path = "../infra/config-gen"} 
 
-[lib]
-name = "ambient_core"
-path = "src/lib.rs"
-
 [[bin]]
 name = "ambient-lighting"
 path = "src/main.rs"
