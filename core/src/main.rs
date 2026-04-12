@@ -14,7 +14,7 @@ use hardware_output::{
     HardwareOutput,
 };
 use std::{sync::atomic::{AtomicBool, Ordering}};
-use threads::screen_capture::screen_capture::CaptureThread;
+use threads::{hardware_output::hardware_output::HardwareOutputThread, screen_capture::screen_capture::CaptureThread};
 
 include_shadow_all!(
     "./algorithms/src/units.rs",
@@ -220,6 +220,7 @@ fn stage_4_select_hardware_driver<Processor, Analyst, Filter>(
     Filter: ColorFilter,
 {
     let color_engine = ColorEngine::new(processor, analyst, filter, geometry_config.clone(), screen_config);
+    let led_amount = geometry_config.calculate_leds_amount();
 
     match settings.hardware_output_type {
         HardwareOutputType::DebugDriver => {
@@ -229,7 +230,7 @@ fn stage_4_select_hardware_driver<Processor, Analyst, Filter>(
             );
 
             // Уже проверенный конфиг
-            run_ambient_loop(color_engine, hardware_output, capture_thread);
+            run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
         }
 
         HardwareOutputType::SerialDriver => {
@@ -242,7 +243,7 @@ fn stage_4_select_hardware_driver<Processor, Analyst, Filter>(
             // Проверка уже содержится в открытии порта
             let hardware_output = SerialDriver::new(serial_driver_config);
 
-            run_ambient_loop(color_engine, hardware_output, capture_thread);
+            run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
         }
     }
 }
@@ -250,25 +251,33 @@ fn stage_4_select_hardware_driver<Processor, Analyst, Filter>(
 /// Запуск цикла обработки
 fn run_ambient_loop<Processor, Analyst, Filter, Output>(
     mut color_engine: ColorEngine<Processor, Analyst, Filter>,
-    mut hardware_output: Output,
+    hardware_output: Output,
+    led_amount: usize,
     capture_thread: &CaptureThread,
 ) where
-    Processor: ChunkProcessor,
-    Analyst: ColorAnalyst,
-    Filter: ColorFilter,
-    Output: HardwareOutput,
+Processor: ChunkProcessor,
+Analyst: ColorAnalyst,
+Filter: ColorFilter,
+Output: HardwareOutput + Send + 'static,
 {
+    let mut hardware_output_ctx = HardwareOutputThread::new(hardware_output, led_amount);
+
     println!("Система запущена!");
 
     while KEEP_RUNNING.load(Ordering::Relaxed) {
+        // Запрашиваем кадр
         capture_thread.request_frame(|data| {
-            // Теперь data — это безопасный &[u8]
-            // Получаем указатель на вектор цветов
-            let colors = color_engine.process_frame(data);
-
-            hardware_output.send_colors(colors);
+            // Быстро читаем и анализируем
+            color_engine.process_frame(data);
         });
+
+        // Применяем фильтры
+        let colors = color_engine.apply_filters();
+
+        // Отправляем на устройство
+        hardware_output_ctx.update_colors(colors);
     }
 
+    hardware_output_ctx.stop();
     println!("Цикл обработки завершен.");
 }

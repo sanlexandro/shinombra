@@ -236,10 +236,7 @@ where
     ///
     /// **Аргументы:**
     /// - `byte_frame`: &[[u8]] - указатель на кадр (массив пикселей)
-    ///
-    /// **Выходные поля:**
-    /// - &[[RGBPixel]] - указатель на вычисленный массив цветов
-    pub fn process_frame(&mut self, byte_frame: &[u8]) -> &[RGBPixel] {
+    pub fn process_frame(&mut self, byte_frame: &[u8]) {
         // Обрабатываем каждый фрагмент, используя предоставленный метод и
         // сохранённое в карте значение
         for (chunk_task, led_color) in self.chunk_map.iter().zip(self.output_buffer.iter_mut()) {
@@ -253,7 +250,15 @@ where
             // Сохраняем результат анализа
             *led_color = convert_hsv_to_rgb(self.analyst.get_winner());
         }
-
+    }
+    
+    /// Применить фильтры
+    /// 
+    /// Данный метод необходим, чтобы применить фильтры к проанализированному фрагменту
+    /// 
+    /// **Выходные поля:**
+    /// - &[[RGBPixel]] - указатель на вычисленный массив цветов
+    pub fn apply_filters(&mut self)  -> &[RGBPixel] {
         return self.filter.apply(&self.output_buffer);
     }
 }

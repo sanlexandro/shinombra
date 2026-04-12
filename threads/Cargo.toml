@@ -8,9 +8,11 @@ cc = "1"
 pkg-config = "0.3"
 
 [dependencies]
+algorithms = { path = "../algorithms" }
+hardware_output = { path = "../hardware_output" }
+
 tokio = { version = "1", features = ["full"] }
 ffi = { path = "../ffi" }
-algorithms = { path = "../algorithms" }
 
 [lib]
 name = "threads"

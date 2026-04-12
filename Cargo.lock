@@ -1612,6 +1612,7 @@ dependencies = [
  "algorithms",
  "cc",
  "ffi",
+ "hardware_output",
  "pkg-config",
  "tokio",
 ]

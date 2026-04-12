@@ -1,0 +1,139 @@
+//! Поток, необходимый для отправки данных на устройство
+//!
+//! Работает по принципу почтового ящика (mailbox)
+//! Копирует предоставленный массив в локальный буфер через atomic операцию, а
+//! затем отправляет буфер на устройство
+
+use algorithms::color::types::RGBPixel;
+use hardware_output::HardwareOutput;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Condvar, Mutex,
+};
+use std::thread;
+
+/// Поток отправки данных на устройство
+///
+/// Полностью инкапсулирует логику работы с потоком отправки
+pub struct HardwareOutputThread {
+    mailbox: Arc<(Mutex<(Vec<RGBPixel>, bool)>, Condvar)>,
+    keep_running: Arc<AtomicBool>,
+    handle: Option<thread::JoinHandle<()>>,
+}
+
+/// Реализация методов [HardwareOutputThread]
+impl HardwareOutputThread {
+    /// Конструктор
+    ///
+    /// Создаёт поток и контроллер потока
+    ///
+    /// **Поля:**
+    /// - `output`: [HardwareOutput] - готовый метод отправки данных
+    /// - `buffer_size`: [usize]     - размер буфера (обычно - количество светодиодов)
+    ///
+    /// **Выходные поля:**
+    /// - [HardwareOutputThread] - готовый контроллер потока
+    pub fn new<Output>(output: Output, buffer_size: usize) -> HardwareOutputThread
+    where
+        Output: HardwareOutput + Send + 'static,
+    {
+        // Создаем связку (Данные, Флаг Обновления) + Condvar
+        let mailbox = Arc::new((
+            Mutex::new((vec![RGBPixel::black(); buffer_size], false)),
+            Condvar::new(),
+        ));
+        let keep_running = Arc::new(AtomicBool::new(true));
+
+        let worker = HardwareOutputWorker {
+            output,
+            buffer: vec![RGBPixel::black(); buffer_size],
+            mailbox: Arc::clone(&mailbox),
+            keep_running: Arc::clone(&keep_running),
+        };
+
+        // Отрываем от главного потока
+        let handle = thread::spawn(move || {
+            worker.run();
+        });
+
+        // Возвращаем наружу красивый Контроллер
+        HardwareOutputThread {
+            mailbox,
+            keep_running,
+            handle: Some(handle),
+        }
+    }
+
+    /// Обновить цвета в буфере
+    ///
+    /// Данный метод пробует перехватить `lock`, чтобы записать данные в
+    /// локальный буфер работника. При неудаче отпускает, а при успехе "будит" поток-работник.
+    ///
+    /// **Поля:**
+    /// -  `colors`: &[[RGBPixel]] - указатель на массив цветов для отправки
+    pub fn update_colors(&self, colors: &[RGBPixel]) {
+        let (lock, cvar) = &*self.mailbox;
+        if let Ok(mut state) = lock.try_lock() {
+            state.0.copy_from_slice(colors);
+            state.1 = true; // Указываем, что появились новые данные
+            cvar.notify_one(); // Будим поток отправки
+        }
+    }
+
+    /// Остановка потока
+    /// 
+    /// Данный метод мягко останавливает поток, позволяя работнику отправить
+    /// последнее сообщение
+    pub fn stop(&mut self) {
+        self.keep_running.store(false, Ordering::Relaxed);
+        let (_, cvar) = &*self.mailbox;
+        cvar.notify_all(); // Будим поток-работник, если он спал, чтобы он мог выйти
+
+        // Ждём пока работник всё дошлёт и мягко завершаем
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
+    }
+}
+
+/// "Работник" потока отправки
+struct HardwareOutputWorker<Output: HardwareOutput> {
+    output: Output,
+    buffer: Vec<RGBPixel>,
+    mailbox: Arc<(Mutex<(Vec<RGBPixel>, bool)>, Condvar)>,
+    keep_running: Arc<AtomicBool>,
+}
+
+impl<Output: HardwareOutput + Send + 'static> HardwareOutputWorker<Output> {
+    /// Основная ф-я отправки данных
+    ///
+    /// Работает по следующей инструкции пока `keep_running = true` :
+    /// 1) заснуть до появления новых данных
+    /// 2) захватить `lock` и скопировать буфер
+    /// 3) сбросить флаг и отпустить мьютекс
+    /// 4) отправить данные на устройство
+    fn run(mut self) {
+        while self.keep_running.load(Ordering::Relaxed) {
+            {
+                let (lock, cvar) = &*self.mailbox;
+                let mut state = lock.lock().unwrap();
+
+                // Спим в ожидании момента, когда появятся новые данные (flag == true)
+                // ИЛИ когда придет команда на остановку потока
+                while !state.1 && self.keep_running.load(Ordering::Relaxed) {
+                    state = cvar.wait(state).unwrap();
+                }
+
+                // Проверяем, не разбудили ли нас ради остановки программы
+                if !self.keep_running.load(Ordering::Relaxed) {
+                    break;
+                }
+
+                self.buffer.clone_from_slice(&state.0);
+                state.1 = false; // Сбрасываем флаг, говоря "я забрал эти данные"
+            }
+            // Отправляем данные, при этом мьютекс уже отпущен
+            self.output.send_colors(&self.buffer);
+        }
+    }
+}
