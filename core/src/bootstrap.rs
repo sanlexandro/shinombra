@@ -224,6 +224,10 @@ impl ConfigLoader {
         let led_amount = self.geometry_config.calculate_leds_amount();
         let hardware_output_type = self.settings.hardware_output_type;
 
+        // Извлекаем нужные параметры из geometry_config до того, как он "уедет" в color_engine
+        let hor_amount = self.geometry_config.led_pos.horizontal_led_amount;
+        let ver_amount = self.geometry_config.led_pos.vertical_led_amount;
+
         // Мы передаём владение geometry_config и screen_config в движок
         let color_engine = ColorEngine::new(
             processor,
@@ -235,27 +239,9 @@ impl ConfigLoader {
 
         match hardware_output_type {
             HardwareOutputType::DebugDriver => {
-                // Если мы дошли сюда, нужно откуда-то достать инфу для создания драйвера.
-                // Поскольку мы отдали geometry_config, лучше вычислить размеры ДО передачи,
-                // Либо использовать цветной движок для получения параметров (что даже архитектурно правильнее)
-                // Но мы просто воспользуемся shadow_root перед тем как он умрет.
-
-                let hor_amount = self
-                    .shadow_root
-                    .led_position_config
-                    .as_ref()
-                    .unwrap()
-                    .horizontal_led_amount;
-                let ver_amount = self
-                    .shadow_root
-                    .led_position_config
-                    .as_ref()
-                    .unwrap()
-                    .vertical_led_amount;
-
                 let hardware_output = DebugDriver::new(hor_amount, ver_amount);
 
-                // В этот момент drop(self) уничтожает остатки: shadow_root, settings и т.д.
+                // Оставшиеся лишние данные будут уничтожены при выходе из этой функции
                 run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
             }
 
