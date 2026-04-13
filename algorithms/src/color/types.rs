@@ -1,7 +1,7 @@
 //! Структуры хранения цвета
 
 /// Пиксель в формате HSV *(Hue Saturation Value)*
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HSVPixel {
     pub hue: f32,
     pub saturation: f32,
@@ -9,7 +9,7 @@ pub struct HSVPixel {
 }
 
 /// Пиксель в формате RBG *(Red Green Blue)*
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct RGBPixel {
     pub red: u8,
     pub green: u8,

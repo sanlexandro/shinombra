@@ -111,7 +111,12 @@ impl ColorHistogram {
         // HSVPixel {
         //     hue,
         //     saturation: 1.0, // TODO: Усреднение цвета в сегменте
-        //     value: 255.0,    // TODO: Усреднение цвета в сегменте (пока макс. яркость)
         // }
+    }
+
+    /// Доступ к сегментам (только для тестов)
+    #[cfg(test)]
+    pub fn get_bins(&self) -> &[ColorBin; 37] {
+        &self.bins
     }
 }
