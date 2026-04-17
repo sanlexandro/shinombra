@@ -9,7 +9,11 @@ impl ColorBin {
     ///
     /// Создаёт сектор с 0-ым весом.
     pub fn new() -> Self {
-        Self { weight: 0, votes: 0, sum_pixel: HSVPixel::black() }
+        Self {
+            weight: 0,
+            votes: 0,
+            sum_pixel: HSVPixel::black(),
+        }
     }
 
     /// Сброс информации о сегменте
@@ -49,28 +53,41 @@ impl ColorHistogram {
     /// - `hsv_pixel`:[HSVPixel]   - голосующий HSV-пиксель
     pub fn process_vote(&mut self, hsv_pixel: HSVPixel) {
         // Вычисляем вес как произведение яркости и насыщенности
-        let weight = (hsv_pixel.value * hsv_pixel.saturation) as u64;
+        let color_weight = (hsv_pixel.value * hsv_pixel.saturation * 100.0) as u64;
 
-        // Если вес слишком низкий, значит цвет близок к чёрному / белому
-        if weight < 10 {
-            // TODO: Считывание кол-ва сегментов из конфига
-            self.bins[36].weight += weight + 1; // чтобы чёрный / белый всегда голосовал
+        // Если насыщенность слишком низкая,
+        // пиксель идет в «бесцветный» сектор (36)
+        if hsv_pixel.saturation < 0.15 {
+            // TODO: получение кол-ва сегментов из конфига
+            let bin = &mut self.bins[36];
+
+            // Вес для белого тем выше, чем выше яркость
+            bin.weight += (hsv_pixel.value * 100.0) as u64;
+            bin.votes += 1;
+
+            // Накапливаем значения (hue тут не важен, но для единообразия пишем всё)
+            bin.sum_pixel.hue += hsv_pixel.hue;
+            bin.sum_pixel.saturation += hsv_pixel.saturation;
+            bin.sum_pixel.value += hsv_pixel.value;
             return;
         }
 
-        // Определяем номер сектора
-        let bin_idx = (hsv_pixel.hue / 10.0) as usize; // TODO: считывание размера сектора из конфига
+        // Если пиксель цветной, определяем его сектор
+        let bin_idx = (hsv_pixel.hue / 10.0) as usize;
+        if bin_idx >= 36 {
+            return;
+        } // Защита от выхода за границы (360.0 / 10.0)
 
         let result_bin = &mut self.bins[bin_idx];
 
-        // Сохраняем голос и сумму по цвету
-        result_bin.weight += weight;
+        result_bin.weight += color_weight;
         result_bin.votes += 1;
 
         result_bin.sum_pixel.hue += hsv_pixel.hue;
         result_bin.sum_pixel.saturation += hsv_pixel.saturation;
         result_bin.sum_pixel.value += hsv_pixel.value;
     }
+
     /// Определение сектора-победителя
     ///
     /// Находит сектор с бОльшим количеством
@@ -81,7 +98,7 @@ impl ColorHistogram {
     /// **Выходные данные:**
     /// - `HSVPixel` - пиксель-победитель в HSV формате
     pub fn determining_winner(&mut self) -> HSVPixel {
-        // Находим индекс сектора с максимальным весом
+        // Ищем сектор с максимальным весом
         let (winner_idx, winner_bin) = self
             .bins
             .iter()
@@ -89,29 +106,37 @@ impl ColorHistogram {
             .max_by_key(|(_, bin)| bin.weight)
             .expect("bins must not be empty");
 
-        // Если голосов вообще нет или победил "черный" (36-й индекс)
-        if winner_idx == 36 || winner_bin.weight == 0 {
+        // Если веса вообще нет — выключаем ленту
+        if winner_bin.weight == 0 {
+            return HSVPixel::black();
+        }
+
+        // Вычисляем среднее значение
+        let votes = winner_bin.votes as f32;
+        let avg_hue = winner_bin.sum_pixel.hue / votes;
+        let avg_sat = winner_bin.sum_pixel.saturation / votes;
+        let avg_val = winner_bin.sum_pixel.value / votes;
+
+        // Если победил сектор 36 (ахроматический)
+        if winner_idx == 36 {
+            // Если яркость совсем низкая — возвращаем черный
+            if avg_val < 0.05 {
+                return HSVPixel::black();
+            }
+            // Если яркость есть — это белый/серый (saturation 0)
             return HSVPixel {
                 hue: 0.0,
                 saturation: 0.0,
-                value: 0.0,
+                value: avg_val,
             };
         }
 
-        let hue = winner_bin.sum_pixel.hue / winner_bin.votes as f32;
-        let saturation = winner_bin.sum_pixel.saturation / winner_bin.votes as f32;
-        let value = winner_bin.sum_pixel.value / winner_bin.votes as f32;
-
-        return HSVPixel { hue, saturation, value };
-
-        // // Рассчитываем Hue как центр сектора
-        // // Т.к. индекс 0 — это 0-10°, центр будет 5°
-        // let hue = (winner_idx as f32 * 10.0) + 5.0; // TODO: считывание размера сектора из конфига
-
-        // HSVPixel {
-        //     hue,
-        //     saturation: 1.0, // TODO: Усреднение цвета в сегменте
-        // }
+        // Для обычных секторов возвращаем честное усредненное значение
+        HSVPixel {
+            hue: avg_hue,
+            saturation: avg_sat,
+            value: avg_val,
+        }
     }
 
     /// Доступ к сегментам (только для тестов)
