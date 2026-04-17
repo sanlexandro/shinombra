@@ -38,7 +38,7 @@ impl ColorFilter for EmaFilter {
 /// Реализация трейта [ColorFilter] для [NoFilter]
 impl ColorFilter for NoFilter {
     fn apply(&mut self, raw_colors: &[RGBPixel]) -> &[RGBPixel] {
-        &self.states.clone_from_slice(raw_colors);
+        self.states.clone_from_slice(raw_colors);
 
         &self.states
     }
