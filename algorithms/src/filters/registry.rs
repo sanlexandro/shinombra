@@ -2,5 +2,6 @@
 
 #[derive(Debug)]
 pub enum ColorFilterType {
+    NoFilter,
     EmaFilter,
 }

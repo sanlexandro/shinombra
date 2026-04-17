@@ -75,11 +75,13 @@ impl ConfigLoader {
         )
         else {
             // В случае ошибки прерываем выполнение кода
-            panic!("Проверьте секции: 
+            panic!(
+                "Проверьте секции: 
                     \n    [settings]; 
                     \n    [screen_reading_config]; 
                     \n    [screen_config];
-                    \n    [led_position_config]");
+                    \n    [led_position_config]"
+            );
         };
 
         // При успехе преобразуем
@@ -194,6 +196,11 @@ impl ConfigLoader {
         Analyst: ColorAnalyst,
     {
         match self.settings.filter_type {
+            ColorFilterType::NoFilter => {
+                let filter = NoFilter::new(self.geometry_config.calculate_leds_amount());
+                self.stage_4_select_hardware_driver(capture_thread, processor, analyst, filter);
+            }
+
             ColorFilterType::EmaFilter => {
                 let filter = EmaFilter::new(self.geometry_config.calculate_leds_amount());
                 self.stage_4_select_hardware_driver(capture_thread, processor, analyst, filter);

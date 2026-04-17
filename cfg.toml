@@ -1,8 +1,8 @@
 [settings]
 chunk_processor_type = "Checkerboard"
 analytics_type = "ColorHistogram"
-filter_type = "EmaFilter"
-hardware_output_type = "SerialDriver"
+filter_type = "NoFilter"
+hardware_output_type = "DebugDriver"
 
 [screen_reading_config]
 deep_in = 20
