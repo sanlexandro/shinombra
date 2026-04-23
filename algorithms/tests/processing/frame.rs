@@ -304,11 +304,10 @@ fn test_process_frame() {
 /// буфера из памяти класса.
 #[test]
 fn test_apply_filters() {
-    let dummy_out = vec![RGBPixel {
-        red: 10,
-        green: 20,
-        blue: 30,
-    }];
+    let dummy_out = vec![
+        RGBPixel { red: 10, green: 20, blue: 30 },
+        RGBPixel { red: 40, green: 50, blue: 60 },
+    ];
 
     let filter = MockColorFilter {
         dummy_buffer: dummy_out.clone(),
@@ -318,7 +317,7 @@ fn test_apply_filters() {
     let screen = ScreenConfig::default();
     let geometry = GeometryConfig {
         led_pos: LedPositionConfig {
-            horizontal_led_amount: 0,
+            horizontal_led_amount: 1,
             vertical_led_amount: 0,
             ..Default::default()
         },
@@ -333,10 +332,16 @@ fn test_apply_filters() {
         screen,
     );
 
+    // Заполняем внутренний буфер ColorEngine
+    let dummy_frame: [u8; 1] = [0];
+    engine.process_frame(&dummy_frame);
+
     let result = engine.apply_filters();
 
     assert_eq!(result.len(), dummy_out.len());
-    assert_eq!(result[0].red, dummy_out[0].red);
-    assert_eq!(result[0].green, dummy_out[0].green);
-    assert_eq!(result[0].blue, dummy_out[0].blue);
+    for (i, color) in result.iter().enumerate() {
+        assert_eq!(color.red, dummy_out[i].red);
+        assert_eq!(color.green, dummy_out[i].green);
+        assert_eq!(color.blue, dummy_out[i].blue);
+    }
 }
