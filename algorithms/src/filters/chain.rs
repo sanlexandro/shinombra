@@ -28,18 +28,11 @@ impl FilterChain {
     /// Запуск цепи фильтров
     /// 
     /// **Поля:**
-    /// - `raw_colors`: &[[RGBPixel]] - массив новых цветов для подсчёта
-    ///
-    /// **Выходные данные:**
-    /// - ?[RGBPixel] - массив фильтрованных цветов в формате RGB
-    pub fn run_chain<'a>(&'a mut self, raw_colors: &'a [RGBPixel]) -> &'a [RGBPixel] {
-        let mut current_colors = raw_colors;
-
+    /// - `raw_colors`: & mut [[RGBPixel]] - массив новых цветов для подсчёта
+    pub fn run_chain(&mut self, raw_colors: & mut [RGBPixel]) {
         // Последовательно пропускаем данные через каждый фильтр в цепочке
         for filter in self.filters.iter_mut() {
-            current_colors = filter.apply(current_colors);
+            filter.apply(raw_colors);
         }
-
-        return current_colors;
     }
 }

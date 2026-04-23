@@ -25,11 +25,8 @@ impl EmaFilter {
     /// Пересчёт нового среднего
     ///
     /// **Поля:**
-    /// - `raw_colors`: &[[RGBPixel]] - массив новых цветов для подсчёта
-    ///
-    /// **Выходные данные:**
-    /// - ?[RGBPixel] - массив фильтрованных цветов в формате RGB
-    pub fn process_ema<'a>(&'a mut self, raw_colors: &'a [RGBPixel]) -> &'a [RGBPixel] {
+    /// - `raw_colors`: & mut [[RGBPixel]] - массив новых цветов для подсчёта
+    pub fn process_ema(& mut self, raw_colors: & mut [RGBPixel]) {
         // Небольшая функция-помощник для правильного округления шага.
         // Она гарантирует, что шаг всегда будет минимум 1 (или -1),
         // пока разница не станет равна 0.
@@ -43,13 +40,15 @@ impl EmaFilter {
             }
         }
 
-        for (state, raw) in self.states.iter_mut().zip(raw_colors.iter()) {
+        for (state, raw) in self.states.iter_mut().zip(raw_colors.iter_mut()) {
             state.red = (state.red as i16 + calc_step(raw.red as i16 - state.red as i16)) as u8;
             state.green =
                 (state.green as i16 + calc_step(raw.green as i16 - state.green as i16)) as u8;
             state.blue = (state.blue as i16 + calc_step(raw.blue as i16 - state.blue as i16)) as u8;
-        }
 
-        return &self.states;
+            raw.red = state.red;
+            raw.blue = state.blue;
+            raw.green = state.green;
+        }
     }
 }

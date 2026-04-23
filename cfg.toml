@@ -1,7 +1,7 @@
 [settings]
 chunk_processor_type = "Checkerboard"
 analytics_type = "ColorHistogram"
-filter_chain = ["NoFilter", "EmaFilter"]
+filter_chain = ["EmaFilter", "GammaFilter"]
 hardware_output_type = "SerialDriver"
 
 [screen_reading_config]
@@ -21,8 +21,8 @@ frame_width_mm = 345
 frame_height_mm = 195
 
 [checkerboard_config]
-pixel_step = 5
-row_stride = 3
+pixel_step = 10
+row_stride = 5
 
 [serial_driver_config]
 port_path = "/dev/ttyUSB0"

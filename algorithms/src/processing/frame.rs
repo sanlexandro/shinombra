@@ -259,6 +259,10 @@ where
     /// **Выходные поля:**
     /// - &[[RGBPixel]] - указатель на вычисленный массив цветов
     pub fn apply_filters(&mut self)  -> &[RGBPixel] {
-        return self.filter.apply(&self.output_buffer);
+        // Применяем фильтр
+        self.filter.apply(self.output_buffer.as_mut_slice());
+
+        // Возвращаем значение
+        return &self.output_buffer;
     }
 }

@@ -83,14 +83,15 @@ struct MockColorFilter {
 }
 
 impl ColorFilter for MockColorFilter {
-    fn apply(&mut self, raw_colors: &[RGBPixel]) -> &[RGBPixel] {
+    fn apply(&mut self, raw_colors: &mut [RGBPixel]) {
         *self.last_supplied_colors.borrow_mut() = raw_colors.to_vec();
-
         if self.dummy_buffer.is_empty() {
             self.dummy_buffer = raw_colors.to_vec();
         }
-
-        &self.dummy_buffer
+        // Копируем dummy_buffer в raw_colors, чтобы имитировать фильтрацию
+        for (dst, src) in raw_colors.iter_mut().zip(self.dummy_buffer.iter()) {
+            *dst = *src;
+        }
     }
 }
 

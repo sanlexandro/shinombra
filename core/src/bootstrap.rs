@@ -215,6 +215,12 @@ impl ConfigLoader {
                     let filter = EmaFilter::new(self.geometry_config.calculate_leds_amount());
                     FilterInstance::Ema(filter)
                 }
+
+                ColorFilterType::GammaFilter => {
+                    // TODO: считывание коэффициента из конфигурации
+                    let filter = GammaFilter::new(2.2);
+                    FilterInstance::Gamma(filter)
+                }
             };
 
             filter_chain.add_filter(instance);

@@ -19,22 +19,17 @@ use algorithms::{color::types::RGBPixel, filters::types::EmaFilter};
 #[test]
 fn test_no_changes() {
     let cases = vec![
-        // (fixed_color)
-        (RGBPixel::black()), // Чёрный цвет
-        (RGBPixel {
-            red: 255,
-            green: 255,
-            blue: 255,
-        }), // Белый цвет
+        RGBPixel::black(),
+        RGBPixel { red: 255, green: 255, blue: 255 },
     ];
 
     for fixed_color in cases {
-        let color_vec = vec![fixed_color.clone(); 1];
+        let mut color_vec = vec![fixed_color.clone(); 1];
         let mut filter = EmaFilter::new_with_state(color_vec.clone());
 
         for _ in 0..10 {
-            let got_color = filter.process_ema(&color_vec);
-            assert_eq!(fixed_color, got_color[0]);
+            filter.process_ema(color_vec.as_mut_slice());
+            assert_eq!(fixed_color, color_vec[0]);
         }
     }
 }
@@ -57,21 +52,13 @@ fn test_sudden_change() {
         // От чёрного к белому
         (
             RGBPixel::black(),
-            RGBPixel {
-                red: 255,
-                green: 255,
-                blue: 255,
-            },
+            RGBPixel { red: 255, green: 255, blue: 255 },
             50,
             true,
         ),
         // От белого к чёрному
         (
-            RGBPixel {
-                red: 255,
-                green: 255,
-                blue: 255,
-            },
+            RGBPixel { red: 255, green: 255, blue: 255 },
             RGBPixel::black(),
             50,
             false,
@@ -80,7 +67,7 @@ fn test_sudden_change() {
 
     for (initial, target, max_steps, is_increasing) in cases {
         let initial_vec = vec![initial.clone(); 1];
-        let target_vec = vec![target.clone(); 1];
+        let mut target_vec = vec![target.clone(); 1];
 
         let mut filter = EmaFilter::new_with_state(initial_vec.clone());
 
@@ -88,25 +75,24 @@ fn test_sudden_change() {
         let mut buffer = initial_vec.clone();
 
         while counter < 100 {
-            // Условное большое число (лимит цикла)
-            let got = filter.process_ema(&target_vec);
+            filter.process_ema(target_vec.as_mut_slice());
 
-            if got[0] == target_vec[0] {
+            if target_vec[0] == buffer[0] {
                 break;
             }
 
             if is_increasing {
-                assert_bigger(got[0].red, buffer[0].red);
-                assert_bigger(got[0].green, buffer[0].green);
-                assert_bigger(got[0].blue, buffer[0].blue);
+                assert_bigger(target_vec[0].red, buffer[0].red);
+                assert_bigger(target_vec[0].green, buffer[0].green);
+                assert_bigger(target_vec[0].blue, buffer[0].blue);
             } else {
-                assert_smaller(got[0].red, buffer[0].red);
-                assert_smaller(got[0].green, buffer[0].green);
-                assert_smaller(got[0].blue, buffer[0].blue);
+                assert_smaller(target_vec[0].red, buffer[0].red);
+                assert_smaller(target_vec[0].green, buffer[0].green);
+                assert_smaller(target_vec[0].blue, buffer[0].blue);
             }
 
             counter += 1;
-            buffer = got.to_vec();
+            buffer = target_vec.clone();
         }
 
         assert_smaller(counter, max_steps);
@@ -123,34 +109,21 @@ fn test_sudden_change() {
 #[test]
 fn test_multiple_pixels_independence() {
     let cases = vec![
-        // (colors)
         vec![
-            RGBPixel {
-                red: 255,
-                green: 0,
-                blue: 0,
-            }, // Красный
-            RGBPixel {
-                red: 0,
-                green: 255,
-                blue: 0,
-            }, // Зелёный
-            RGBPixel {
-                red: 0,
-                green: 0,
-                blue: 255,
-            }, // Синий
+            RGBPixel { red: 255, green: 0, blue: 0 },
+            RGBPixel { red: 0, green: 255, blue: 0 },
+            RGBPixel { red: 0, green: 0, blue: 255 },
         ],
     ];
 
-    for colors in cases {
+    for mut colors in cases {
+        let previous_colors = colors.clone();
         let mut filter = EmaFilter::new_with_state(colors.clone());
 
         for _ in 0..10 {
-            let got_colors = filter.process_ema(&colors);
-
+            filter.process_ema(colors.as_mut_slice());
             for i in 0..colors.len() {
-                assert_eq!(got_colors[i], colors[i]);
+                assert_eq!(previous_colors[i], colors[i]);
             }
         }
     }

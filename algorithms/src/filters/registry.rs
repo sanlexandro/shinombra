@@ -4,4 +4,5 @@
 pub enum ColorFilterType {
     NoFilter,
     EmaFilter,
+    GammaFilter,
 }
