@@ -29,7 +29,7 @@ impl EmaFilter {
     ///
     /// **Выходные данные:**
     /// - ?[RGBPixel] - массив фильтрованных цветов в формате RGB
-    pub fn process_ema(&mut self, raw_colors: &[RGBPixel]) -> &[RGBPixel] {
+    pub fn process_ema<'a>(&'a mut self, raw_colors: &'a [RGBPixel]) -> &'a [RGBPixel] {
         // Небольшая функция-помощник для правильного округления шага.
         // Она гарантирует, что шаг всегда будет минимум 1 (или -1),
         // пока разница не станет равна 0.

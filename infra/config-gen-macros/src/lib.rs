@@ -6,7 +6,7 @@ use syn::{parse::Parse, parse::ParseStream, parse_macro_input, File, Item, LitSt
 
 // TODO! Комментарии к коду!
 
-#[proc_macro] // Обрати внимание: это просто proc_macro, не attribute
+#[proc_macro]
 pub fn include_shadow(input: TokenStream) -> TokenStream {
     // 1. Получаем путь из макроса include_shadow!("path/to/file.rs")
     let path_lit = parse_macro_input!(input as LitStr);
@@ -131,14 +131,35 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
     // Вспомогательная функция для трансформации типов на лету
     let transform_ty = |ty: &syn::Type| -> syn::Type {
         let mut new_ty = ty.clone();
-        if let syn::Type::Path(ref mut tp) = new_ty {
-            if let Some(last_segment) = tp.path.segments.last_mut() {
-                let ident_str = last_segment.ident.to_string();
-                if all_struct_names.contains(&ident_str) {
-                    last_segment.ident = quote::format_ident!("{}Shadow", last_segment.ident);
+
+        fn walk_type(ty: &mut syn::Type, names: &HashSet<String>) {
+            match ty {
+                syn::Type::Path(ref mut tp) => {
+                    // 1. Проверяем сам тип (например, ColorFilterType -> ColorFilterTypeShadow)
+                    if let Some(last_segment) = tp.path.segments.last_mut() {
+                        let ident_str = last_segment.ident.to_string();
+                        if names.contains(&ident_str) {
+                            last_segment.ident =
+                                quote::format_ident!("{}Shadow", last_segment.ident);
+                        }
+
+                        // 2. РЕКУРСИЯ: Проверяем generic-аргументы (например, Vec<ColorFilterType>)
+                        if let syn::PathArguments::AngleBracketed(ref mut args) =
+                            last_segment.arguments
+                        {
+                            for arg in args.args.iter_mut() {
+                                if let syn::GenericArgument::Type(ref mut inner_ty) = arg {
+                                    walk_type(inner_ty, names);
+                                }
+                            }
+                        }
+                    }
                 }
+                _ => {}
             }
         }
+
+        walk_type(&mut new_ty, &all_struct_names);
         new_ty
     };
 
@@ -189,22 +210,38 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                         syn::Fields::Unit => quote! { ; },
                     };
 
+                    // Вспомогательная функция для генерации конвертации поля
+                    let gen_conversion = |field_tokens: proc_macro2::TokenStream,
+                                          ty: &syn::Type| {
+                        if let syn::Type::Path(tp) = ty {
+                            if let Some(seg) = tp.path.segments.last() {
+                                if seg.ident == "Vec" {
+                                    // Если это Vec, конвертируем каждый элемент
+                                    return quote! { #field_tokens.into_iter().map(|v| v.into()).collect() };
+                                }
+                            }
+                        }
+                        // Для обычных типов оставляем как было
+                        quote! { #field_tokens.into() }
+                    };
+
                     // Генерируем From с .into() для рекурсии
                     let from_body = match &s.fields {
                         syn::Fields::Named(f) => {
                             let mapping = f.named.iter().map(|field| {
                                 let f_name = &field.ident;
-                                quote! { #f_name: shadow.#f_name.into() }
+                                let conv = gen_conversion(quote!(shadow.#f_name), &field.ty);
+                                quote! { #f_name: #conv }
                             });
                             quote! { Self { #( #mapping, )* } }
                         }
                         syn::Fields::Unnamed(f) => {
-                            let mapping = (0..f.unnamed.len()).map(|i| {
+                            let mapping = f.unnamed.iter().enumerate().map(|(i, field)| {
                                 let idx = syn::Index::from(i);
-                                quote! { shadow.#idx.into() }
+                                let conv = gen_conversion(quote!(shadow.#idx), &field.ty);
+                                quote! { #conv }
                             });
-                            quote! { Self ( #( #mapping ),* )
-                            }
+                            quote! { Self ( #( #mapping ),* ) }
                         }
                         syn::Fields::Unit => quote! { Self },
                     };
@@ -214,16 +251,16 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                         syn::Fields::Named(f) => {
                             let mapping = f.named.iter().map(|field| {
                                 let f_name = &field.ident;
-                                // Здесь фокус: если поле — это тоже Shadow-структура,
-                                // мы вызываем .clone().into() или .into(), если это примитив
-                                quote! { #f_name: shadow.#f_name.clone().into() }
+                                let conv = gen_conversion(quote!(shadow.#f_name.clone()), &field.ty);
+                                quote! { #f_name: #conv }
                             });
                             quote! { Self { #( #mapping, )* } }
                         }
                         syn::Fields::Unnamed(f) => {
-                            let mapping = (0..f.unnamed.len()).map(|i| {
+                            let mapping = f.unnamed.iter().enumerate().map(|(i, field)| {
                                 let idx = syn::Index::from(i);
-                                quote! { shadow.#idx.clone().into() }
+                                let conv = gen_conversion(quote!(shadow.#idx.clone()), &field.ty);
+                                quote! { #conv }
                             });
                             quote! { Self ( #( #mapping ),* ) }
                         }
@@ -235,14 +272,16 @@ pub fn include_shadow_all(input: TokenStream) -> TokenStream {
                         syn::Fields::Named(f) => {
                             let mapping = f.named.iter().map(|field| {
                                 let f_name = &field.ident;
-                                quote! { #f_name: orig.#f_name.into() }
+                                let conv = gen_conversion(quote!(orig.#f_name), &field.ty);
+                                quote! { #f_name: #conv }
                             });
                             quote! { Self { #( #mapping, )* } }
                         }
                         syn::Fields::Unnamed(f) => {
-                            let mapping = (0..f.unnamed.len()).map(|i| {
+                            let mapping = f.unnamed.iter().enumerate().map(|(i, field)| {
                                 let idx = syn::Index::from(i);
-                                quote! { orig.#idx.into() }
+                                let conv = gen_conversion(quote!(orig.#idx), &field.ty);
+                                quote! { #conv }
                             });
                             quote! { Self ( #( #mapping ),* ) }
                         }

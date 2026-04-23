@@ -13,6 +13,23 @@ pub struct EmaFilter {
 
 /// Структура для "работы" отсутствия фильтра
 #[derive(Clone)]
-pub struct NoFilter {
-    pub(super) states: Vec<RGBPixel>,
+pub struct NoFilter {}
+
+/// Структура для хранения фильтров
+/// 
+/// Данная структура необходимо для статической реализации цепи фильтров
+/// 
+/// Поддерживает все возможные фильтры кроме [NoFilter]
+#[derive(Clone)]
+pub enum FilterInstance {
+    Ema(EmaFilter),
+}
+
+/// Структура для хранения цепи фильтров
+/// 
+/// **Поля:**
+/// - `filters`: [Vec]<[FilterInstance]> - вектор хранилищ фильтров
+#[derive(Clone)]
+pub struct FilterChain {
+    pub(super) filters: Vec<FilterInstance>,
 }

@@ -5,7 +5,7 @@ use hardware_output::registry::*;
 pub struct Settings {
     pub chunk_processor_type: ChunkProcessorType,
     pub analytics_type: ColorAnalystType,
-    pub filter_type: ColorFilterType,
+    pub filter_chain: Vec<ColorFilterType>,
     pub hardware_output_type: HardwareOutputType,
 }
 

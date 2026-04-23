@@ -195,17 +195,32 @@ impl ConfigLoader {
         Processor: ChunkProcessor,
         Analyst: ColorAnalyst,
     {
-        match self.settings.filter_type {
-            ColorFilterType::NoFilter => {
-                let filter = NoFilter::new(self.geometry_config.calculate_leds_amount());
-                self.stage_4_select_hardware_driver(capture_thread, processor, analyst, filter);
-            }
-
-            ColorFilterType::EmaFilter => {
-                let filter = EmaFilter::new(self.geometry_config.calculate_leds_amount());
-                self.stage_4_select_hardware_driver(capture_thread, processor, analyst, filter);
-            }
+        // Если массив пуст
+        if self.settings.filter_chain.len() == 0 {
+            self.stage_4_select_hardware_driver(capture_thread, processor, analyst, NoFilter::new());
+            return;
         }
+
+        // Иначе генерируем цепь
+        let mut filter_chain = FilterChain::new();
+
+        for filter_type in self.settings.filter_chain.iter() {
+            let instance = match filter_type {
+                ColorFilterType::NoFilter => {
+                    println!("Предупреждение: NoFilter пропущен в цепочке.");
+                continue;
+                }
+    
+                ColorFilterType::EmaFilter => {
+                    let filter = EmaFilter::new(self.geometry_config.calculate_leds_amount());
+                    FilterInstance::Ema(filter)
+                }
+            };
+
+            filter_chain.add_filter(instance);
+        }
+        self.stage_4_select_hardware_driver(capture_thread, processor, analyst, filter_chain);
+
     }
 
     /// 4-я ступень - выбор вывода на устройство

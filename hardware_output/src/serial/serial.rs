@@ -26,7 +26,7 @@ impl SerialDriver {
     }
 
     /// Отправка массива цвета на устройство
-    /// 
+    ///
     /// **Поля:**
     /// - `colors`: &[[RGBPixel]] - массив из RGBPixel
     pub fn internal_send(&mut self, colors: &[RGBPixel]) {
