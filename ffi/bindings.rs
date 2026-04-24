@@ -10,9 +10,11 @@ pub struct CaptureConfig {
     pub is_ready: AtomicBool, // Флаг для синхронизации
 }
 
-// TODO! Комментарии к коду!
-
+/// Реализация методов для [CaptureConfig]
 impl CaptureConfig {
+    /// Конструктор
+    /// 
+    /// Создаёт конфиг с нулевыми значениями и ложным флагом
     pub fn new() -> Self {
         return Self {
             screen_width: 0,

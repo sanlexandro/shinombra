@@ -32,7 +32,7 @@ impl Millimeters {
     }
 }
 
-// TODO! комментарии
+/// Реализация отображения для [Millimeters]
 impl fmt::Display for Millimeters {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0) // Выводим просто число

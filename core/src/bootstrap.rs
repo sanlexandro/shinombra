@@ -91,7 +91,7 @@ impl ConfigLoader {
         let screen_config: ScreenConfig = screen_config_shadow.into();
 
         // TODO! Проверка данных из критических конфигов!!!
-        // TOFO! Проверка наличия секций для выбранных алгоритмов!!
+        // TODO! Проверка наличия секций для выбранных алгоритмов!!
 
         // Объединяем конфигурацию
         let geometry_config = GeometryConfig {

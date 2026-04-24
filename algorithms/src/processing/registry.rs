@@ -4,5 +4,3 @@
 pub enum ChunkProcessorType {
     Checkerboard,
 }
-
-// TODO! Комментарии к коду!

@@ -5,5 +5,3 @@ pub enum HardwareOutputType {
     DebugDriver,
     SerialDriver,
 }
-
-// TODO! Комментарии к коду!

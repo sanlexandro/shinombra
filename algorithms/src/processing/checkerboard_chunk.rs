@@ -40,7 +40,9 @@ impl CheckerboardConfig {
 impl CheckerboardScanner {
     /// Конструктор
     ///
-    /// TODO: дописать комментарий
+    /// **Поля:**
+    /// - `alg_config`: [CheckerboardConfig] - конфигурация для шахматки
+    /// - `screen_config`: [ScreenConfig]    - конфигурация экрана
     pub fn new(alg_config: CheckerboardConfig, screen_config: ScreenConfig) -> Self {
         return Self {
             alg_config,

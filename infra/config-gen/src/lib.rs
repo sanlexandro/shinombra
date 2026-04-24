@@ -6,8 +6,8 @@ pub mod __private {
     pub use toml;
 }
 
-// TODO! Комментарии к коду!
-
+/// Трейт загрузки данных из toml-конфига
 pub trait TomlLoader: Sized {
+    /// Метод загрузки строки
     fn load_from_string(data: &str) -> Result<Self, String>;
 }

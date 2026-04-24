@@ -4,5 +4,3 @@
 pub enum ColorAnalystType {
     ColorHistogram
 }
-
-// TODO! Комментарии к коду!

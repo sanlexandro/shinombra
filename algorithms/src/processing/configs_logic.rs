@@ -35,10 +35,14 @@ impl GeometryConfig {
     }
 }
 
-// TODO! Комментарии к коду!
-
+/// Реализация методов для [ScreenConfig]
 impl ScreenConfig {
-    pub fn load_px(& mut self,frame_width_px: u32, frame_height_px: u32) {
+    /// Сохранение размера экрана в пикселях
+    ///
+    /// **Поля:**
+    /// - `frame_width_px`: [u32]  - ширина экрана в пикселях
+    /// - `frame_height_px`: [u32] - высота экрана в пикселях
+    pub fn load_px(&mut self, frame_width_px: u32, frame_height_px: u32) {
         self.frame_width_px = Pixels(frame_width_px as usize);
         self.frame_height_px = Pixels(frame_height_px as usize);
     }

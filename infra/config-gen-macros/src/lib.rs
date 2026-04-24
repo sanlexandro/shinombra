@@ -4,8 +4,6 @@ use std::collections::HashSet;
 use std::fs;
 use syn::{parse::Parse, parse::ParseStream, parse_macro_input, File, Item, LitStr, Token};
 
-// TODO! Комментарии к коду!
-
 #[proc_macro]
 pub fn include_shadow(input: TokenStream) -> TokenStream {
     // 1. Получаем путь из макроса include_shadow!("path/to/file.rs")
