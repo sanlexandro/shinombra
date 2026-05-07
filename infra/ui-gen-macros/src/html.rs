@@ -1,0 +1,345 @@
+//! Функции и трейты для генерации HTML-кода
+//!
+//! Отвечает за преобразование разобранных настроек (AST) в готовые
+//! статические и динамические HTML-элементы для веб-интерфейса.
+
+use quote::quote;
+use std::fs;
+
+use proc_macro2;
+use syn::File;
+
+use crate::{
+    types::{NumericFieldSettings, RegistrySettings, TextFieldSettings},
+    FieldSetting, WidgetType,
+};
+
+/// Общий трейт для виджетов, умеющих генерировать HTML представление
+trait GenerateInputHTML {
+    fn gen_html(
+        &self,
+        struct_name: String,
+        field_name: String,
+        access_path: proc_macro2::TokenStream,
+        array_index: Option<proc_macro2::TokenStream>,
+    ) -> (proc_macro2::TokenStream, String);
+}
+
+/// Генерирует уникальный ID элемента для использования в атрибуте `id`
+fn gen_field_id(
+    struct_name: &String,
+    field_name: &String,
+    is_array: bool,
+    is_static: bool,
+) -> String {
+    if is_array {
+        if is_static {
+            format!("{}_{}___INDEX__", struct_name, field_name)
+        } else {
+            format!("{}_{}_{{}}", struct_name, field_name)
+        }
+    } else {
+        format!("{}_{}", struct_name, field_name)
+    }
+}
+
+/// Генерирует имя поля для отправки формы (атрибут `name`)
+fn gen_field_name(
+    struct_name: &String,
+    field_name: &String,
+    is_array: bool,
+    is_static: bool,
+) -> String {
+    if is_array {
+        if is_static {
+            format!("{}[{}][__INDEX__]", struct_name, field_name)
+        } else {
+            format!("{}[{}][{{}}]", struct_name, field_name)
+        }
+    } else {
+        format!("{}[{}]", struct_name, field_name)
+    }
+}
+
+impl GenerateInputHTML for RegistrySettings {
+    fn gen_html(
+        &self,
+        struct_name: String,
+        field_name: String,
+        access_path: proc_macro2::TokenStream,
+        array_index: Option<proc_macro2::TokenStream>,
+    ) -> (proc_macro2::TokenStream, String) {
+        // Читаем файл
+        let content = fs::read_to_string(&self.file_path).expect("File not found");
+
+        // Парсим файл как AST Rust
+        let file = syn::parse_str::<File>(&content).expect("Parse error");
+
+        // Ищем enum с конкретным именем
+        let target_enum = file
+            .items
+            .iter()
+            .find_map(|item| {
+                if let syn::Item::Enum(e) = item {
+                    if e.ident == self.registry_enum {
+                        return Some(e);
+                    }
+                }
+                None
+            })
+            .expect(&format!("Can`t find enum {}", self.registry_enum));
+
+        let mut static_string = Vec::new();
+        let mut logic_token = Vec::new();
+
+        // Вытягиваем всё поля как строки
+        for variant in target_enum.variants.iter() {
+            let id = variant.ident.to_string();
+            let selected = format!(r#"<option value="{}" selected>{}</option>"#, id, id);
+            let not_selected = format!(r#"<option value="{}">{}</option>"#, id, id);
+
+            let shadow_registry_ident = quote::format_ident!("{}Shadow", self.registry_enum);
+            let id_ident = quote::format_ident!("{}", id);
+
+            static_string.push(not_selected.clone());
+            logic_token.push(quote! {
+                if #access_path == #shadow_registry_ident::#id_ident {
+                    html.push(String::from(#selected));
+                } else {
+                    html.push(String::from(#not_selected));
+                }
+            });
+        }
+
+        let first_string = format!(
+            r#"<select id="{}" name="{}" required>"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), false),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), false)
+        );
+
+        let static_first_string = format!(
+            r#"<select id="{}" name="{}" required>"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), true),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), true)
+        );
+
+        let last_string = "</select>".to_string();
+
+        let create_string =
+            static_first_string.to_string() + &static_string.join("\n") + &last_string.to_string();
+
+        // Возвращаем обёртку в select
+        let ts = if let Some(idx) = &array_index {
+            proc_macro2::TokenStream::from(quote! {
+                html.push(format!(#first_string, #idx, #idx)); // Вставляем первую строку
+                #( #logic_token )*
+                html.push(String::from(#last_string)); // Вставляем последнюю строку
+            })
+        } else {
+            proc_macro2::TokenStream::from(quote! {
+                html.push(String::from(#first_string)); // Вставляем первую строку
+                #( #logic_token )*
+                html.push(String::from(#last_string)); // Вставляем последнюю строку
+            })
+        };
+
+        return (ts, create_string);
+    }
+}
+
+impl GenerateInputHTML for NumericFieldSettings {
+    fn gen_html(
+        &self,
+        struct_name: String,
+        field_name: String,
+        access_path: proc_macro2::TokenStream,
+        array_index: Option<proc_macro2::TokenStream>,
+    ) -> (proc_macro2::TokenStream, String) {
+        // Собираем атрибуты только если значения существуют
+        let mut attrs: Vec<String> = Vec::new();
+
+        if let Some(min) = self.min {
+            attrs.push(format!(r#"min="{}""#, min));
+        }
+        if let Some(max) = self.max {
+            attrs.push(format!(r#"max="{}""#, max));
+        }
+
+        let attrs_str = if attrs.is_empty() {
+            String::new()
+        } else {
+            format!(" {}", attrs.join(" "))
+        };
+
+        // Статическая строка
+        let static_string = format!(
+            r#"<input type="number" id="{}" name="{}" {} required />"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), true),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), true),
+            attrs_str
+        );
+        // Строка, готовая для динамической обработки
+        let logic_token = format!(
+            r#"<input type="number" id="{}" name="{}" {} value="{{}}" required />"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), false),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), false),
+            attrs_str
+        );
+
+        let ts = if let Some(idx) = &array_index {
+            proc_macro2::TokenStream::from(
+                quote! { html.push(format!(#logic_token, #idx, #idx, #access_path)); },
+            )
+        } else {
+            proc_macro2::TokenStream::from(
+                quote! { html.push(format!(#logic_token, #access_path)); },
+            )
+        };
+
+        return (ts, static_string);
+    }
+}
+
+impl GenerateInputHTML for TextFieldSettings {
+    fn gen_html(
+        &self,
+        struct_name: String,
+        field_name: String,
+        access_path: proc_macro2::TokenStream,
+        array_index: Option<proc_macro2::TokenStream>,
+    ) -> (proc_macro2::TokenStream, String) {
+        // Статическая строка
+        let static_string = format!(
+            r#"<input type="text" id="{}" name="{}" placeholder="{}" required />"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), true),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), true),
+            self.placeholder
+        );
+        // Строка для динамической обработки
+        let logic_token = format!(
+            r#"<input type="text" id="{}" name="{}" placeholder="{}" value="{{}}" required />"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), false),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), false),
+            self.placeholder
+        );
+
+        let ts = if let Some(idx) = &array_index {
+            proc_macro2::TokenStream::from(
+                quote! { html.push(format!(#logic_token, #idx, #idx, #access_path)); },
+            )
+        } else {
+            proc_macro2::TokenStream::from(
+                quote! { html.push(format!(#logic_token, #access_path)); },
+            )
+        };
+
+        return (ts, static_string);
+    }
+}
+
+impl GenerateInputHTML for WidgetType {
+    fn gen_html(
+        &self,
+        struct_name: String,
+        field_name: String,
+        access_path: proc_macro2::TokenStream,
+        array_index: Option<proc_macro2::TokenStream>,
+    ) -> (proc_macro2::TokenStream, String) {
+        match self {
+            WidgetType::Registry(c) => {
+                c.gen_html(struct_name, field_name, access_path, array_index)
+            }
+            WidgetType::NumericField(c) => {
+                c.gen_html(struct_name, field_name, access_path, array_index)
+            }
+            WidgetType::TextField(c) => {
+                c.gen_html(struct_name, field_name, access_path, array_index)
+            }
+            WidgetType::Wrapper(_, inner) => inner.gen_html(
+                struct_name,
+                field_name,
+                quote! { (#access_path).0 },
+                array_index,
+            ),
+            WidgetType::WrapperVec(_) => {
+                panic!("WrapperVec cannot generate standard HTML input directly")
+            }
+        }
+    }
+}
+
+impl FieldSetting {
+    pub(crate) fn gen_html(&self, struct_name: String) -> (proc_macro2::TokenStream, String) {
+        let label = format!(
+            r#"<label for="{}">{} </label>"#,
+            gen_field_id(&struct_name, &self.field_name.to_string(), false, false),
+            self.field_name.to_string()
+        );
+
+        let field_ident = &self.field_name;
+
+        // В зависимости от типа поля вставляем необходимый html
+        let (field_logic, field_static) = match &self.widget_type {
+            WidgetType::WrapperVec(inner) => {
+                let (inner_field_logic, inner_field_static) = inner.gen_html(
+                    struct_name.clone(),
+                    self.field_name.to_string(),
+                    quote! { *item },
+                    Some(quote! { _i }),
+                );
+
+                let container_id =
+                    format!("{}_{}_container", struct_name, self.field_name.to_string());
+                let template_html = format!(
+                    r#"<div class="wrapper-vec-item">{}<button type="button" onclick="this.parentElement.remove()">Remove</button></div>"#,
+                    inner_field_static
+                );
+
+                let full_static = format!(
+                    r#"<div class="wrapper-vec-container" id="{}">
+                        <template id="{}_template">{}</template>
+                        <div class="wrapper-vec-items"></div>
+                        <button type="button" onclick="addWrapperVecItem('{}')">Add Item</button>
+                    </div>"#,
+                    container_id, container_id, template_html, container_id
+                );
+
+                let full_logic = quote! {
+                    html.push(format!("<div class=\"wrapper-vec-container\" id=\"{}\">", #container_id));
+                    html.push(format!("<template id=\"{}_template\">{}</template>", #container_id, #template_html));
+                    html.push(String::from("<div class=\"wrapper-vec-items\">"));
+                    for (_i, item) in data.#field_ident.iter().enumerate() {
+                        html.push(String::from("<div class=\"wrapper-vec-item\">"));
+                        #inner_field_logic
+                        html.push(String::from("<button type=\"button\" onclick=\"this.parentElement.remove()\">Remove</button></div>"));
+                    }
+                    html.push(String::from("</div>"));
+                    html.push(format!("<button type=\"button\" onclick=\"addWrapperVecItem('{}')\">Add Item</button></div>", #container_id));
+                };
+
+                return (
+                    proc_macro2::TokenStream::from(quote! {
+                        html.push(String::from(#label));
+                        #full_logic
+                    }),
+                    label.to_string() + &full_static + "<br/>",
+                );
+            }
+            other => other.gen_html(
+                struct_name.clone(),
+                self.field_name.to_string(),
+                quote! { data.#field_ident },
+                None,
+            ),
+        };
+
+        return (
+            proc_macro2::TokenStream::from(quote! {
+                html.push(String::from(#label));
+
+                #field_logic
+            }),
+            label + &field_static,
+        );
+    }
+}

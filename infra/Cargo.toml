@@ -2,4 +2,6 @@
 members = [
     "config-gen",
     "config-gen-macros",
+    "ui-gen",
+    "ui-gen-macros",
 ]
