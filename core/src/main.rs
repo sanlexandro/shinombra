@@ -1,4 +1,7 @@
-use algorithms::{analytics::ColorAnalyst, filters::ColorFilter, pixel_mapper::PixelFormatter, processing::processors::ChunkProcessor};
+use algorithms::{
+    analytics::ColorAnalyst, filters::ColorFilter, pixel_formatter::PixelFormatter,
+    processing::processors::ChunkProcessor,
+};
 use ffi::bindings::CaptureConfig;
 use hardware_output::HardwareOutput;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -17,13 +20,10 @@ static KEEP_RUNNING: AtomicBool = AtomicBool::new(true);
 
 // ф-я остановки основного потока
 fn ctrlc_func() {
-    println!("Got signal");
     KEEP_RUNNING.store(false, Ordering::Relaxed);
 }
 
 fn main() {
-    println!("Ambient Lighting Backend");
-
     // Обработчик прерывания
     ctrlc::set_handler(ctrlc_func).expect("Some errors!");
 
@@ -34,7 +34,10 @@ fn main() {
     let mut capture_config = CaptureConfig::new();
 
     let mut capture_thread = CaptureThread::new();
-    capture_thread.start(&mut capture_config);
+    capture_thread.start(
+        &mut capture_config,
+        config_loader.get_flags().pipewire_conversion,
+    );
 
     // Ждем, пока флаг станет TRUE
     while !capture_config.is_ready.load(Ordering::Relaxed) {
@@ -54,13 +57,13 @@ fn main() {
         &capture_thread,
     );
 
-    println!("Shutting down...");
+    println!("[INFO] Core: Shutting down...");
 
     capture_thread.stop();
 }
 
 /// Запуск цикла обработки
-/// 
+///
 /// Данная функция запускает основной цикл амбиентной подсветки, ответственный
 /// за логику обмена данными между различными потоками и модулями
 pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
@@ -77,7 +80,7 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
 {
     let mut hardware_output_ctx = HardwareOutputThread::new(hardware_output, led_amount);
 
-    println!("Система запущена!");
+    println!("[INFO] Core: The system is running!");
 
     while KEEP_RUNNING.load(Ordering::Relaxed) {
         // Запрашиваем кадр
@@ -94,5 +97,4 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
     }
 
     hardware_output_ctx.stop();
-    println!("Цикл обработки завершен.");
 }

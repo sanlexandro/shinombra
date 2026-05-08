@@ -1,7 +1,7 @@
 //! Реализация преобразования [BGRA] -> [RGBPixel]
 
 use crate::color::types::RGBPixel;
-use crate::pixel_mapper::{types::BGRA, PixelFormatter};
+use crate::pixel_formatter::{types::BGRA, PixelFormatter};
 
 impl PixelFormatter for BGRA {
     const SIZE: usize = 4;

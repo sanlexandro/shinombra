@@ -27,10 +27,11 @@ typedef struct capture_context capture_context_t;
  * @brief Инициализация захвата экрана
  *
  * @param config Указатель на структуру capture_config_t с настройками захвата
+ * @param apply_conversion Флаг включения преобразования формата видео на уровне pipewire
  *
  * @return Указатель на структуру capture_context_t с состоянием захвата, или NULL
  */
-capture_context_t *screen_capture_init(capture_config_t *config);
+capture_context_t *screen_capture_init(capture_config_t *config, bool apply_conversion);
 
 /**
  * @brief Запуск процесса захвата экрана

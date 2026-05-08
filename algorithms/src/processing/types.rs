@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-use crate::{analytics::ColorAnalyst, color::types::RGBPixel, filters::ColorFilter, pixel_mapper::PixelFormatter, processing::processors::{ChunkProcessor, configs::ChunkTask}};
+use crate::{analytics::ColorAnalyst, color::types::RGBPixel, filters::ColorFilter, pixel_formatter::PixelFormatter, processing::processors::{ChunkProcessor, configs::ChunkTask}};
 
 /// Движок обработки кадров
 ///

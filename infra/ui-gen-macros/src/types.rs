@@ -22,11 +22,15 @@ pub(crate) struct NumericFieldSettings {
     pub(crate) max: Option<f32>,
 }
 
+/// Настройки для булевого поля ввода (checkbox).
+pub(crate) struct BoolFieldSettings;
+
 /// Поддерживаемые типы виджетов веб-интерфейса.
 pub(crate) enum WidgetType {
     Registry(RegistrySettings),
     TextField(TextFieldSettings),
     NumericField(NumericFieldSettings),
+    BoolField(BoolFieldSettings),
     Wrapper(Ident, Box<WidgetType>),
     WrapperVec(Box<WidgetType>),
 }

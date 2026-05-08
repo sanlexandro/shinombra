@@ -9,8 +9,7 @@
 use super::types::CheckerboardScanner;
 use crate::analytics::ColorAnalyst;
 use crate::color::conversion::convert_rgb_to_hsv;
-use crate::color::types::RGBPixel;
-use crate::pixel_mapper::{PixelFormatter, PixelIter};
+use crate::pixel_formatter::{PixelFormatter, PixelIter};
 use crate::processing::configs::ScreenConfig;
 use crate::processing::processors::configs::{CheckerboardConfig, ChunkTask};
 use crate::units::*;

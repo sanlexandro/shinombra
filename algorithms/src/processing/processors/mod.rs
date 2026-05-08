@@ -9,7 +9,7 @@
 //!   [crate::analytics]
 
 
-use crate::{analytics::ColorAnalyst, pixel_mapper::PixelFormatter, processing::processors::{configs::ChunkTask, types::CheckerboardScanner}};
+use crate::{analytics::ColorAnalyst, pixel_formatter::PixelFormatter, processing::processors::{configs::ChunkTask, types::CheckerboardScanner}};
 
 pub mod checkerboard;
 pub mod configs;

@@ -10,7 +10,7 @@ use proc_macro2;
 use syn::File;
 
 use crate::{
-    types::{NumericFieldSettings, RegistrySettings, TextFieldSettings},
+    types::{BoolFieldSettings, NumericFieldSettings, RegistrySettings, TextFieldSettings},
     FieldSetting, WidgetType,
 };
 
@@ -237,6 +237,44 @@ impl GenerateInputHTML for TextFieldSettings {
     }
 }
 
+impl GenerateInputHTML for BoolFieldSettings {
+    fn gen_html(
+        &self,
+        struct_name: String,
+        field_name: String,
+        access_path: proc_macro2::TokenStream,
+        array_index: Option<proc_macro2::TokenStream>,
+    ) -> (proc_macro2::TokenStream, String) {
+        // Статическая строка для режима Create (без checked)
+        let static_string = format!(
+            r#"<input type="checkbox" id="{}" name="{}" />"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), true),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), true)
+        );
+        
+        // Строка для динамической обработки с условным checked атрибутом
+        let logic_token_template = format!(
+            r#"<input type="checkbox" id="{}" name="{}" {{}}/>"#,
+            gen_field_id(&struct_name, &field_name, array_index.is_some(), false),
+            gen_field_name(&struct_name, &field_name, array_index.is_some(), false)
+        );
+
+        let ts = if let Some(idx) = &array_index {
+            proc_macro2::TokenStream::from(quote! {
+                let checked_attr = if #access_path { "checked " } else { "" };
+                html.push(format!(#logic_token_template, #idx, #idx, checked_attr));
+            })
+        } else {
+            proc_macro2::TokenStream::from(quote! {
+                let checked_attr = if #access_path { "checked " } else { "" };
+                html.push(format!(#logic_token_template, checked_attr));
+            })
+        };
+
+        return (ts, static_string);
+    }
+}
+
 impl GenerateInputHTML for WidgetType {
     fn gen_html(
         &self,
@@ -253,6 +291,9 @@ impl GenerateInputHTML for WidgetType {
                 c.gen_html(struct_name, field_name, access_path, array_index)
             }
             WidgetType::TextField(c) => {
+                c.gen_html(struct_name, field_name, access_path, array_index)
+            }
+            WidgetType::BoolField(c) => {
                 c.gen_html(struct_name, field_name, access_path, array_index)
             }
             WidgetType::Wrapper(_, inner) => inner.gen_html(

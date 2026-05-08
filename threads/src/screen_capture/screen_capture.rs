@@ -1,7 +1,6 @@
 //! Модуль, управляющий потоком захвата экрана
 
 use ffi::bindings::*;
-use hardware_output::debug;
 use std::ffi::c_void;
 use std::thread::JoinHandle;
 
@@ -28,20 +27,24 @@ impl CaptureThread {
     }
 
     /// Ф-я запуска потока
-    pub fn start(&mut self, config: &mut CaptureConfig) {
+    pub fn start(&mut self, config: &mut CaptureConfig, apply_conversion: bool) {
         // Проверяем, не запущен ли уже поток, чтобы не плодить их
         if self.handle.is_some() {
-            println!("[WARN] Thread already running");
+            println!("[WARN] CaptureThread: Thread already running");
             return;
+        }
+
+        if apply_conversion {
+            println!("[WARN] CaptureThread: PipeWire conversion applied")
         }
 
         // Запускаем поток захвата и сохраняем контекст и данные об экране
         let ctx: *mut std::ffi::c_void =
-            unsafe { screen_capture_init(config as *mut CaptureConfig) };
+            unsafe { screen_capture_init(config as *mut CaptureConfig, apply_conversion) };
 
         // Проверяем, что получили не нулевой контекст
         if ctx.is_null() {
-            println!("[ERROR] Failed to initialize C context");
+            println!("[ERROR] CaptureThread: Failed to initialize C context");
             return;
         }
 
@@ -62,7 +65,7 @@ impl CaptureThread {
 
     pub fn calculate_data(&mut self, config: &CaptureConfig) {
         // test
-        println!("video format: {}", SpaVideoFormat::try_from(config.video_format).map(|f| f.to_string()).unwrap_or_else(|e| format!("unknown ({})", e)));
+        println!("[INFO] CaptureThread: video format: {}", SpaVideoFormat::try_from(config.video_format).map(|f| f.to_string()).unwrap_or_else(|e| format!("unknown ({})", e)));
 
         // Рассчитываем размер кадра
         self.frame_size = (config.screen_height * config.screen_width * 4) as usize; // TODO: считывание размера одного пикселя
@@ -71,7 +74,7 @@ impl CaptureThread {
     /// Остановка потока
     pub fn stop(&mut self) {
         if self.ctx_ptr.is_null() {
-            println!("[WARN] No context to stop");
+            println!("[WARN] CaptureThread: No context to stop");
             return;
         }
 
@@ -81,9 +84,9 @@ impl CaptureThread {
         }
 
         if let Some(handle) = self.handle.take() {
-            handle.join().expect("Couldn't join thread");
+            handle.join().expect("[ERROR] CaptureThread: Couldn't join thread");
             self.ctx_ptr = std::ptr::null_mut(); // Обнуляем после завершения
-            println!("[INFO] Capture thread stopped");
+            println!("[INFO] CaptureThread: Capture thread stopped");
         }
     }
 

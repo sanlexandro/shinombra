@@ -37,7 +37,7 @@ impl CaptureConfig {
 // Используем ф-ии из `C-worker`
 extern "C" {
     /// Ф-я инициализации захвата экрана
-    pub fn screen_capture_init(config: *mut CaptureConfig) -> *mut c_void;
+    pub fn screen_capture_init(config: *mut CaptureConfig, apply_conversion: bool) -> *mut c_void;
 
     /// Ф-я запуска захвата экрана
     pub fn screen_capture_run(ctx: *mut c_void);
@@ -55,6 +55,7 @@ extern "C" {
 /// Тип видео-формата
 ///
 /// Скопировано из `spa/param/video/raw.h` `spa_video_format`
+#[allow(non_camel_case_types)]
 #[derive(Debug)]
 #[repr(u32)]
 pub enum SpaVideoFormat {
@@ -71,7 +72,7 @@ pub enum SpaVideoFormat {
     xRGB = 9,
     xBGR = 10,
     RGBA = 11,
-    BGRA = 12,
+    BGRA = 12, /// native
     ARGB = 13,
     ABGR = 14,
     RGB = 15,

@@ -19,7 +19,7 @@ use algorithms::{
     },
     units::*,
 };
-use ambient_core::config::Settings;
+use ambient_core::config::{Flags, Settings};
 use hardware_output::{registry::*, serial::config::SerialDriverConfig};
 
 // Подключаем все тени
@@ -43,6 +43,7 @@ generate_ui!(
             hardware_output_type: Registry {"./hardware_output/src/registry.rs" => HardwareOutputType },
             filter_chain: WrapperVec( Registry {"./algorithms/src/filters/registry.rs" => ColorFilterType} ),
         },
+        Flags => {pipewire_conversion: BoolField {}, },
     },
     "./algorithms/src/processing/configs.rs" => {
         ScreenConfig => {

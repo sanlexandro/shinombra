@@ -65,6 +65,13 @@ impl Parse for NumericFieldSettings {
     }
 }
 
+impl Parse for BoolFieldSettings {
+    fn parse(_input: ParseStream) -> Result<Self> {
+        // BoolField не требует параметров, это просто флаг
+        Ok(BoolFieldSettings)
+    }
+}
+
 impl Parse for WidgetType {
     fn parse(input: ParseStream) -> Result<Self> {
         let name: Ident = input.parse()?;
@@ -97,6 +104,16 @@ impl Parse for WidgetType {
                     syn::braced!(content in input);
                     let settings: TextFieldSettings = content.parse()?;
                     Ok(WidgetType::TextField(settings))
+                } else {
+                    Err(input.error("Can`t find config"))
+                }
+            }
+            "BoolField" => {
+                if input.peek(syn::token::Brace) {
+                    let content;
+                    syn::braced!(content in input);
+                    let settings: BoolFieldSettings = content.parse()?;
+                    Ok(WidgetType::BoolField(settings))
                 } else {
                     Err(input.error("Can`t find config"))
                 }

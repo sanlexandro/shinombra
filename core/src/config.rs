@@ -16,4 +16,10 @@ pub struct Settings {
     pub analytics_type: ColorAnalystType,
     pub filter_chain: Vec<ColorFilterType>,
     pub hardware_output_type: HardwareOutputType,
+    pub flags: Flags,
+}
+
+#[derive(Debug, Default)]
+pub struct Flags {
+    pub pipewire_conversion: bool,
 }

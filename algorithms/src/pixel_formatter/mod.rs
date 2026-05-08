@@ -1,15 +1,22 @@
 //! Модуль преобразования различных форматов хранения пикселя в единый для
 //! алгоритмов формат из `color`
-//! 
+//!
 //! Также реализуется итерация по массиву [u8] для удобства работы
 
 use crate::color::types::RGBPixel;
 
+pub mod abrg;
+pub mod argb;
+pub mod bgra;
+pub mod bgrx;
+pub mod rgba;
+pub mod rgbx;
 pub mod types;
-pub mod brga;
+pub mod xbgr;
+pub mod xrgb;
 
 /// Трейт преобразования различных форматов пикселя в [RGBPixel]
-/// 
+///
 /// **Реализуемые методы:**
 /// - `to_rgb` - преобразование к [RGBPixel]
 pub trait PixelFormatter {
@@ -17,9 +24,9 @@ pub trait PixelFormatter {
     const SIZE: usize;
 
     /// Преобразование к [RGBPixel]
-    /// 
+    ///
     /// Специальным образом (в зависимости от формата) преобразует данные в тип [RGBPixel]
-    /// 
+    ///
     /// **Входные поля:**
     /// - `data`: &[[u8]] - указатель на кадр
     fn to_rgb(data: &[u8]) -> RGBPixel;

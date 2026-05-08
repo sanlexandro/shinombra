@@ -7,7 +7,7 @@ use crate::analytics::ColorAnalyst;
 use crate::color::conversion::convert_hsv_to_rgb;
 use crate::color::types::RGBPixel;
 use crate::filters::ColorFilter;
-use crate::pixel_mapper::PixelFormatter;
+use crate::pixel_formatter::PixelFormatter;
 use crate::processing::measures::calculate_px_x_y_to_bytes;
 use crate::processing::processors::configs::ChunkTask;
 use crate::processing::processors::ChunkProcessor;

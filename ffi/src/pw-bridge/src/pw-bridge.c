@@ -19,9 +19,9 @@
 // #define DEBUG_FFI
 
 #ifdef DEBUG_FFI
-    #define LOG_FFI(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
+#define LOG_FFI(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
 #else
-    #define LOG_FFI(fmt, ...) // Ничего не делаем
+#define LOG_FFI(fmt, ...) // Ничего не делаем
 #endif
 
 // Контекст сессии захвата экрана через портал
@@ -59,18 +59,19 @@ struct capture_context {
 };
 
 /**
- * @brief Обработчик события смены состояния потока 
+ * @brief Обработчик события смены состояния потока
  */
 static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
     capture_context_t *ctx = user_ctx;
     LOG_FFI("Stream state changed: %d -> %d", old, state);
-    if (error){
+    if (error) {
         LOG_FFI(" (error: %s)", error);
     }
     // Ждём пока поток полностью запустится и только тогда отпускаем
     if (state == PW_STREAM_STATE_STREAMING) {
-        atomic_store_explicit(&ctx->config->is_ready, true, memory_order_release);
+        atomic_store_explicit(&ctx->config->is_ready, true,
+                              memory_order_release);
     }
     LOG_FFI("\n");
     // <--
@@ -182,16 +183,16 @@ static void on_param_changed(void *user_ctx, uint32_t id,
 
     uint32_t video_format = ctx->video_format.info.raw.format;
     LOG_FFI("Negotiated format: %d (%s)\n", video_format,
-           spa_debug_type_find_name(spa_type_video_format, video_format));
+            spa_debug_type_find_name(spa_type_video_format, video_format));
 
     LOG_FFI("got video format:\n");
     LOG_FFI("  format: %d (%s)\n", ctx->video_format.info.raw.format,
-           spa_debug_type_find_name(spa_type_video_format,
-                                    ctx->video_format.info.raw.format)); // <--
+            spa_debug_type_find_name(spa_type_video_format,
+                                     ctx->video_format.info.raw.format)); // <--
     LOG_FFI("  size: %dx%d\n", ctx->video_format.info.raw.size.width,
-           ctx->video_format.info.raw.size.height);
+            ctx->video_format.info.raw.size.height);
     LOG_FFI("  framerate: %d/%d\n", ctx->video_format.info.raw.framerate.num,
-           ctx->video_format.info.raw.framerate.denom);
+            ctx->video_format.info.raw.framerate.denom);
 
     // Если получили адрес конфига, сохраняем
     if (ctx->config) {
@@ -349,7 +350,7 @@ struct portal_data *get_screencast_session(void) {
     }
 
     LOG_FFI("Portal screencast setup complete, PipeWire node_id=%u\n",
-           portal_data->video_node_id);
+            portal_data->video_node_id);
 
     // ВАЖНО: портал, сессия и event_loop остаются ОТКРЫТЫМИ!
     return portal_data;
@@ -375,7 +376,8 @@ static void cleanup_portal_data(struct portal_data *portal_data) {
 }
 
 // Инициализация, запуск и остановка захвата экрана
-capture_context_t *screen_capture_init(capture_config_t *config) {
+capture_context_t *screen_capture_init(capture_config_t *config,
+                                       bool apply_conversion) {
     // Проверяем, что указатель на конфиг не NULL
     if (!config) {
         return NULL;
@@ -431,11 +433,27 @@ capture_context_t *screen_capture_init(capture_config_t *config) {
 
     LOG_FFI("PipeWire stream created\n");
 
-    // Задаём формат видео: принимаем любой сырой видеоформат
-    format_parameters[0] = spa_pod_builder_add_object(
-        &pod_builder, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
-        SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video),
-        SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw)); // <--
+    // Задаём формат видео:
+    if (apply_conversion) {
+        // если есть флаг преобразования, то забираем любой тип
+        format_parameters[0] = spa_pod_builder_add_object(
+            &pod_builder, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
+            SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video),
+            SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw));
+
+    } else {
+        // принимаем только нативный формат
+        format_parameters[0] = spa_pod_builder_add_object(
+            &pod_builder, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
+            SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video),
+            SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw),
+            SPA_FORMAT_VIDEO_format,
+            SPA_POD_CHOICE_ENUM_Id(8, SPA_VIDEO_FORMAT_RGBx,
+                                   SPA_VIDEO_FORMAT_BGRx, SPA_VIDEO_FORMAT_xRGB,
+                                   SPA_VIDEO_FORMAT_xBGR, SPA_VIDEO_FORMAT_RGBA,
+                                   SPA_VIDEO_FORMAT_BGRA, SPA_VIDEO_FORMAT_ARGB,
+                                   SPA_VIDEO_FORMAT_ABGR));
+    }
 
     // Подключаем поток к целевому узлу
     // Явно указываем video_node_id с флагом DRIVER (не AUTOCONNECT), иначе
@@ -484,7 +502,8 @@ void screen_capture_stop(capture_context_t *ctx) {
         return;
     }
 
-    // Просим loop завершиться; фактическая очистка выполняется в screen_capture_run
+    // Просим loop завершиться; фактическая очистка выполняется в
+    // screen_capture_run
     pw_main_loop_quit(ctx->main_loop);
 }
 
@@ -531,7 +550,8 @@ void release_frame(capture_context_t *ctx) {
     // Если есть указатель на буфер
     if (ctx->frame_data.last_pipewire_buffer) {
         // Возвращаем буфер в видеопоток
-        pw_stream_queue_buffer(ctx->video_stream, ctx->frame_data.last_pipewire_buffer);
+        pw_stream_queue_buffer(ctx->video_stream,
+                               ctx->frame_data.last_pipewire_buffer);
         ctx->frame_data.last_pipewire_buffer = NULL;
     }
 

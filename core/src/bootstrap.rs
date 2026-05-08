@@ -10,12 +10,16 @@
 //! После подготовки всех ступеней запускается основной цикл программы,
 //! содержащийся в main
 
+use crate::config::Flags;
 use crate::config::Settings;
 use crate::run_ambient_loop;
 use algorithms::{
     analytics::{registry::*, types::*, ColorAnalyst},
     filters::{registry::*, types::*, ColorFilter},
-    pixel_mapper::{types::BGRA, PixelFormatter},
+    pixel_formatter::{
+        types::{xBGR, xRGB, BGRx, RGBx, ABGR, ARGB, BGRA, RGBA},
+        PixelFormatter,
+    },
     processing::{
         configs::*,
         processors::{
@@ -68,11 +72,10 @@ impl ConfigLoader {
     /// для запуска дальнейшей инициализации
     pub fn load() -> Self {
         // Считываем данные из файла
-        let toml_str = std::fs::read_to_string("cfg.toml").expect("Не удалось прочитать cfg.toml");
+        let toml_str = std::fs::read_to_string("cfg.toml").expect("Failed to read cfg.toml");
 
         // Проводим десериализацию
-        let shadow_root: FullConfigShadow =
-            toml::from_str(&toml_str).expect("Ошибка парсинга TOML");
+        let shadow_root: FullConfigShadow = toml::from_str(&toml_str).expect("Parsing error TOML");
 
         // Достаём критические конфиги
         let (
@@ -89,7 +92,7 @@ impl ConfigLoader {
         else {
             // В случае ошибки прерываем выполнение кода
             panic!(
-                "Проверьте секции: 
+                "Check sections: 
                     \n    [settings]; 
                     \n    [screen_reading_config]; 
                     \n    [screen_config];
@@ -120,6 +123,13 @@ impl ConfigLoader {
         }
     }
 
+    /// Получение специальных флагов
+    pub fn get_flags(&self) -> Flags {
+        Flags {
+            pipewire_conversion: self.settings.flags.pipewire_conversion,
+        }
+    }
+
     /// Запуск подготовки и основного цикла
     ///
     /// Данная функция подтягивает необходимую конфигурацию в настройки конфигурации
@@ -139,24 +149,50 @@ impl ConfigLoader {
     }
 
     /// 1-я ступень - выбор преобразователя пикселей
-    /// 
+    ///
     /// Данная ступень выбирает реализацию трейта [PixelFormatter] в зависимости
     /// от [SpaVideoFormat]
-    /// 
+    ///
     /// **Поддерживается обработка для:**
     /// - [SpaVideoFormat::BGRA]
-    /// 
+    ///
     /// После подготовки запускается следующая ступень
     fn stage_1_select_formatter(self, video_format: u32, capture_thread: &CaptureThread) {
         let format = SpaVideoFormat::try_from(video_format)
             .expect(format!("Strange video format id: {}", video_format).as_str());
 
         match format {
+            SpaVideoFormat::RGBx => {
+                self.stage_2_select_chunk_processor::<RGBx>(capture_thread);
+            }
+            SpaVideoFormat::BGRx => {
+                self.stage_2_select_chunk_processor::<BGRx>(capture_thread);
+            }
+            SpaVideoFormat::xRGB => {
+                self.stage_2_select_chunk_processor::<xRGB>(capture_thread);
+            }
+            SpaVideoFormat::xBGR => {
+                self.stage_2_select_chunk_processor::<xBGR>(capture_thread);
+            }
+            SpaVideoFormat::RGBA => {
+                self.stage_2_select_chunk_processor::<RGBA>(capture_thread);
+            }
             SpaVideoFormat::BGRA => {
                 self.stage_2_select_chunk_processor::<BGRA>(capture_thread);
             }
-            _ => {
-                println!("Bad format") // TODO:: Написать нормальную ошибку
+            SpaVideoFormat::ARGB => {
+                self.stage_2_select_chunk_processor::<ARGB>(capture_thread);
+            }
+            SpaVideoFormat::ABGR => {
+                self.stage_2_select_chunk_processor::<ABGR>(capture_thread);
+            }
+
+            format => {
+                println!(
+                    "[ERROR] ConfigLoader: Format {} not supported. Try setting the flag `pipewire_conversion = true` in the section `[settings.flags]`",
+                    format
+                );
+                return;
             }
         };
     }
@@ -177,7 +213,7 @@ impl ConfigLoader {
         match self.settings.chunk_processor_type {
             ChunkProcessorType::Checkerboard => {
                 let Some(shadow) = self.shadow_root.checkerboard_config.as_ref() else {
-                    println!("Проверьте секцию [checkerboard_config]");
+                    println!("[ERROR] ConfigLoader: Check section [checkerboard_config]");
                     return;
                 };
 
@@ -254,7 +290,7 @@ impl ConfigLoader {
         for filter_type in self.settings.filter_chain.iter() {
             let instance = match filter_type {
                 ColorFilterType::NoFilter => {
-                    println!("Предупреждение: NoFilter пропущен в цепочке.");
+                    println!("[WARN] ConfigLoader: NoFilter missed in the chain.");
                     continue;
                 }
 
@@ -272,7 +308,12 @@ impl ConfigLoader {
 
             filter_chain.add_filter(instance);
         }
-        self.stage_5_select_hardware_driver::<Formatter, _, _, _>(capture_thread, processor, analyst, filter_chain);
+        self.stage_5_select_hardware_driver::<Formatter, _, _, _>(
+            capture_thread,
+            processor,
+            analyst,
+            filter_chain,
+        );
     }
 
     /// 5-я ступень - выбор вывода на устройство
@@ -322,7 +363,7 @@ impl ConfigLoader {
 
             HardwareOutputType::SerialDriver => {
                 let Some(shadow) = self.shadow_root.serial_driver_config else {
-                    println!("Проверьте секцию [serial_driver_config]");
+                    println!("[ERROR] ConfigLoader: Check section [serial_driver_config]");
                     return;
                 };
                 let serial_driver_config: SerialDriverConfig = shadow.into();
