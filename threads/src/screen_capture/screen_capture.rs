@@ -1,13 +1,20 @@
 //! Модуль, управляющий потоком захвата экрана
 
-use std::ffi::c_void;
 use ffi::bindings::*;
-use std::thread::{JoinHandle};
+use hardware_output::debug;
+use std::ffi::c_void;
+use std::thread::JoinHandle;
 
-#[repr(C)]
+/// Поток захвата кадра
+///
+/// **Поля:**
+/// `handle`: [Option]<JoinHandle<()>> - поток
+/// `ctx_ptr`: *mut [c_void] - контекст потока
+/// `frame_size`: [usize] - размер кадра
 pub struct CaptureThread {
     pub handle: Option<JoinHandle<()>>,
     pub ctx_ptr: *mut c_void,
+    pub frame_size: usize,
 }
 
 impl CaptureThread {
@@ -16,6 +23,7 @@ impl CaptureThread {
         return CaptureThread {
             handle: None,
             ctx_ptr: std::ptr::null_mut(),
+            frame_size: 0,
         };
     }
 
@@ -27,19 +35,21 @@ impl CaptureThread {
             return;
         }
 
-        let ctx: *mut std::ffi::c_void = unsafe {
-            screen_capture_init(config as *mut CaptureConfig)
-        };
+        // Запускаем поток захвата и сохраняем контекст и данные об экране
+        let ctx: *mut std::ffi::c_void =
+            unsafe { screen_capture_init(config as *mut CaptureConfig) };
 
+        // Проверяем, что получили не нулевой контекст
         if ctx.is_null() {
             println!("[ERROR] Failed to initialize C context");
             return;
         }
 
+        // Сохраняем контекст
         self.ctx_ptr = ctx;
-        let ctx_for_thread = ctx as usize;
-
+        
         // Запускаем поток
+        let ctx_for_thread = ctx as usize;
         let thread_handle = std::thread::spawn(move || {
             let ptr = ctx_for_thread as *mut c_void;
             unsafe {
@@ -50,7 +60,15 @@ impl CaptureThread {
         self.handle = Some(thread_handle);
     }
 
-    /// Ф-я остановки потока
+    pub fn calculate_data(&mut self, config: &CaptureConfig) {
+        // test
+        println!("video format: {}", SpaVideoFormat::try_from(config.video_format).map(|f| f.to_string()).unwrap_or_else(|e| format!("unknown ({})", e)));
+
+        // Рассчитываем размер кадра
+        self.frame_size = (config.screen_height * config.screen_width * 4) as usize; // TODO: считывание размера одного пикселя
+    }
+
+    /// Остановка потока
     pub fn stop(&mut self) {
         if self.ctx_ptr.is_null() {
             println!("[WARN] No context to stop");
@@ -58,7 +76,7 @@ impl CaptureThread {
         }
 
         unsafe {
-            // Передаем указатель в C, чтобы вызвать pw_main_loop_quit
+            // Передаем указатель в C, чтобы вызвать `pw_main_loop_quit`
             screen_capture_stop(self.ctx_ptr);
         }
 
@@ -69,32 +87,33 @@ impl CaptureThread {
         }
     }
 
-    pub fn request_frame<F>(&self, processor: F) 
-    where 
-        F: FnOnce(&[u8]) 
+    /// Запрос кадра и его обработка
+    ///
+    /// Обёртка над запросом, которая вызывает переданную ф-ю для обработки кадра
+    ///
+    /// **Входные поля:**
+    /// - `processor`: [FnOnce] (&[[u8]]) - метод обработки кадра соответствующей
+    ///   реализации [algorithms::processing::ChunkProcessor]
+    pub fn request_frame<F>(&self, processor: F)
+    where
+        F: FnOnce(&[u8]),
     {
         unsafe {
             if self.ctx_ptr.is_null() {
                 return;
             }
 
-            // 1. Ждем, пока Си-воркер подготовит кадр (блокирующий вызов)
+            // Ждем, пока Си-воркер подготовит кадр (блокирующий вызов)
             let ptr = wait_for_frame(self.ctx_ptr);
 
             if !ptr.is_null() {
-                // 2. Определяем размер буфера. 
-                // Для Full HD это 1920 * 1080 * 4 (RGBA) = 8_294_400 байт.
-                let width = 1920; // В будущем лучше брать из конфига
-                let height = 1080;
-                let size = (width * height * 4) as usize;
+                // Создаем слайс (окно в память Си)
+                let data = std::slice::from_raw_parts(ptr, self.frame_size);
 
-                // 3. Создаем слайс (окно в память Си)
-                let data = std::slice::from_raw_parts(ptr, size);
-
-                // 4. Выполняем твой алгоритм
+                // Выполняем полученный алгоритм
                 processor(data);
 
-                // 5. Обязательно сообщаем Си, что мы закончили работать с этим буфером
+                // Обязательно сообщаем Си, что мы закончили работать с этим буфером
                 release_frame(self.ctx_ptr);
             }
         }

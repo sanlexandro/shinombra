@@ -1,4 +1,4 @@
-use algorithms::{analytics::ColorAnalyst, filters::ColorFilter, processing::ChunkProcessor};
+use algorithms::{analytics::ColorAnalyst, filters::ColorFilter, pixel_mapper::PixelFormatter, processing::processors::ChunkProcessor};
 use ffi::bindings::CaptureConfig;
 use hardware_output::HardwareOutput;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -42,10 +42,15 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
+    // Считываем размеры экрана из конфига только после того, как соединение
+    // установилось
+    capture_thread.calculate_data(&capture_config);
+
     // Запускаем инициализацию и `run_ambient_loop` в дальнейшем
     config_loader.run_stages(
         capture_config.screen_width as u32,
         capture_config.screen_height as u32,
+        capture_config.video_format as u32,
         &capture_thread,
     );
 
@@ -58,13 +63,14 @@ fn main() {
 /// 
 /// Данная функция запускает основной цикл амбиентной подсветки, ответственный
 /// за логику обмена данными между различными потоками и модулями
-pub fn run_ambient_loop<Processor, Analyst, Filter, Output>(
-    mut color_engine: ColorEngine<Processor, Analyst, Filter>,
+pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
+    mut color_engine: ColorEngine<Formatter, Processor, Analyst, Filter>,
     hardware_output: Output,
     led_amount: usize,
     capture_thread: &CaptureThread,
 ) where
-    Processor: ChunkProcessor,
+    Formatter: PixelFormatter,
+    Processor: ChunkProcessor<Formatter>,
     Analyst: ColorAnalyst,
     Filter: ColorFilter,
     Output: HardwareOutput + Send + 'static,

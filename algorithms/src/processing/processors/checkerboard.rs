@@ -10,7 +10,9 @@ use super::types::CheckerboardScanner;
 use crate::analytics::ColorAnalyst;
 use crate::color::conversion::convert_rgb_to_hsv;
 use crate::color::types::RGBPixel;
-use crate::processing::configs::{CheckerboardConfig, ChunkTask, ScreenConfig};
+use crate::pixel_mapper::{PixelFormatter, PixelIter};
+use crate::processing::configs::ScreenConfig;
+use crate::processing::processors::configs::{CheckerboardConfig, ChunkTask};
 use crate::units::*;
 
 /// Реализация методов CheckerboardConfig
@@ -60,7 +62,7 @@ impl CheckerboardScanner {
     ///   пикселей)
     /// - `chunk_task`: [ChunkTask]              - "задание" фрагмента
     /// - `analyst`: &mut [ColorAnalyst] - метод анализа цвета
-    pub fn process_checkerboard_chunk<Analyst: ColorAnalyst>(
+    pub fn process_checkerboard_chunk<Formatter: PixelFormatter, Analyst: ColorAnalyst>(
         &self,
         byte_frame: &[u8],
         chunk_task: ChunkTask,
@@ -88,23 +90,21 @@ impl CheckerboardScanner {
             };
             let end = row_start_index + chunk_width * 4;
 
-            // fixme добавить логику смещения строк по чётности
+            // TODO: добавить логику смещения строк по чётности
 
             // Делаем срез строки (от стартового индекса строки, до (него + ширина
             // фрагмента))
             let row_bytes = &byte_frame[start..end];
-            let pixels = row_bytes.chunks_exact(4).step_by(pixel_step);
+            let pixels = PixelIter::<Formatter>::new(row_bytes, pixel_step);
 
             // Итерируемся по срезу (читаем каждый `pixel_step` пиксель)
-            for bgr in pixels {
-                let rgb = RGBPixel {
-                    red: bgr[2],
-                    green: bgr[1],
-                    blue: bgr[0],
-                };
+            for rgb in pixels { // <--
 
                 let hsv = convert_rgb_to_hsv(rgb);
 
+                // TODO: перевести analyst на считывание RGB, а конвертацию
+                // делать только для тех, кому необходимо
+                
                 // Проводим голосование
                 analyst.add_data(hsv);
             }

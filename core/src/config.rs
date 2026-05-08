@@ -1,6 +1,6 @@
 //! Конфигурация, необходимая для непосредственной работы ядра
 
-use algorithms::{analytics::registry::*, filters::registry::ColorFilterType, processing::registry::*};
+use algorithms::{analytics::registry::*, filters::registry::ColorFilterType, processing::processors::registry::*};
 use hardware_output::registry::*;
 
 /// Структура для хранения основных критических настроек

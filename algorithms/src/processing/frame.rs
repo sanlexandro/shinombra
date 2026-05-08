@@ -3,20 +3,23 @@
 use super::configs::*;
 use super::measures::calculate_mm_to_px_k;
 use super::types::*;
-use super::ChunkProcessor;
 use crate::analytics::ColorAnalyst;
 use crate::color::conversion::convert_hsv_to_rgb;
 use crate::color::types::RGBPixel;
 use crate::filters::ColorFilter;
+use crate::pixel_mapper::PixelFormatter;
 use crate::processing::measures::calculate_px_x_y_to_bytes;
+use crate::processing::processors::configs::ChunkTask;
+use crate::processing::processors::ChunkProcessor;
 use crate::units::*;
 
 /// Реализация методов ColorEngine
-impl<Processor, Analyst, Filter> ColorEngine<Processor, Analyst, Filter>
+impl<Formatter, Processor, Analyst, Filter> ColorEngine<Formatter, Processor, Analyst, Filter>
 where
-    Processor: ChunkProcessor,
+    Formatter: PixelFormatter,
+    Processor: ChunkProcessor<Formatter>,
     Analyst: ColorAnalyst,
-    Filter: ColorFilter
+    Filter: ColorFilter,
 {
     /// Конструктор
     ///
@@ -43,6 +46,7 @@ where
             filter,
             chunk_map,
             output_buffer,
+            _formatter: std::marker::PhantomData,
         };
     }
 
@@ -251,14 +255,14 @@ where
             *led_color = convert_hsv_to_rgb(self.analyst.get_winner());
         }
     }
-    
+
     /// Применить фильтры
-    /// 
+    ///
     /// Данный метод необходим, чтобы применить фильтры к проанализированному фрагменту
-    /// 
+    ///
     /// **Выходные поля:**
     /// - &[[RGBPixel]] - указатель на вычисленный массив цветов
-    pub fn apply_filters(&mut self)  -> &[RGBPixel] {
+    pub fn apply_filters(&mut self) -> &[RGBPixel] {
         // Применяем фильтр
         self.filter.apply(self.output_buffer.as_mut_slice());
 

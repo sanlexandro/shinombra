@@ -1,7 +1,8 @@
-//! Структуры обработки кадра и фрагментов
-//!
-use super::configs::*;
-use crate::{analytics::ColorAnalyst, color::types::RGBPixel, filters::ColorFilter, processing::ChunkProcessor};
+//! Структура обработки кадра
+
+use std::marker::PhantomData;
+
+use crate::{analytics::ColorAnalyst, color::types::RGBPixel, filters::ColorFilter, pixel_mapper::PixelFormatter, processing::processors::{ChunkProcessor, configs::ChunkTask}};
 
 /// Движок обработки кадров
 ///
@@ -16,25 +17,17 @@ use crate::{analytics::ColorAnalyst, color::types::RGBPixel, filters::ColorFilte
 /// - `chunk_map`: [ChunkTask]          - карта фрагментов (рассчитывается при
 ///   инициализации)
 /// - `output_buffer`: [Vec<RGBPixel>]  - вектор с вычисленными результатами
-pub struct ColorEngine<Processor, Analyst, Filter>
+pub struct ColorEngine<Formatter, Processor, Analyst, Filter>
 where
-    Processor: ChunkProcessor,
+    Formatter: PixelFormatter,
+    Processor: ChunkProcessor<Formatter>,
     Analyst: ColorAnalyst,
     Filter: ColorFilter,
 {
+    pub(crate) _formatter: PhantomData<Formatter>,
     pub(crate) processor: Processor,
     pub(crate) analyst: Analyst,
     pub(crate) filter: Filter,
     pub(crate) chunk_map: Vec<ChunkTask>,
     pub(crate) output_buffer: Vec<RGBPixel>,
-}
-
-/// Сканер в шахматном порядке
-///
-/// **Поля:**
-/// - `alg_config`: [CheckerboardConfig] - данные для шахматного обхода фрагмента
-/// - `screen_config`: [ScreenConfig]    - информация о дисплее
-pub struct CheckerboardScanner {
-    pub(crate) alg_config: CheckerboardConfig,
-    pub(crate) screen_config: ScreenConfig,
 }

@@ -1,10 +1,11 @@
 //! Модуль загрузки данных из конфига и подготовки структур для запуска цикла
 //!
 //! Данный модуль вытягивает данные из toml-файла и запускает сборку данных по ступеням:
-//! 1) выбор обработчика фрагментов
-//! 2) выбор анализатора цвета в фрагменте
-//! 3) выбор фильтра для результирующего цвета
-//! 4) выбор способа вывода на устройство
+//! 1) выбор преобразователя пикселей
+//! 2) выбор обработчика фрагментов
+//! 3) выбор анализатора цвета в фрагменте
+//! 4) выбор фильтра для результирующего цвета
+//! 5) выбор способа вывода на устройство
 //!
 //! После подготовки всех ступеней запускается основной цикл программы,
 //! содержащийся в main
@@ -14,10 +15,21 @@ use crate::run_ambient_loop;
 use algorithms::{
     analytics::{registry::*, types::*, ColorAnalyst},
     filters::{registry::*, types::*, ColorFilter},
-    processing::{configs::*, registry::*, types::*, ChunkProcessor},
+    pixel_mapper::{types::BGRA, PixelFormatter},
+    processing::{
+        configs::*,
+        processors::{
+            configs::{CheckerboardConfig, ChunkConfig, ChunkTask},
+            registry::*,
+            types::CheckerboardScanner,
+            ChunkProcessor,
+        },
+        types::*,
+    },
     units::*,
 };
 use config_gen::{__private::*, *};
+use ffi::bindings::SpaVideoFormat;
 use hardware_output::{
     debug::types::DebugDriver,
     registry::*,
@@ -28,7 +40,8 @@ use threads::screen_capture::screen_capture::CaptureThread;
 include_shadow_all!(
     "./algorithms/src/units.rs",
     "./algorithms/src/processing/configs.rs",
-    "./algorithms/src/processing/registry.rs",
+    "./algorithms/src/processing/processors/registry.rs",
+    "./algorithms/src/processing/processors/configs.rs",
     "./algorithms/src/analytics/registry.rs",
     "./algorithms/src/filters/registry.rs",
     "./hardware_output/src/registry.rs",
@@ -115,16 +128,40 @@ impl ConfigLoader {
         mut self,
         screen_width: u32,
         screen_height: u32,
+        video_format: u32,
         capture_thread: &CaptureThread,
     ) {
         // Подтягиваем конфигурацию экрана из потока захвата
         self.screen_config.load_px(screen_width, screen_height);
 
         // И запускаем обработку по стадиям
-        self.stage_1_select_chunk_processor(capture_thread);
+        self.stage_1_select_formatter(video_format, capture_thread);
     }
 
-    /// 1-я ступень - выбор обработчика фрагментов
+    /// 1-я ступень - выбор преобразователя пикселей
+    /// 
+    /// Данная ступень выбирает реализацию трейта [PixelFormatter] в зависимости
+    /// от [SpaVideoFormat]
+    /// 
+    /// **Поддерживается обработка для:**
+    /// - [SpaVideoFormat::BGRA]
+    /// 
+    /// После подготовки запускается следующая ступень
+    fn stage_1_select_formatter(self, video_format: u32, capture_thread: &CaptureThread) {
+        let format = SpaVideoFormat::try_from(video_format)
+            .expect(format!("Strange video format id: {}", video_format).as_str());
+
+        match format {
+            SpaVideoFormat::BGRA => {
+                self.stage_2_select_chunk_processor::<BGRA>(capture_thread);
+            }
+            _ => {
+                println!("Bad format") // TODO:: Написать нормальную ошибку
+            }
+        };
+    }
+
+    /// 2-я ступень - выбор обработчика фрагментов
     ///
     /// Данная ступень выбирает реализацию трейта [ChunkProcessor]
     ///
@@ -132,7 +169,10 @@ impl ConfigLoader {
     /// - [ChunkProcessorType::Checkerboard]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_1_select_chunk_processor(self, capture_thread: &CaptureThread) {
+    fn stage_2_select_chunk_processor<Formatter>(self, capture_thread: &CaptureThread)
+    where
+        Formatter: PixelFormatter,
+    {
         // Выбираем тип обработчика фрагмента из конфига
         match self.settings.chunk_processor_type {
             ChunkProcessorType::Checkerboard => {
@@ -150,12 +190,12 @@ impl ConfigLoader {
 
                 // TODO! Проверка конфига!!
 
-                self.stage_2_select_color_analyst(capture_thread, processor);
+                self.stage_3_select_color_analyst::<Formatter, _>(capture_thread, processor);
             }
         }
     }
 
-    /// 2-я ступень - выбор анализатора цвета в фрагменте
+    /// 3-я ступень - выбор анализатора цвета в фрагменте
     ///
     /// Данная ступень выбирает реализацию трейта [ColorAnalyst]
     ///
@@ -163,22 +203,23 @@ impl ConfigLoader {
     /// - [ColorAnalystType::ColorHistogram]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_2_select_color_analyst<Processor>(
+    fn stage_3_select_color_analyst<Formatter, Processor>(
         self,
         capture_thread: &CaptureThread,
         processor: Processor,
     ) where
-        Processor: ChunkProcessor,
+        Formatter: PixelFormatter,
+        Processor: ChunkProcessor<Formatter>,
     {
         match self.settings.analytics_type {
             ColorAnalystType::ColorHistogram => {
                 let analyst = ColorHistogram::new();
-                self.stage_3_select_filter(capture_thread, processor, analyst);
+                self.stage_4_select_filter::<Formatter, _, _>(capture_thread, processor, analyst);
             }
         }
     }
 
-    /// 3-я ступень - выбор фильтра для результирующего цвета
+    /// 4-я ступень - выбор фильтра для результирующего цвета
     ///
     /// Данная ступень реализует выбор трейта [ColorFilter]
     ///
@@ -186,18 +227,24 @@ impl ConfigLoader {
     /// - [ColorFilterType::EmaFilter]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_3_select_filter<Processor, Analyst>(
+    fn stage_4_select_filter<Formatter, Processor, Analyst>(
         self,
         capture_thread: &CaptureThread,
         processor: Processor,
         analyst: Analyst,
     ) where
-        Processor: ChunkProcessor,
+        Formatter: PixelFormatter,
+        Processor: ChunkProcessor<Formatter>,
         Analyst: ColorAnalyst,
     {
         // Если массив пуст
         if self.settings.filter_chain.len() == 0 {
-            self.stage_4_select_hardware_driver(capture_thread, processor, analyst, NoFilter::new());
+            self.stage_5_select_hardware_driver::<Formatter, _, _, _>(
+                capture_thread,
+                processor,
+                analyst,
+                NoFilter::new(),
+            );
             return;
         }
 
@@ -208,9 +255,9 @@ impl ConfigLoader {
             let instance = match filter_type {
                 ColorFilterType::NoFilter => {
                     println!("Предупреждение: NoFilter пропущен в цепочке.");
-                continue;
+                    continue;
                 }
-    
+
                 ColorFilterType::EmaFilter => {
                     let filter = EmaFilter::new(self.geometry_config.calculate_leds_amount());
                     FilterInstance::Ema(filter)
@@ -225,11 +272,10 @@ impl ConfigLoader {
 
             filter_chain.add_filter(instance);
         }
-        self.stage_4_select_hardware_driver(capture_thread, processor, analyst, filter_chain);
-
+        self.stage_5_select_hardware_driver::<Formatter, _, _, _>(capture_thread, processor, analyst, filter_chain);
     }
 
-    /// 4-я ступень - выбор вывода на устройство
+    /// 5-я ступень - выбор вывода на устройство
     ///
     /// Данная ступень выбирает реализацию трейта [hardware_output::HardwareOutput]
     ///
@@ -238,14 +284,15 @@ impl ConfigLoader {
     /// - [HardwareOutputType::SerialDriver]
     ///
     /// После обработки запускается основной цикл, содержащийся в `main`
-    fn stage_4_select_hardware_driver<Processor, Analyst, Filter>(
+    fn stage_5_select_hardware_driver<Formatter, Processor, Analyst, Filter>(
         self,
         capture_thread: &CaptureThread,
         processor: Processor,
         analyst: Analyst,
         filter: Filter,
     ) where
-        Processor: ChunkProcessor,
+        Formatter: PixelFormatter,
+        Processor: ChunkProcessor<Formatter>,
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
     {
@@ -257,7 +304,7 @@ impl ConfigLoader {
         let ver_amount = self.geometry_config.led_pos.vertical_led_amount;
 
         // Мы передаём владение geometry_config и screen_config в движок
-        let color_engine = ColorEngine::new(
+        let color_engine = ColorEngine::<Formatter, _, _, _>::new(
             processor,
             analyst,
             filter,

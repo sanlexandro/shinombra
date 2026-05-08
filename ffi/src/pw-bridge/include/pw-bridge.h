@@ -16,6 +16,7 @@
 typedef struct {
     uint32_t screen_width;
     uint32_t screen_height;
+    uint32_t video_format;
     atomic_bool is_ready;
 } capture_config_t;
 

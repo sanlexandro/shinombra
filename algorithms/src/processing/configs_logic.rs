@@ -1,5 +1,5 @@
 use crate::{
-    processing::{configs::*, measures::calculate_mm_to_px_k},
+    processing::{configs::*, measures::calculate_mm_to_px_k, processors::configs::ChunkConfig},
     units::*,
 };
 

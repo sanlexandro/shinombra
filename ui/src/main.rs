@@ -10,7 +10,13 @@ use ui_gen::{add_js, generate_ui, Renderable};
 use algorithms::{
     analytics::registry::*,
     filters::registry::*,
-    processing::{configs::*, registry::*},
+    processing::{
+        configs::*,
+        processors::{
+            configs::{CheckerboardConfig, ChunkConfig, ChunkTask},
+            registry::*,
+        },
+    },
     units::*,
 };
 use ambient_core::config::Settings;
@@ -20,18 +26,19 @@ use hardware_output::{registry::*, serial::config::SerialDriverConfig};
 include_shadow_all!(
     "./algorithms/src/units.rs",
     "./algorithms/src/processing/configs.rs",
-    "./algorithms/src/processing/registry.rs",
+    "./algorithms/src/processing/processors/registry.rs",
+    "./algorithms/src/processing/processors/configs.rs",
     "./algorithms/src/analytics/registry.rs",
     "./algorithms/src/filters/registry.rs",
     "./hardware_output/src/registry.rs",
-    "./hardware_output/src/serial/config.rs"
     "./core/src/config.rs",
+    "./hardware_output/src/serial/config.rs"
 );
 // Генерируем ui
 generate_ui!(
     "./core/src/config.rs" => {
         Settings => {
-            chunk_processor_type: Registry {"./algorithms/src/processing/registry.rs" => ChunkProcessorType },
+            chunk_processor_type: Registry {"./algorithms/src/processing/processors/registry.rs" => ChunkProcessorType },
             analytics_type: Registry {"./algorithms/src/analytics/registry.rs" => ColorAnalystType },
             hardware_output_type: Registry {"./hardware_output/src/registry.rs" => HardwareOutputType },
             filter_chain: WrapperVec( Registry {"./algorithms/src/filters/registry.rs" => ColorFilterType} ),

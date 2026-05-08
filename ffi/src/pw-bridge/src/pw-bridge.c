@@ -59,15 +59,21 @@ struct capture_context {
 };
 
 /**
- * @brief Обработчик события смены состояния потока
+ * @brief Обработчик события смены состояния потока 
  */
-static void on_state_changed(void *userdata, enum pw_stream_state old,
+static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
+    capture_context_t *ctx = user_ctx;
     LOG_FFI("Stream state changed: %d -> %d", old, state);
     if (error){
         LOG_FFI(" (error: %s)", error);
     }
+    // Ждём пока поток полностью запустится и только тогда отпускаем
+    if (state == PW_STREAM_STATE_STREAMING) {
+        atomic_store_explicit(&ctx->config->is_ready, true, memory_order_release);
+    }
     LOG_FFI("\n");
+    // <--
 }
 
 /**
@@ -131,7 +137,7 @@ static void on_process(void *user_ctx) {
  * @brief Обработчик события изменения параметров видеопотока
  * Вызывается при изменении формата видео или других параметров потока
  *
- * @param userdata указатель на структуру stream_data с данными приложения
+ * @param user_ctx указатель на структуру stream_data с данными приложения
  * @param id идентификатор параметра, который изменился
  * @param param указатель на структуру параметра SPA или NULL
  */
@@ -181,7 +187,7 @@ static void on_param_changed(void *user_ctx, uint32_t id,
     LOG_FFI("got video format:\n");
     LOG_FFI("  format: %d (%s)\n", ctx->video_format.info.raw.format,
            spa_debug_type_find_name(spa_type_video_format,
-                                    ctx->video_format.info.raw.format));
+                                    ctx->video_format.info.raw.format)); // <--
     LOG_FFI("  size: %dx%d\n", ctx->video_format.info.raw.size.width,
            ctx->video_format.info.raw.size.height);
     LOG_FFI("  framerate: %d/%d\n", ctx->video_format.info.raw.framerate.num,
@@ -191,7 +197,7 @@ static void on_param_changed(void *user_ctx, uint32_t id,
     if (ctx->config) {
         ctx->config->screen_height = ctx->video_format.info.raw.size.height;
         ctx->config->screen_width = ctx->video_format.info.raw.size.width;
-        atomic_store_explicit(&ctx->config->is_ready, true, memory_order_release);
+        ctx->config->video_format = ctx->video_format.info.raw.format;
     }
 }
 
@@ -429,7 +435,7 @@ capture_context_t *screen_capture_init(capture_config_t *config) {
     format_parameters[0] = spa_pod_builder_add_object(
         &pod_builder, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
         SPA_FORMAT_mediaType, SPA_POD_Id(SPA_MEDIA_TYPE_video),
-        SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw));
+        SPA_FORMAT_mediaSubtype, SPA_POD_Id(SPA_MEDIA_SUBTYPE_raw)); // <--
 
     // Подключаем поток к целевому узлу
     // Явно указываем video_node_id с флагом DRIVER (не AUTOCONNECT), иначе

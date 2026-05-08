@@ -54,6 +54,7 @@ impl HardwareOutputThread {
         // Отрываем от главного потока
         let handle = thread::spawn(move || {
             worker.run();
+            // TODO: Отправить сигнал завершения на устройство!!
         });
 
         // Возвращаем наружу красивый Контроллер
