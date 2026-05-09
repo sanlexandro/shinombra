@@ -25,7 +25,7 @@ pub struct CaptureThread {
 impl CaptureThread {
     /// Запуск потока
     ///
-    /// **Входные поля:**
+    /// **Аргументы:**
     /// - `config`: &mut [CaptureConfig] - место, куда будет сохранён конфиг захвата
     /// - `core_controller`: [Arc]<[CoreController]> - контроллер ядра
     /// - `apply_conversion`: [bool] - флаг разрешения использовать
@@ -84,7 +84,7 @@ impl CaptureThread {
 
     /// Расчёт необходимых для работы данных
     ///
-    /// **Входные поля:**
+    /// **Аргументы:**
     /// - `pixel_size`: [usize] - размер одного пикселя в байтах
     ///
     pub fn calculate_data(&mut self, pixel_size: usize) {
@@ -134,7 +134,7 @@ impl CaptureThread {
     ///
     /// Обёртка над запросом, которая вызывает переданную ф-ю для обработки кадра
     ///
-    /// **Входные поля:**
+    /// **Аргументы:**
     /// - `processor`: [FnOnce] (&[[u8]]) - метод обработки кадра соответствующей
     ///   реализации [algorithms::processing::ChunkProcessor]
     pub fn request_frame<F>(&self, processor: F)

@@ -1,6 +1,8 @@
 use algorithms::{
-    analytics::ColorAnalyst, filters::ColorFilter, pixel_formatter::PixelFormatter,
-    processing::processors::ChunkProcessor,
+    analytics::ColorAnalyst,
+    filters::ColorFilter,
+    pixel_formatter::PixelFormatter,
+    processing::{processors::ChunkProcessor, types::ColorEngine},
 };
 use common::core::controller::CoreController;
 use ffi::bindings::CaptureConfig;
@@ -15,7 +17,6 @@ pub mod bootstrap;
 pub mod config;
 
 use crate::bootstrap::ConfigLoader;
-use algorithms::processing::types::ColorEngine;
 
 fn main() {
     // Инициализируем конфиг
@@ -46,7 +47,7 @@ fn main() {
         }
     };
 
-    // Ждем, пока флаг станет TRUE
+    // Ждем запуска
     while !controller.wait() {
         // Спим 10мс, чтобы не грузить CPU
         std::thread::sleep(std::time::Duration::from_millis(10));
@@ -78,7 +79,7 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
 {
     capture_thread.calculate_data(Formatter::SIZE);
 
-    let mut hardware_output_ctx = HardwareOutputThread::new(hardware_output, led_amount);
+    let mut hardware_output_ctx = HardwareOutputThread::new(hardware_output, led_amount, capture_thread.get_controller());
 
     println!("[INFO] Core: The system is running!");
 

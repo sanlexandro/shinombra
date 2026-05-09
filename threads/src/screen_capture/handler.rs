@@ -74,7 +74,6 @@ pub(crate) extern "C" fn callback(
         event: event,
         message: string_message,
     };
-    println!("From handler");
 
     CaptureHandler::handle(wrapper, &controller);
 }

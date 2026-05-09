@@ -2,6 +2,8 @@
 
 use algorithms::color::types::RGBPixel;
 
+use crate::HardwareEvents;
+
 use super::types::DebugDriver;
 
 /// Ф-я вывода цвета в консоль для отладки
@@ -37,7 +39,7 @@ impl DebugDriver {
     ///
     /// **Аргументы:**
     /// - `colors`: &[RGBPixel] - массив цветов для вывода
-    pub fn print_debug_frame(&self, colors: &[RGBPixel]) {
+    pub fn print_debug_frame(&self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
         // Верхняя строка
         print!("       "); // 7 пробелов
         for idx in 0..self.led_width {
@@ -74,5 +76,7 @@ impl DebugDriver {
 
         println!("");
         println!("");
+
+        Ok(())
     }
 }

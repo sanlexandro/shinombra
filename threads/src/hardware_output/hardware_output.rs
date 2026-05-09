@@ -5,6 +5,7 @@
 //! затем отправляет буфер на устройство
 
 use algorithms::color::types::RGBPixel;
+use common::core::{controller::CoreController, event_handlers::EventHandler};
 use hardware_output::HardwareOutput;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -12,13 +13,22 @@ use std::sync::{
 };
 use std::thread;
 
+use crate::hardware_output::handler::HardwareHandler;
+
 /// Поток отправки данных на устройство
 ///
 /// Полностью инкапсулирует логику работы с потоком отправки
+///
+/// **Поля:**
+/// - `mailbox`: [Arc]<([Mutex]<([Vec]<[RGBPixel]>, [bool])>, [Condvar])> -
+///   почтовый ящик
+/// - `keep_running`: [Arc]<[AtomicBool]> - собственный флаг на продолжение работы
+/// - `handle`: [Option]<thread::JoinHandle<()>> - поток
+/// - `controller`: [Arc]<[CoreController]> - контроллер ядра
 pub struct HardwareOutputThread {
-    mailbox: Arc<(Mutex<(Vec<RGBPixel>, bool)>, Condvar)>,
-    keep_running: Arc<AtomicBool>,
-    handle: Option<thread::JoinHandle<()>>,
+    pub(super) mailbox: Arc<(Mutex<(Vec<RGBPixel>, bool)>, Condvar)>,
+    pub(super) keep_running: Arc<AtomicBool>,
+    pub(super) handle: Option<thread::JoinHandle<()>>,
 }
 
 /// Реализация методов [HardwareOutputThread]
@@ -30,10 +40,15 @@ impl HardwareOutputThread {
     /// **Поля:**
     /// - `output`: [HardwareOutput] - готовый метод отправки данных
     /// - `buffer_size`: [usize]     - размер буфера (обычно - количество светодиодов)
+    /// - `core_controller`: [Arc]<[CoreController]> - контроллер ядра
     ///
     /// **Выходные поля:**
     /// - [HardwareOutputThread] - готовый контроллер потока
-    pub fn new<Output>(output: Output, buffer_size: usize) -> HardwareOutputThread
+    pub fn new<Output>(
+        output: Output,
+        buffer_size: usize,
+        core_controller: Arc<CoreController>,
+    ) -> HardwareOutputThread
     where
         Output: HardwareOutput + Send + 'static,
     {
@@ -49,6 +64,7 @@ impl HardwareOutputThread {
             buffer: vec![RGBPixel::black(); buffer_size],
             mailbox: Arc::clone(&mailbox),
             keep_running: Arc::clone(&keep_running),
+            core_controller
         };
 
         // Отрываем от главного потока
@@ -82,7 +98,7 @@ impl HardwareOutputThread {
     }
 
     /// Остановка потока
-    /// 
+    ///
     /// Данный метод мягко останавливает поток, позволяя работнику отправить
     /// последнее сообщение
     pub fn stop(&mut self) {
@@ -98,11 +114,20 @@ impl HardwareOutputThread {
 }
 
 /// "Работник" потока отправки
+/// 
+/// **Поля:**
+/// - `output`: [HardwareOutput] - способ отправки данных
+/// - `buffer`: [Vec]<[RGBPixel]> - собственный буфер
+/// - `mailbox`: [Arc]<([Mutex]<([Vec]<[RGBPixel]>, [bool])>, [Condvar])> -
+///   почтовый ящик
+/// - `keep_running`: [Arc]<[AtomicBool]> - флаг продолжения работы
+/// - `core_controller`: [Arc]<[CoreController]> - контроллер ядра
 struct HardwareOutputWorker<Output: HardwareOutput> {
     output: Output,
     buffer: Vec<RGBPixel>,
     mailbox: Arc<(Mutex<(Vec<RGBPixel>, bool)>, Condvar)>,
     keep_running: Arc<AtomicBool>,
+    core_controller: Arc<CoreController>,
 }
 
 impl<Output: HardwareOutput + Send + 'static> HardwareOutputWorker<Output> {
@@ -134,7 +159,10 @@ impl<Output: HardwareOutput + Send + 'static> HardwareOutputWorker<Output> {
                 state.1 = false; // Сбрасываем флаг, говоря "я забрал эти данные"
             }
             // Отправляем данные, при этом мьютекс уже отпущен
-            self.output.send_colors(&self.buffer);
+            match self.output.send_colors(&self.buffer) {
+                Ok(_) => (),
+                Err(event) => HardwareHandler::handle(event, &self.core_controller),
+            }
         }
     }
 }

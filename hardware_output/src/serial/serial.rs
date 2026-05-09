@@ -1,6 +1,9 @@
 //! Реализация связи с железом по Serial
 
-use crate::serial::{config::SerialDriverConfig, types::SerialDriver};
+use crate::{
+    serial::{config::SerialDriverConfig, types::SerialDriver},
+    HardwareEvents,
+};
 use algorithms::color::types::RGBPixel;
 use serialport;
 use std::time::Duration;
@@ -29,7 +32,7 @@ impl SerialDriver {
     ///
     /// **Поля:**
     /// - `colors`: &[[RGBPixel]] - массив из RGBPixel
-    pub fn internal_send(&mut self, colors: &[RGBPixel]) {
+    pub fn internal_send(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
         // Формируем пакет: [Префикс] + [RGB данные]
         let mut payload = Vec::with_capacity(2 + colors.len() * 3);
         payload.extend_from_slice(b"AD"); // Magic Word (AmbiData)
@@ -42,7 +45,32 @@ impl SerialDriver {
         }
 
         // Отправляем всё одним махом
-        self.port.write_all(&payload).ok();
+        match self.port.write_all(&payload) {
+            Ok(_) => Ok(()),
+            Err(error) => {
+                let event = match error.kind() {
+                    // Устройство физически отключено или порт закрыт системой
+                    std::io::ErrorKind::BrokenPipe
+                    | std::io::ErrorKind::AddrNotAvailable
+                    | std::io::ErrorKind::NotFound => HardwareEvents::Disconnected,
+
+                    // Ошибки прав доступа
+                    std::io::ErrorKind::PermissionDenied => HardwareEvents::NoAccess,
+
+                    // Временные сбои: прерывание системным вызовом или таймаут
+                    // Тут имеет смысл попробовать отправить еще раз
+                    std::io::ErrorKind::Interrupted | std::io::ErrorKind::TimedOut => {
+                        HardwareEvents::RetryNeeded
+                    }
+
+                    // Всё остальное, что мы не ожидали
+                    _ => {
+                        HardwareEvents::InternalError(error.to_string())
+                    }
+                };
+                Err(event)
+            }
+        }
     }
 }
 
