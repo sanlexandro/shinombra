@@ -8,7 +8,6 @@
 
 use super::types::CheckerboardScanner;
 use crate::analytics::ColorAnalyst;
-use crate::color::conversion::convert_rgb_to_hsv;
 use crate::pixel_formatter::{PixelFormatter, PixelIter};
 use crate::processing::configs::ScreenConfig;
 use crate::processing::processors::configs::{CheckerboardConfig, ChunkTask};
@@ -89,23 +88,15 @@ impl CheckerboardScanner {
             };
             let end = row_start_index + chunk_width * 4;
 
-            // TODO: добавить логику смещения строк по чётности
-
             // Делаем срез строки (от стартового индекса строки, до (него + ширина
             // фрагмента))
             let row_bytes = &byte_frame[start..end];
             let pixels = PixelIter::<Formatter>::new(row_bytes, pixel_step);
 
             // Итерируемся по срезу (читаем каждый `pixel_step` пиксель)
-            for rgb in pixels { // <--
-
-                let hsv = convert_rgb_to_hsv(rgb);
-
-                // TODO: перевести analyst на считывание RGB, а конвертацию
-                // делать только для тех, кому необходимо
-                
+            for rgb in pixels {
                 // Проводим голосование
-                analyst.add_data(hsv);
+                analyst.add_data(rgb);
             }
         }
     }

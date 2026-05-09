@@ -4,7 +4,6 @@ use super::configs::*;
 use super::measures::calculate_mm_to_px_k;
 use super::types::*;
 use crate::analytics::ColorAnalyst;
-use crate::color::conversion::convert_hsv_to_rgb;
 use crate::color::types::RGBPixel;
 use crate::filters::ColorFilter;
 use crate::pixel_formatter::PixelFormatter;
@@ -38,8 +37,6 @@ where
         let chunk_map = Self::init_chunk_map(geometry, screen_config);
         let output_buffer = vec![RGBPixel::black(); chunk_map.len()];
 
-        // TODO:
-        // 1) добавить расчёт размеров фрагмента
         return Self {
             processor,
             analyst,
@@ -99,12 +96,11 @@ where
 
             // `y` в данном случае не изменяется
             chunk_map.push(ChunkTask {
-                // TODO: считывать кол-во полей в пикселе из конфига
                 start_index: calculate_px_x_y_to_bytes(
                     current_up_x_px,
                     start_up_y_px,
                     px_in_row,
-                    4,
+                    Formatter::SIZE,
                 ),
                 orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
             });
@@ -134,12 +130,11 @@ where
 
             // `x` в данном случае не изменяется
             chunk_map.push(ChunkTask {
-                // TODO: считывать кол-во полей в пикселе из конфига
                 start_index: calculate_px_x_y_to_bytes(
                     start_right_x_px,
                     current_right_y_px,
                     px_in_row,
-                    4,
+                    Formatter::SIZE,
                 ),
                 orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
             });
@@ -178,12 +173,11 @@ where
 
             // `y` в данном случае не изменяется
             chunk_map.push(ChunkTask {
-                // TODO: считывать кол-во полей в пикселе из конфига
                 start_index: calculate_px_x_y_to_bytes(
                     current_down_x_px,
                     start_down_y_px,
                     px_in_row,
-                    4,
+                    Formatter::SIZE,
                 ),
                 orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
             });
@@ -218,12 +212,11 @@ where
 
             // `x` в данном случае не изменяется
             chunk_map.push(ChunkTask {
-                // TODO: считывать кол-во полей в пикселе из конфига
                 start_index: calculate_px_x_y_to_bytes(
                     start_left_x_px,
                     current_left_y_px,
                     px_in_row,
-                    4,
+                    Formatter::SIZE,
                 ),
                 orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
             });
@@ -252,7 +245,7 @@ where
                 .process_chunk(byte_frame, *chunk_task, &mut self.analyst);
 
             // Сохраняем результат анализа
-            *led_color = convert_hsv_to_rgb(self.analyst.get_winner());
+            *led_color = self.analyst.get_winner();
         }
     }
 

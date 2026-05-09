@@ -53,7 +53,7 @@ document.addEventListener('input', () => {
         try {
             const check = new Function('ctx', `with(ctx) { return ${condition} }`);
             const isVisible = !!check(data);
-            el.style.display = isVisible ? 'block' : 'none';
+            el.style.display = isVisible ? '' : 'none';
             el.querySelectorAll('input, select').forEach(input => {
                 input.disabled = !isVisible;
             });
@@ -89,3 +89,16 @@ document.querySelector('form').addEventListener('submit', async (e) => {
 
 // Первичный запуск логики видимости
 document.dispatchEvent(new Event('input'));
+
+// Инициализация пустых значений ползунков при загрузке
+document.querySelectorAll('.slider-group').forEach(group => {
+    const numInput = group.querySelector('.slider-num');
+    const rangeInput = group.querySelector('.slider-range');
+    
+    if (numInput && rangeInput) {
+        // Если у инпута нет value (как у Gamma и Ema), берем дефолтное положение range
+        if (!numInput.value) {
+            numInput.value = rangeInput.value;
+        }
+    }
+});

@@ -1,28 +1,50 @@
+[gamma_filter_config]
+gamma = 2.200000047683716
+
+[ema_filter_config]
+alpha = 0.10000000149011612
+amount = 0
+
 [settings]
 chunk_processor_type = "Checkerboard"
 analytics_type = "ColorHistogram"
-filter_chain = ["EmaFilter", "GammaFilter"]
+filter_chain = [
+    "EmaFilter",
+    "GammaFilter",
+]
 hardware_output_type = "SerialDriver"
 
-[screen_reading_config]
-deep_in = 20
-deep_out = 0
+[settings.flags]
+pipewire_conversion = false
+
+[screen_config]
+frame_width_px = 0
+frame_height_px = 0
+frame_width_mm = 590
+frame_height_mm = 330
+
+[color_histogram_config]
+precision_level = 20
 
 [led_position_config]
 gap = 5
-led_length = 62
-horizontal_offset = 20
-horizontal_led_amount = 9
 vertical_offset = 15
+horizontal_offset = 20
+led_length = 62
 vertical_led_amount = 5
-
-[screen_config]
-frame_width_mm = 590
-frame_height_mm = 330
+horizontal_led_amount = 9
 
 [checkerboard_config]
 pixel_step = 10
 row_stride = 5
+
+[checkerboard_config.config]
+width = 0
+height = 0
+
+[screen_reading_config]
+deep_in = 20
+deep_out = 0
 
 [serial_driver_config]
 port_path = "/dev/ttyUSB0"

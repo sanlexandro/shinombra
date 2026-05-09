@@ -1,20 +1,21 @@
 //! Модуль определения результирующего цвета
-//! 
+//!
 //! Данный модуль реализует алгоритмы, которые собирают пул данных, основанный
 //! на переданных для обработки пикселях. После чего собранные данные
 //! анализируются и вычисляется результирующий цвет
-//! 
+//!
 //! **Методы:**
 //! - Гистограммы [types::ColorHistogram] - метод, основанный на разбиение HSV "круга" на отдельные
 //!   сектора. Каждый переданный пиксель голосует за сектор, в котором
 //!   находится, в результате чего определяется сектор с большим количеством
 //!   голосов
 
+pub mod configs;
 pub mod histogram;
-pub mod types;
 pub mod registry;
+pub mod types;
 
-use crate::color::types::HSVPixel;
+use crate::color::types::RGBPixel;
 
 /// Трейт анализа цвета
 ///
@@ -30,14 +31,14 @@ pub trait ColorAnalyst: Clone {
     /// Этот метод вызывается для каждого выбранного пикселя в чанке
     ///
     /// **Аргументы:**
-    /// - `hsv: HSVPixel` - пиксель в HSV формате
-    fn add_data(&mut self, hsv: HSVPixel);
+    /// - `rgb: RGBPixel` - пиксель в RGB формате
+    fn add_data(&mut self, rgb: RGBPixel);
 
     /// Вычисление итогового "победившего" цвета на основе накопленных данных
     ///
     /// **Выходные данные:**
-    ///  - `HSVPixel` - победивший цвет в HSV формате
-    fn get_winner(&mut self) -> HSVPixel;
+    ///  - `RGBPixel` - победивший цвет в RGB формате
+    fn get_winner(&mut self) -> RGBPixel;
 }
 
 // Реализация трейта для ColorHistogram
@@ -45,10 +46,10 @@ impl ColorAnalyst for types::ColorHistogram {
     fn clear(&mut self) {
         self.clear();
     }
-    fn add_data(&mut self, hsv: HSVPixel) {
-        self.process_vote(hsv);
+    fn add_data(&mut self, rgb: RGBPixel) {
+        self.process_vote(rgb);
     }
-    fn get_winner(&mut self) -> HSVPixel {
+    fn get_winner(&mut self) -> RGBPixel {
         self.determining_winner()
     }
 }

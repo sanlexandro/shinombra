@@ -16,11 +16,20 @@ pub struct ColorBin {
     pub sum_pixel: HSVPixel,
 }
 
+// Максимальное количество корзин (3 градуса - это уже на грани восприятия)
+pub const MAX_BINS: usize = 120;
+
 /// Информация о гистограмме
 ///
 /// **Поля:**
-/// - `bins`:[[ColorBin]; 37] - приватный массив сегментов
+/// - `bins`:[[ColorBin]; [MAX_BINS] + 1] - приватный массив сегментов
+/// - `active_amount`: [usize] - количество сегментов, которые реально участвуют
+///   в обработке
+/// - `hue_to_bin_scale`: [f32] - заранее рассчитанный коэффициент для
+///   определения к какой корзине относится текущий цвет
 #[derive(Clone)]
 pub struct ColorHistogram {
-    pub(super) bins: [ColorBin; 37], // TODO: реализовать считывание кол-ва сегментов из конфига
+    pub(super) bins: [ColorBin; MAX_BINS + 1],
+    pub(super) active_amount: usize,
+    pub(super) hue_to_bin_scale: f32,
 }

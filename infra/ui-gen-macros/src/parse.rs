@@ -1,5 +1,5 @@
 //! Парсинг синтаксических структур
-//! 
+//!
 //! Здесь реализован трейт [Parse] для всех моделей из модуля `types`.
 //! Логика позволяет корректно извлекать настройки виджетов и полей из потока токенов.
 
@@ -72,6 +72,36 @@ impl Parse for BoolFieldSettings {
     }
 }
 
+impl Parse for SliderFieldSettings {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        syn::braced!(content in input);
+
+        // Считываем min (обязательно)
+        let min = parse_f32(&content)?;
+        
+        // Ожидаем запятую
+        content.parse::<Token![,]>()?;
+        
+        // Считываем max (обязательно)
+        let max = parse_f32(&content)?;
+
+        // Проверяем, есть ли шаг (необязательно, по умолчанию 1.0)
+        let step = if content.peek(Token![,]) {
+            content.parse::<Token![,]>()?;
+            if !content.is_empty() {
+                parse_f32(&content)?
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        };
+
+        Ok(SliderFieldSettings { min, max, step })
+    }
+}
+
 impl Parse for WidgetType {
     fn parse(input: ParseStream) -> Result<Self> {
         let name: Ident = input.parse()?;
@@ -118,6 +148,7 @@ impl Parse for WidgetType {
                     Err(input.error("Can`t find config"))
                 }
             }
+            "SliderField" => Ok(WidgetType::SliderField(input.parse()?)),
             "Wrapper" => {
                 if input.peek(syn::token::Paren) {
                     let content;
@@ -127,7 +158,9 @@ impl Parse for WidgetType {
                     let inner_widget: WidgetType = content.parse()?;
                     Ok(WidgetType::Wrapper(wrapper_ident, Box::new(inner_widget)))
                 } else {
-                    Err(input.error("Can`t find wrapper params. Usage: Wrapper(WrapperType, InnerWidget)"))
+                    Err(input.error(
+                        "Can`t find wrapper params. Usage: Wrapper(WrapperType, InnerWidget)",
+                    ))
                 }
             }
             "WrapperVec" => {
@@ -137,7 +170,8 @@ impl Parse for WidgetType {
                     let inner_widget: WidgetType = content.parse()?;
                     Ok(WidgetType::WrapperVec(Box::new(inner_widget)))
                 } else {
-                    Err(input.error("Can`t find wrapper vec params. Usage: WrapperVec(InnerWidget)"))
+                    Err(input
+                        .error("Can`t find wrapper vec params. Usage: WrapperVec(InnerWidget)"))
                 }
             }
             _ => Err(input.error(format!("Unknown widget_type type: {}", name))),

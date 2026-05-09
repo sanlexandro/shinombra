@@ -9,6 +9,8 @@ use crate::color::types::RGBPixel;
 #[derive(Clone)]
 pub struct EmaFilter {
     pub(super) states: Vec<RGBPixel>,
+    pub(super) alpha: i32,
+    pub(super) inverted_alpha: i32,
 }
 
 /// Структура для "работы" отсутствия фильтра

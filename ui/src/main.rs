@@ -8,19 +8,16 @@ use config_gen::{__private::*, *};
 use ui_gen::{add_js, generate_ui, Renderable};
 
 use algorithms::{
-    analytics::registry::*,
-    filters::registry::*,
+    analytics::{configs::*, registry::*},
+    filters::{configs::*, registry::*},
     processing::{
         configs::*,
-        processors::{
-            configs::{CheckerboardConfig, ChunkConfig, ChunkTask},
-            registry::*,
-        },
+        processors::{configs::*, registry::*},
     },
     units::*,
 };
-use ambient_core::config::{Flags, Settings};
-use hardware_output::{registry::*, serial::config::SerialDriverConfig};
+use ambient_core::config::*;
+use hardware_output::{registry::*, serial::config::*};
 
 // Подключаем все тени
 include_shadow_all!(
@@ -29,7 +26,9 @@ include_shadow_all!(
     "./algorithms/src/processing/processors/registry.rs",
     "./algorithms/src/processing/processors/configs.rs",
     "./algorithms/src/analytics/registry.rs",
+    "./algorithms/src/analytics/configs.rs",
     "./algorithms/src/filters/registry.rs",
+    "./algorithms/src/filters/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
     "./hardware_output/src/serial/config.rs"
@@ -69,6 +68,22 @@ generate_ui!(
             row_stride: NumericField{1}
         },
         ChunkTask => {},
+    },
+    "./algorithms/src/analytics/configs.rs" => {
+        @show_if(Settings.analytics_type == "ColorHistogram")
+        ColorHistogramConfig => {
+            precision_level: SliderField { 0.0, 20.0, 1 }
+        }
+    },
+    "./algorithms/src/filters/configs.rs" => {
+        @show_if(Settings.filter_chain.includes("GammaFilter"))
+        GammaFilterConfig => {
+            gamma: SliderField { 0.01, 4.0, 0.01}
+        }, 
+        @show_if(Settings.filter_chain.includes("EmaFilter"))
+        EmaFilterConfig => {
+            alpha: SliderField { 0.01, 1.0, 0.01 }
+        },
     },
     "./hardware_output/src/serial/config.rs" => {
         @show_if(Settings.hardware_output_type == "SerialDriver")

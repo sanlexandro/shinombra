@@ -12,6 +12,7 @@
 //! Также данный модуль поддерживает запуск цепи из фильтров [FilterChain]
 
 pub mod chain;
+pub mod configs;
 pub mod ema;
 pub mod gamma;
 pub mod no_filter;
@@ -31,12 +32,12 @@ pub trait ColorFilter: Clone {
     ///
     /// **Поля:**
     /// - `raw_colors`: &[[RGBPixel]] - массив новых пикселей для наложения фильтра
-    fn apply(& mut self, raw_colors: & mut [RGBPixel]);
+    fn apply(&mut self, raw_colors: &mut [RGBPixel]);
 }
 
 /// Реализация трейта [ColorFilter] для хранилища фильтров [FilterInstance]
 impl ColorFilter for FilterInstance {
-    fn apply(& mut self, raw_colors: & mut [RGBPixel]) {
+    fn apply(&mut self, raw_colors: &mut [RGBPixel]) {
         match self {
             Self::Ema(f) => f.apply(raw_colors),
             Self::Gamma(f) => f.apply(raw_colors),
@@ -46,25 +47,25 @@ impl ColorFilter for FilterInstance {
 
 /// Реализация трейта [ColorFilter] для [EmaFilter]
 impl ColorFilter for EmaFilter {
-    fn apply(& mut self, raw_colors: & mut [RGBPixel]) {
+    fn apply(&mut self, raw_colors: &mut [RGBPixel]) {
         self.process_ema(raw_colors);
     }
 }
 
 /// Реализация трейта [ColorFilter] для [NoFilter]
 impl ColorFilter for NoFilter {
-    fn apply(& mut self, _raw_colors: & mut [RGBPixel]) {}
+    fn apply(&mut self, _raw_colors: &mut [RGBPixel]) {}
 }
 
 impl ColorFilter for GammaFilter {
-    fn apply(& mut self, raw_colors: & mut [RGBPixel]) {
+    fn apply(&mut self, raw_colors: &mut [RGBPixel]) {
         self.apply_gamma(raw_colors);
     }
 }
 
 /// Реализация трейта [ColorFilter] для [FilterChain]
 impl ColorFilter for FilterChain {
-    fn apply(& mut self, raw_colors: & mut [RGBPixel]) {
+    fn apply(&mut self, raw_colors: &mut [RGBPixel]) {
         self.run_chain(raw_colors);
     }
 }

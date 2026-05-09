@@ -37,6 +37,14 @@
 }
 
 /* Базовый сброс и тело страницы */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 html {
     font-size: 14px;
     -webkit-font-smoothing: antialiased;
@@ -230,6 +238,65 @@ input[type="checkbox"]:checked::after {
 input[type="checkbox"]:disabled {
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+/* Контейнер для ползунка и числового поля */
+.slider-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%; /* Растягиваем на всю ширину колонки 1fr */
+    grid-column: 2; /* Явно указываем вторую колонку, если вдруг сетка ломается */
+}
+
+/* Компактное поле ввода слева */
+.slider-num {
+    width: 60px !important; /* Принудительно ограничиваем ширину */
+    flex-shrink: 0;
+    text-align: center;
+    color: var(--accent) !important;
+}
+
+/* Обертка для ползунка и его лимитов */
+.slider-num {
+    width: 60px !important;
+    flex-shrink: 0;
+    text-align: center;
+    color: var(--text-primary) !important; 
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+}
+
+/* Обертка для ползунка */
+.slider-wrapper {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-input);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+}
+
+/* Стили самого ползунка */
+.slider-range {
+    flex-grow: 1;
+    cursor: pointer;
+    accent-color: var(--accent);
+    min-width: 0;
+    /* Уменьшаем высоту для Firefox */
+    height: 3px; 
+}
+
+/* Уменьшаем высоту дорожки для Chrome/Webkit */
+.slider-range::-webkit-slider-runnable-track {
+    height: 3px;
+}
+
+/* Уменьшаем высоту дорожки для Firefox */
+.slider-range::-moz-range-track {
+    height: 3px;
 }
 
 /* Выпадающий список - реестр enum */

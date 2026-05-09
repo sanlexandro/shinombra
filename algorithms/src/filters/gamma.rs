@@ -4,7 +4,7 @@
 //! коэффициенту. Во время работы он преобразует значения согласно таблице. Это
 //! необходимо в силу того, что человек различает яркость логорифмически
 
-use crate::{color::types::RGBPixel, filters::types::GammaFilter};
+use crate::{color::types::RGBPixel, filters::{configs::GammaFilterConfig, types::GammaFilter}};
 
 /// Реализация методов [GammaFilter]
 impl GammaFilter {
@@ -13,15 +13,15 @@ impl GammaFilter {
     /// Предварительно рассчитывает гамма-таблицу по переданному коэффициенту
     ///
     /// **Поля:**
-    /// - `gamma`: [f32] - гамма коэффициент
-    pub fn new(gamma: f32) -> Self {
+    /// - `config`: [GammaFilterConfig] - конфигурация для gamma-фильтра
+    pub fn new(config: GammaFilterConfig) -> Self {
         let mut gamma_table = [0u8; 256];
 
         for i in 0..256 {
             // Нормализуем i до 0.0 - 1.0
             let v_in = i as f32 / 255.0;
             // Возводим в степень и масштабируем обратно до 0-255
-            let v_out = v_in.powf(gamma) * 255.0;
+            let v_out = v_in.powf(config.gamma) * 255.0;
             gamma_table[i] = v_out.round() as u8;
         }
         return Self { gamma_table };

@@ -25,12 +25,20 @@ pub(crate) struct NumericFieldSettings {
 /// Настройки для булевого поля ввода (checkbox).
 pub(crate) struct BoolFieldSettings;
 
+/// Настройки для виджета ползунка (slider).
+pub(crate) struct SliderFieldSettings {
+    pub(crate) min: f32,
+    pub(crate) max: f32,
+    pub(crate) step: f32,
+}
+
 /// Поддерживаемые типы виджетов веб-интерфейса.
 pub(crate) enum WidgetType {
     Registry(RegistrySettings),
     TextField(TextFieldSettings),
     NumericField(NumericFieldSettings),
     BoolField(BoolFieldSettings),
+    SliderField(SliderFieldSettings),
     Wrapper(Ident, Box<WidgetType>),
     WrapperVec(Box<WidgetType>),
 }

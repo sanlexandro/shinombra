@@ -13,6 +13,9 @@
 use crate::config::Flags;
 use crate::config::Settings;
 use crate::run_ambient_loop;
+use algorithms::analytics::configs::ColorHistogramConfig;
+use algorithms::filters::configs::EmaFilterConfig;
+use algorithms::filters::configs::GammaFilterConfig;
 use algorithms::{
     analytics::{registry::*, types::*, ColorAnalyst},
     filters::{registry::*, types::*, ColorFilter},
@@ -47,7 +50,9 @@ include_shadow_all!(
     "./algorithms/src/processing/processors/registry.rs",
     "./algorithms/src/processing/processors/configs.rs",
     "./algorithms/src/analytics/registry.rs",
+    "./algorithms/src/analytics/configs.rs",
     "./algorithms/src/filters/registry.rs",
+    "./algorithms/src/filters/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
     "./hardware_output/src/serial/config.rs"
@@ -249,7 +254,12 @@ impl ConfigLoader {
     {
         match self.settings.analytics_type {
             ColorAnalystType::ColorHistogram => {
-                let analyst = ColorHistogram::new();
+                let Some(shadow) = self.shadow_root.color_histogram_config.as_ref() else {
+                    println!("[ERROR] ConfigLoader: Check section [color_histogram_config]");
+                    return;
+                };
+
+                let analyst = ColorHistogram::new(shadow.into());
                 self.stage_4_select_filter::<Formatter, _, _>(capture_thread, processor, analyst);
             }
         }
@@ -295,13 +305,25 @@ impl ConfigLoader {
                 }
 
                 ColorFilterType::EmaFilter => {
-                    let filter = EmaFilter::new(self.geometry_config.calculate_leds_amount());
+                    let Some(shadow) = self.shadow_root.ema_filter_config.as_ref() else {
+                        println!("[ERROR] ConfigLoader: Check section [ema_filter_config]");
+                        return;
+                    };
+                    let shadow_config: EmaFilterConfig = shadow.into();
+                    let config = EmaFilterConfig {
+                        alpha: shadow_config.alpha,
+                        amount: self.geometry_config.calculate_leds_amount(),
+                    };
+                    let filter = EmaFilter::new(config);
                     FilterInstance::Ema(filter)
                 }
 
                 ColorFilterType::GammaFilter => {
-                    // TODO: считывание коэффициента из конфигурации
-                    let filter = GammaFilter::new(2.2);
+                    let Some(shadow) = self.shadow_root.gamma_filter_config.as_ref() else {
+                        println!("[Error] ConfigLoader: Check section [gamma_filter_config]");
+                        return;
+                    };
+                    let filter = GammaFilter::new(shadow.into());
                     FilterInstance::Gamma(filter)
                 }
             };
