@@ -58,10 +58,11 @@ struct capture_context {
     struct portal_data *portal_data;    // данные портала (ДОЛЖНЫ ОСТАТЬСЯ!)
 
     struct current_frame_t
-        frame_data; // указатель на структуру обмена указателем на кадр
+        frame_data;  // указатель на структуру обмена указателем на кадр
+    void *user_data; // указатель на спец данные для функции обратного вызова
     void (*event_callback)(
-        int, const char *);        // указатель на функцию обратного возврата
-    capture_event_t current_state; // текущее состояние потока
+        void *, int, const char *); // указатель на функцию обратного возврата
+    capture_event_t current_state;  // текущее состояние потока
 };
 
 /**
@@ -84,7 +85,6 @@ static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
     capture_context_t *ctx = user_ctx;
     LOG_FFI("Stream state changed: %d -> %d", old, state);
-    fprintf(stderr, "Stream state changed: %d -> %d \n", old, state);
 
     // В зависимости от состояния вызываем обработчик с соответствующим флагом
     switch (state) {
@@ -92,25 +92,27 @@ static void on_state_changed(void *user_ctx, enum pw_stream_state old,
         LOG_FFI(" (error: %s)", error ? error : "Unknown error");
         ctx->current_state = Error;
         unlock_wait(user_ctx);
-        ctx->event_callback(Error, error ? error : "Unknown error");
+        ctx->event_callback(ctx->user_data, Error,
+                            error ? error : "Unknown error");
         break;
 
     case PW_STREAM_STATE_STREAMING:
         ctx->current_state = Ready;
-        ctx->event_callback(Ready, "Streaming started");
+        ctx->event_callback(ctx->user_data, Ready, "Streaming started");
         break;
 
     case PW_STREAM_STATE_UNCONNECTED:
         ctx->current_state = Stopped;
         unlock_wait(user_ctx);
-        ctx->event_callback(Stopped, "Streaming stopped");
+        ctx->event_callback(ctx->user_data, Stopped, "Streaming stopped");
         break;
 
     default:
         if (ctx->current_state == Ready) {
             ctx->current_state = Reconnecting;
             unlock_wait(user_ctx);
-            ctx->event_callback(Reconnecting, "Streaming reconnecting");
+            ctx->event_callback(ctx->user_data, Reconnecting,
+                                "Streaming reconnecting");
         }
         break;
     }
@@ -223,9 +225,9 @@ static void on_param_changed(void *user_ctx, uint32_t id,
     if (spa_format_video_raw_parse(param, &ctx->video_format.info.raw) < 0)
         return;
 
-    uint32_t video_format = ctx->video_format.info.raw.format;
-    LOG_FFI("Negotiated format: %d (%s)\n", video_format,
-            spa_debug_type_find_name(spa_type_video_format, video_format));
+    LOG_FFI("Negotiated format: %d (%s)\n", ctx->video_format.info.raw.format,
+            spa_debug_type_find_name(spa_type_video_format,
+                                     ctx->video_format.info.raw.format));
 
     LOG_FFI("got video format:\n");
     LOG_FFI("  format: %d (%s)\n", ctx->video_format.info.raw.format,
@@ -419,8 +421,8 @@ static void cleanup_portal_data(struct portal_data *portal_data) {
 
 // Инициализация, запуск и остановка захвата экрана
 capture_context_t *screen_capture_init(capture_config_t *config,
-                                       void (*callback)(int, const char *),
-                                       bool apply_conversion) {
+                                       event_callback_t callback,
+                                       void *user_data, bool apply_conversion) {
     // Проверяем, что указатель на конфиг не NULL
     if (!config) {
         return NULL;
@@ -431,12 +433,19 @@ capture_context_t *screen_capture_init(capture_config_t *config,
         return NULL;
     }
 
+    // Проверяем, что указатель на данные не NULL
+    if (!user_data) {
+        return NULL;
+    }
+
     // Выделяем память под структуру контекста
     capture_context_t *ctx = malloc(sizeof(capture_context_t));
     // Сохраняем адрес конфига
     ctx->config = config;
     // Сохраняем функцию обратного вызова
     ctx->event_callback = callback;
+    // Сохраняем данные
+    ctx->user_data = user_data;
 
     // --- ИНИЦИАЛИЗИРУЕМ PIPEWIRE --- //
 
@@ -550,6 +559,10 @@ void screen_capture_run(capture_context_t *ctx) {
     if (ctx->portal_data) {
         cleanup_portal_data(ctx->portal_data);
     }
+    // Освобождаем Arc на стороне Rust
+    if (ctx->user_data) {
+        release_user_data(ctx->user_data);
+    }
 
     free(ctx);
 
@@ -570,6 +583,21 @@ void screen_capture_stop(capture_context_t *ctx) {
     }
 }
 
+// Ф-я получения текущей конфигурации
+capture_config_t *get_capture_config(capture_context_t *ctx) {
+    // Проверяем, что контекст не NULL
+    if (!ctx) {
+        return NULL;
+    }
+
+    pthread_mutex_lock(&ctx->frame_data.lock);
+    capture_config_t *ret = ctx->config;
+    pthread_mutex_unlock(&ctx->frame_data.lock);
+
+    // Вытягиваем данные из конфига
+    return ret;
+}
+
 // Ф-я получения указателя на DMA
 uint8_t *wait_for_frame(capture_context_t *ctx) {
     // Проверяем, что контекст не NULL
@@ -587,7 +615,6 @@ uint8_t *wait_for_frame(capture_context_t *ctx) {
     while (!ctx->frame_data.new_frame && ctx->current_state == Ready) {
         pthread_cond_wait(&ctx->frame_data.cond, &ctx->frame_data.lock);
     }
-
 
     // Помечаем, что начали работу
     ctx->frame_data.on_process = Working;

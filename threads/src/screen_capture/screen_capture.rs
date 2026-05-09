@@ -1,8 +1,12 @@
 //! Модуль, управляющий потоком захвата экрана
 
+use common::core::controller::CoreController;
 use ffi::bindings::*;
 use std::ffi::c_void;
+use std::sync::Arc;
 use std::thread::JoinHandle;
+
+use crate::screen_capture::handler::callback;
 
 /// Поток захвата кадра
 ///
@@ -10,52 +14,51 @@ use std::thread::JoinHandle;
 /// `handle`: [Option]<JoinHandle<()>> - поток
 /// `ctx_ptr`: *mut [c_void] - контекст потока
 /// `frame_size`: [usize] - размер кадра
+/// `core_controller`: [Arc]<[CoreController]> - контроллер ядра
 pub struct CaptureThread {
-    pub handle: Option<JoinHandle<()>>,
-    pub ctx_ptr: *mut c_void,
-    pub frame_size: usize,
+    pub(super) handle: Option<JoinHandle<()>>,
+    pub(super) ctx_ptr: *mut c_void,
+    pub(super) frame_size: usize,
+    pub(super) core_controller: Arc<CoreController>,
 }
 
 impl CaptureThread {
-    /// Ф-я инициализации потока
-    pub fn new() -> Self {
-        return CaptureThread {
-            handle: None,
-            ctx_ptr: std::ptr::null_mut(),
-            frame_size: 0,
-        };
-    }
-
-    /// Ф-я запуска потока
-    pub fn start(
-        &mut self,
+    /// Запуск потока
+    ///
+    /// **Входные поля:**
+    /// - `config`: &mut [CaptureConfig] - место, куда будет сохранён конфиг захвата
+    /// - `core_controller`: [Arc]<[CoreController]> - контроллер ядра
+    /// - `apply_conversion`: [bool] - флаг разрешения использовать
+    ///   преобразования pipewire
+    /// 
+    /// **Выходные поля:**
+    /// - [Result]<Self, [String]> - результат или текст ошибки
+    pub fn new(
         config: &mut CaptureConfig,
-        callback: EventCallback,
+        core_controller: Arc<CoreController>,
         apply_conversion: bool,
-    ) {
-        // Проверяем, не запущен ли уже поток, чтобы не плодить их
-        if self.handle.is_some() {
-            println!("[WARN] CaptureThread: Thread already running");
-            return;
-        }
-
+    ) -> Result<Self, String> {
         if apply_conversion {
             println!("[WARN] CaptureThread: PipeWire conversion applied")
         }
 
         // Запускаем поток захвата и сохраняем контекст и данные об экране
+        let user_data = Arc::into_raw(core_controller.clone()) as *mut c_void;
         let ctx: *mut std::ffi::c_void = unsafe {
-            screen_capture_init(config as *mut CaptureConfig, callback, apply_conversion)
+            screen_capture_init(
+                config as *mut CaptureConfig,
+                callback,
+                user_data,
+                apply_conversion,
+            )
         };
 
         // Проверяем, что получили не нулевой контекст
         if ctx.is_null() {
+            unsafe { Arc::from_raw(user_data as *const CoreController); } // Вернули и дропнули
             println!("[ERROR] CaptureThread: Failed to initialize C context");
-            return;
+            return Err("Failed to initialize C context".to_string());
         }
-
-        // Сохраняем контекст
-        self.ctx_ptr = ctx;
 
         // Запускаем поток
         let ctx_for_thread = ctx as usize;
@@ -66,17 +69,41 @@ impl CaptureThread {
             }
         });
 
-        self.handle = Some(thread_handle);
+        return Ok(Self {
+            handle: Some(thread_handle),
+            ctx_ptr: ctx,
+            frame_size: 0,
+            core_controller,
+        });
     }
 
-    pub fn calculate_data(&mut self, config: &CaptureConfig, pixel_size: usize) {
-        // test
-        println!(
-            "[INFO] CaptureThread: video format: {}",
-            SpaVideoFormat::try_from(config.video_format)
-                .map(|f| f.to_string())
-                .unwrap_or_else(|e| format!("unknown ({})", e))
-        );
+    /// Получение контроллера ядра
+    pub fn get_controller(&self) -> Arc<CoreController> {
+        self.core_controller.clone()
+    }
+
+    /// Расчёт необходимых для работы данных
+    ///
+    /// **Входные поля:**
+    /// - `pixel_size`: [usize] - размер одного пикселя в байтах
+    ///
+    pub fn calculate_data(&mut self, pixel_size: usize) {
+        // Получаем указатель
+        let config_ptr: *mut CaptureConfig = unsafe { get_capture_config(self.ctx_ptr) };
+
+        if config_ptr.is_null() {
+            eprintln!("[ERROR] CaptureThread: Config pointer is NULL");
+            return;
+        }
+
+        // Превращаем указатель в безопасную ссылку (разыменовываем внутри unsafe)
+        let config = unsafe { &*config_ptr };
+
+        let format_str = SpaVideoFormat::try_from(config.video_format)
+            .map(|f| f.to_string())
+            .unwrap_or_else(|_| format!("unknown ({})", config.video_format));
+
+        println!("[INFO] CaptureThread: video format: {}", format_str);
 
         // Рассчитываем размер кадра
         self.frame_size = (config.screen_height * config.screen_width) as usize * pixel_size;
@@ -121,7 +148,6 @@ impl CaptureThread {
 
             // Ждем, пока Си-воркер подготовит кадр (блокирующий вызов)
             let ptr = wait_for_frame(self.ctx_ptr);
-
 
             if !ptr.is_null() {
                 // Создаем слайс (окно в память Си)

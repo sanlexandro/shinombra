@@ -2,6 +2,9 @@
 
 use std::fmt::Display;
 use std::os::raw::c_void;
+use std::sync::Arc;
+
+use common::core::controller::CoreController;
 
 /// Структура для обмена данными с потоком захвата
 ///
@@ -11,9 +14,9 @@ use std::os::raw::c_void;
 /// `video_format`: [u32] - формат видео (конвертируется в [SpaVideoFormat])
 #[repr(C)]
 pub struct CaptureConfig {
-    pub screen_width: u32,    // Заполняет C (PipeWire)
-    pub screen_height: u32,   // Заполняет C (PipeWire)
-    pub video_format: u32,    // Заполняет C (PipeWire)
+    pub screen_width: u32,  // Заполняет C (PipeWire)
+    pub screen_height: u32, // Заполняет C (PipeWire)
+    pub video_format: u32,  // Заполняет C (PipeWire)
 }
 
 /// Реализация методов для [CaptureConfig]
@@ -40,28 +43,45 @@ pub enum CaptureEvent {
 }
 
 /// Тип ф-ии обратного вызова
-pub type EventCallback = extern "C" fn(event: CaptureEvent, message: *const std::os::raw::c_char);
+pub type CaptureEventCallback = extern "C" fn(
+    user_data: *mut c_void,
+    event: CaptureEvent,
+    message: *const std::os::raw::c_char,
+);
 
 // Используем ф-ии из `C-worker`
 extern "C" {
-    /// Ф-я инициализации захвата экрана
+    /// Инициализация захвата экрана
     pub fn screen_capture_init(
         config: *mut CaptureConfig,
-        callback: EventCallback,
+        callback: CaptureEventCallback,
+        user_data: *const c_void,
         apply_conversion: bool,
     ) -> *mut c_void;
 
-    /// Ф-я запуска захвата экрана
+    /// Запуск захвата экрана
     pub fn screen_capture_run(ctx: *mut c_void);
 
-    /// Ф-я остановки потока захвата экрана
+    /// Остановка потока захвата экрана
     pub fn screen_capture_stop(ctx: *mut c_void);
 
-    /// Ф-я получения указателя DMA
+    /// Получение текущей конфигурации захвата экрана
+    pub fn get_capture_config(ctx: *mut c_void) -> *mut CaptureConfig;
+
+    /// Получение указателя DMA
     pub fn wait_for_frame(ctx: *mut c_void) -> *mut u8;
 
-    /// Ф-я освобождения кадра DMA
+    /// Освобождение кадра DMA
     pub fn release_frame(ctx: *mut c_void);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn release_user_data(user_data: *mut c_void) {
+    if !user_data.is_null() {
+        // Восстанавливаем Arc и позволяем ему выйти из области видимости,
+        // что уменьшит счетчик ссылок и удалит объект, если ссылок больше нет.
+        let _ = Arc::from_raw(user_data as *const CoreController);
+    }
 }
 
 /// Тип видео-формата

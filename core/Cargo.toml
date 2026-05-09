@@ -11,7 +11,8 @@ algorithms = { path = "../algorithms" }
 threads = { path = "../threads" }
 ffi = { path = "../ffi" }
 hardware_output = { path = "../hardware_output" }
-config-gen = {path = "../infra/config-gen"} 
+config-gen = { path = "../infra/config-gen" }
+common = { path = "../common" }
 
 [lib]
 name = "ambient_core"

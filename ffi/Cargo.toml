@@ -8,6 +8,7 @@ name = "ffi"
 path = "mod.rs"
 
 [dependencies]
+common ={ path = "../common"}
 
 [build-dependencies]
 cc = "1.0"

@@ -25,7 +25,12 @@ typedef struct capture_context capture_context_t;
 typedef enum { Ready, Error, Stopped, Reconnecting } capture_event_t;
 
 // Тип обратного вызова
-typedef void (*event_callback_t)(int event, const char *msg);
+typedef void (*event_callback_t)(void *user_data, int event, const char *msg);
+
+/**
+ * @brief Освобождение памяти Arc<>
+ */
+void release_user_data(void *user_data);
 
 /**
  * @brief Инициализация захвата экрана
@@ -39,8 +44,8 @@ typedef void (*event_callback_t)(int event, const char *msg);
  * NULL
  */
 capture_context_t *screen_capture_init(capture_config_t *config,
-                                       void (*callback)(int, const char *),
-                                       bool apply_conversion);
+                                       event_callback_t callback,
+                                       void *user_data, bool apply_conversion);
 
 /**
  * @brief Запуск процесса захвата экрана
@@ -62,6 +67,16 @@ void screen_capture_run(capture_context_t *ctx);
  * гарантировать правильное освобождение ресурсов и закрытие сессии портала
  */
 void screen_capture_stop(capture_context_t *ctx);
+
+/**
+ * @brief Получение текущей конфигурации захвата
+ * 
+ * @param ctx Указатель на структуру capture_context_t, возвращённую функцией
+ * инициализации
+ * 
+ * @return Указатель на текущий конфиг захвата
+ */
+capture_config_t *get_capture_config(capture_context_t *ctx);
 
 /**
  * @brief Получение указателя на текущий кадр из видеопотока

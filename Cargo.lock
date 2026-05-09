@@ -198,6 +198,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "pkg-config",
+]
+
+[[package]]
 name = "config-gen"
 version = "0.1.0"
 dependencies = [
@@ -220,6 +228,7 @@ name = "core"
 version = "0.1.0"
 dependencies = [
  "algorithms",
+ "common",
  "config-gen",
  "ctrlc",
  "ffi",
@@ -288,6 +297,7 @@ name = "ffi"
 version = "0.1.0"
 dependencies = [
  "cc",
+ "common",
  "pkg-config",
 ]
 
@@ -900,6 +910,7 @@ version = "0.1.0"
 dependencies = [
  "algorithms",
  "cc",
+ "common",
  "ffi",
  "hardware_output",
  "pkg-config",
