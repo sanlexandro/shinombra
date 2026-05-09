@@ -2,9 +2,12 @@ use algorithms::{
     analytics::ColorAnalyst, filters::ColorFilter, pixel_formatter::PixelFormatter,
     processing::processors::ChunkProcessor,
 };
-use ffi::bindings::CaptureConfig;
+use ffi::bindings::{CaptureConfig, CaptureEvent};
 use hardware_output::HardwareOutput;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    ffi::CStr,
+    sync::atomic::{AtomicBool, Ordering},
+};
 use threads::{
     hardware_output::hardware_output::HardwareOutputThread,
     screen_capture::screen_capture::CaptureThread,
@@ -16,11 +19,35 @@ pub mod config;
 use crate::bootstrap::ConfigLoader;
 use algorithms::processing::types::ColorEngine;
 
-static KEEP_RUNNING: AtomicBool = AtomicBool::new(true);
+static KEEP_RUNNING: AtomicBool = AtomicBool::new(false);
 
 // ф-я остановки основного потока
 fn ctrlc_func() {
-    KEEP_RUNNING.store(false, Ordering::Relaxed);
+    KEEP_RUNNING.store(false, Ordering::SeqCst);
+}
+
+///
+extern "C" fn on_capture_event(event: CaptureEvent, msg_ptr: *const std::os::raw::c_char) {
+    let msg = unsafe { CStr::from_ptr(msg_ptr).to_string_lossy() };
+
+    match event {
+        CaptureEvent::Ready => {
+            println!("[INFO] ScreenCapture: Streaming started ({})", msg);
+            KEEP_RUNNING.store(true, Ordering::SeqCst);
+        }
+        CaptureEvent::Error => {
+            eprintln!("[ERROR] ScreenCapture: Capture error: {}", msg);
+            KEEP_RUNNING.store(false, Ordering::SeqCst);
+        }
+        CaptureEvent::Stopped => {
+            println!("[INFO] ScreenCapture: Streaming stopped: {}", msg);
+            KEEP_RUNNING.store(false, Ordering::SeqCst);
+        }
+        CaptureEvent::Reconnecting=> {
+            println!("[INFO] ScreenCapture: Streaming reconnecting: {}", msg);
+            KEEP_RUNNING.store(false, Ordering::SeqCst);
+        }
+    }
 }
 
 fn main() {
@@ -36,26 +63,18 @@ fn main() {
     let mut capture_thread = CaptureThread::new();
     capture_thread.start(
         &mut capture_config,
+        on_capture_event,
         config_loader.get_flags().pipewire_conversion,
     );
 
     // Ждем, пока флаг станет TRUE
-    while !capture_config.is_ready.load(Ordering::Relaxed) {
+    while !KEEP_RUNNING.load(Ordering::Relaxed) {
         // Спим 10мс, чтобы не грузить CPU
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
-    // Считываем размеры экрана из конфига только после того, как соединение
-    // установилось
-    capture_thread.calculate_data(&capture_config);
-
     // Запускаем инициализацию и `run_ambient_loop` в дальнейшем
-    config_loader.run_stages(
-        capture_config.screen_width as u32,
-        capture_config.screen_height as u32,
-        capture_config.video_format as u32,
-        &capture_thread,
-    );
+    config_loader.run_stages(capture_config, &mut capture_thread);
 
     println!("[INFO] Core: Shutting down...");
 

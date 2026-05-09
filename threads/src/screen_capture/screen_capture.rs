@@ -27,7 +27,12 @@ impl CaptureThread {
     }
 
     /// Ф-я запуска потока
-    pub fn start(&mut self, config: &mut CaptureConfig, apply_conversion: bool) {
+    pub fn start(
+        &mut self,
+        config: &mut CaptureConfig,
+        callback: EventCallback,
+        apply_conversion: bool,
+    ) {
         // Проверяем, не запущен ли уже поток, чтобы не плодить их
         if self.handle.is_some() {
             println!("[WARN] CaptureThread: Thread already running");
@@ -39,8 +44,9 @@ impl CaptureThread {
         }
 
         // Запускаем поток захвата и сохраняем контекст и данные об экране
-        let ctx: *mut std::ffi::c_void =
-            unsafe { screen_capture_init(config as *mut CaptureConfig, apply_conversion) };
+        let ctx: *mut std::ffi::c_void = unsafe {
+            screen_capture_init(config as *mut CaptureConfig, callback, apply_conversion)
+        };
 
         // Проверяем, что получили не нулевой контекст
         if ctx.is_null() {
@@ -50,7 +56,7 @@ impl CaptureThread {
 
         // Сохраняем контекст
         self.ctx_ptr = ctx;
-        
+
         // Запускаем поток
         let ctx_for_thread = ctx as usize;
         let thread_handle = std::thread::spawn(move || {
@@ -63,12 +69,17 @@ impl CaptureThread {
         self.handle = Some(thread_handle);
     }
 
-    pub fn calculate_data(&mut self, config: &CaptureConfig) {
+    pub fn calculate_data(&mut self, config: &CaptureConfig, pixel_size: usize) {
         // test
-        println!("[INFO] CaptureThread: video format: {}", SpaVideoFormat::try_from(config.video_format).map(|f| f.to_string()).unwrap_or_else(|e| format!("unknown ({})", e)));
+        println!(
+            "[INFO] CaptureThread: video format: {}",
+            SpaVideoFormat::try_from(config.video_format)
+                .map(|f| f.to_string())
+                .unwrap_or_else(|e| format!("unknown ({})", e))
+        );
 
         // Рассчитываем размер кадра
-        self.frame_size = (config.screen_height * config.screen_width * 4) as usize; // TODO: считывание размера одного пикселя
+        self.frame_size = (config.screen_height * config.screen_width) as usize * pixel_size;
     }
 
     /// Остановка потока
@@ -84,7 +95,9 @@ impl CaptureThread {
         }
 
         if let Some(handle) = self.handle.take() {
-            handle.join().expect("[ERROR] CaptureThread: Couldn't join thread");
+            handle
+                .join()
+                .expect("[ERROR] CaptureThread: Couldn't join thread");
             self.ctx_ptr = std::ptr::null_mut(); // Обнуляем после завершения
             println!("[INFO] CaptureThread: Capture thread stopped");
         }
@@ -108,6 +121,7 @@ impl CaptureThread {
 
             // Ждем, пока Си-воркер подготовит кадр (блокирующий вызов)
             let ptr = wait_for_frame(self.ctx_ptr);
+
 
             if !ptr.is_null() {
                 // Создаем слайс (окно в память Си)

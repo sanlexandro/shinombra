@@ -8,30 +8,39 @@
 #define PW_SCREEN_CAPTURE_H
 
 #include <pthread.h>
-#include <stdbool.h>
 #include <stdatomic.h>
-
+#include <stdbool.h>
 
 // Структура для хранения конфигурации захвата
 typedef struct {
     uint32_t screen_width;
     uint32_t screen_height;
     uint32_t video_format;
-    atomic_bool is_ready;
 } capture_config_t;
 
 // Структура для хранения данных портала и состояния захвата
 typedef struct capture_context capture_context_t;
 
+// Состояния потока
+typedef enum { Ready, Error, Stopped, Reconnecting } capture_event_t;
+
+// Тип обратного вызова
+typedef void (*event_callback_t)(int event, const char *msg);
+
 /**
  * @brief Инициализация захвата экрана
  *
  * @param config Указатель на структуру capture_config_t с настройками захвата
- * @param apply_conversion Флаг включения преобразования формата видео на уровне pipewire
+ * @param apply_conversion Флаг включения преобразования формата видео на уровне
+ * pipewire
+ * @param callback Указатель на функцию обратного вызова `(int, const char *)`
  *
- * @return Указатель на структуру capture_context_t с состоянием захвата, или NULL
+ * @return Указатель на структуру capture_context_t с состоянием захвата, или
+ * NULL
  */
-capture_context_t *screen_capture_init(capture_config_t *config, bool apply_conversion);
+capture_context_t *screen_capture_init(capture_config_t *config,
+                                       void (*callback)(int, const char *),
+                                       bool apply_conversion);
 
 /**
  * @brief Запуск процесса захвата экрана

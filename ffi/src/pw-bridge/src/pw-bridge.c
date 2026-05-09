@@ -33,13 +33,16 @@ struct portal_data {
     gboolean ready;         // флаг готовности
 };
 
+// Состояния, в которых может находиться обработчик
+typedef enum { Initializing, Working, Waiting } process_state_t;
+
 // Структура для хранения указателя на текущий кадр
 struct current_frame_t {
-    uint8_t *current_frame; // Указатель на DMA
-    bool on_process;        // Флаг занятости читающего (Consumer)
-    bool new_frame;         // Флаг наличия нового кадра (Producer)
-    pthread_mutex_t lock;   // Мьютекс для синхронизации доступа к кадру
-    pthread_cond_t cond;    // Условная переменная для уведомления о новом кадре
+    uint8_t *current_frame;     // Указатель на DMA
+    process_state_t on_process; // Флаг занятости читающего (Consumer)
+    bool new_frame;             // Флаг наличия нового кадра (Producer)
+    pthread_mutex_t lock;       // Мьютекс для синхронизации доступа к кадру
+    pthread_cond_t cond; // Условная переменная для уведомления о новом кадре
     struct pw_buffer
         *last_pipewire_buffer; // последний буфер из видеопотока (для
                                // освобождения после обработки)
@@ -56,25 +59,61 @@ struct capture_context {
 
     struct current_frame_t
         frame_data; // указатель на структуру обмена указателем на кадр
+    void (*event_callback)(
+        int, const char *);        // указатель на функцию обратного возврата
+    capture_event_t current_state; // текущее состояние потока
 };
 
 /**
+ * @brief Разблокировка ожидания
+ */
+static void unlock_wait(void *user_ctx) {
+    capture_context_t *ctx = user_ctx;
+
+    pthread_mutex_lock(&ctx->frame_data.lock);
+    pthread_cond_signal(&ctx->frame_data.cond);
+    pthread_mutex_unlock(&ctx->frame_data.lock);
+}
+
+/**
  * @brief Обработчик события смены состояния потока
+ *
+ * В зависимости от состояния дёргает переданный callback обработчик
  */
 static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
     capture_context_t *ctx = user_ctx;
     LOG_FFI("Stream state changed: %d -> %d", old, state);
-    if (error) {
-        LOG_FFI(" (error: %s)", error);
+    fprintf(stderr, "Stream state changed: %d -> %d \n", old, state);
+
+    // В зависимости от состояния вызываем обработчик с соответствующим флагом
+    switch (state) {
+    case PW_STREAM_STATE_ERROR:
+        LOG_FFI(" (error: %s)", error ? error : "Unknown error");
+        ctx->current_state = Error;
+        unlock_wait(user_ctx);
+        ctx->event_callback(Error, error ? error : "Unknown error");
+        break;
+
+    case PW_STREAM_STATE_STREAMING:
+        ctx->current_state = Ready;
+        ctx->event_callback(Ready, "Streaming started");
+        break;
+
+    case PW_STREAM_STATE_UNCONNECTED:
+        ctx->current_state = Stopped;
+        unlock_wait(user_ctx);
+        ctx->event_callback(Stopped, "Streaming stopped");
+        break;
+
+    default:
+        if (ctx->current_state == Ready) {
+            ctx->current_state = Reconnecting;
+            unlock_wait(user_ctx);
+            ctx->event_callback(Reconnecting, "Streaming reconnecting");
+        }
+        break;
     }
-    // Ждём пока поток полностью запустится и только тогда отпускаем
-    if (state == PW_STREAM_STATE_STREAMING) {
-        atomic_store_explicit(&ctx->config->is_ready, true,
-                              memory_order_release);
-    }
-    LOG_FFI("\n");
-    // <--
 }
 
 /**
@@ -92,7 +131,7 @@ static void on_process(void *user_ctx) {
     // Получаем буфер из видеопотока
     if ((pipewire_buffer = pw_stream_dequeue_buffer(ctx->video_stream)) ==
         NULL) {
-        pw_log_warn("out of buffers: %m");
+        pw_log_warn("out of buffers");
         return;
     }
 
@@ -112,10 +151,13 @@ static void on_process(void *user_ctx) {
 
     // И сохраняем в контекст
     if (pixels) {
+        LOG_FFI("buffer is ok\n");
         // Лочим и проверяем, свободен ли consumer
         pthread_mutex_lock(&ctx->frame_data.lock);
 
-        if (ctx->frame_data.on_process) {
+        // Если процесс занят, просто отпускаем буфер
+        if (ctx->frame_data.on_process != Waiting) {
+            LOG_FFI("frying buffer\n");
             pthread_mutex_unlock(&ctx->frame_data.lock);
             pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
             return;
@@ -377,9 +419,15 @@ static void cleanup_portal_data(struct portal_data *portal_data) {
 
 // Инициализация, запуск и остановка захвата экрана
 capture_context_t *screen_capture_init(capture_config_t *config,
+                                       void (*callback)(int, const char *),
                                        bool apply_conversion) {
     // Проверяем, что указатель на конфиг не NULL
     if (!config) {
+        return NULL;
+    }
+
+    // Проверяем, что указатель на функцию не NULL
+    if (!callback) {
         return NULL;
     }
 
@@ -387,6 +435,8 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     capture_context_t *ctx = malloc(sizeof(capture_context_t));
     // Сохраняем адрес конфига
     ctx->config = config;
+    // Сохраняем функцию обратного вызова
+    ctx->event_callback = callback;
 
     // --- ИНИЦИАЛИЗИРУЕМ PIPEWIRE --- //
 
@@ -467,7 +517,7 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     // --- ИНИЦИАЛИЗИРУЕМ СТРУКТУРУ ПЕРЕДАЧИ КАДРА --- //
 
     ctx->frame_data.current_frame = NULL;
-    ctx->frame_data.on_process = false;
+    ctx->frame_data.on_process = Initializing;
     ctx->frame_data.new_frame = false;
     pthread_mutex_init(&ctx->frame_data.lock, NULL);
     pthread_cond_init(&ctx->frame_data.cond, NULL);
@@ -487,9 +537,20 @@ void screen_capture_run(capture_context_t *ctx) {
     pw_main_loop_run(ctx->main_loop);
 
     // Освобождаем ресурсы в том же потоке, где работал PipeWire loop
-    pw_stream_destroy(ctx->video_stream);
-    pw_main_loop_destroy(ctx->main_loop);
-    cleanup_portal_data(ctx->portal_data);
+    if (ctx->video_stream && ctx->current_state == Ready) {
+        // Уничтожаем поток только если всё ок
+        // При возникновении ошибок pipewire удаляет поток самостоятельно и
+        // блокирует изменения
+        pw_stream_disconnect(ctx->video_stream);
+        pw_stream_destroy(ctx->video_stream);
+    }
+    if (ctx->main_loop) {
+        pw_main_loop_destroy(ctx->main_loop);
+    }
+    if (ctx->portal_data) {
+        cleanup_portal_data(ctx->portal_data);
+    }
+
     free(ctx);
 
     LOG_FFI("End test\n");
@@ -502,28 +563,40 @@ void screen_capture_stop(capture_context_t *ctx) {
         return;
     }
 
-    // Просим loop завершиться; фактическая очистка выполняется в
-    // screen_capture_run
-    pw_main_loop_quit(ctx->main_loop);
+    // Просим loop завершиться
+    // фактическая очистка выполняется в `screen_capture_run`
+    if (ctx->main_loop) {
+        pw_main_loop_quit(ctx->main_loop);
+    }
 }
 
 // Ф-я получения указателя на DMA
 uint8_t *wait_for_frame(capture_context_t *ctx) {
-    // Проверяем, что указатель на контекст не равен NULL
-    if (ctx == NULL) {
+    // Проверяем, что контекст не NULL
+    if (!ctx) {
         return NULL;
     }
 
     pthread_mutex_lock(&ctx->frame_data.lock);
 
-    // Ждём пока Producer не завершит работу
-    while (!ctx->frame_data.new_frame) {
+    // Помечаем, что работа окончена
+    ctx->frame_data.on_process = Waiting;
+
+    // Ждём пока Producer не завершит работу или когда поток вышел из состояния
+    // готовности
+    while (!ctx->frame_data.new_frame && ctx->current_state == Ready) {
         pthread_cond_wait(&ctx->frame_data.cond, &ctx->frame_data.lock);
     }
 
+
     // Помечаем, что начали работу
-    ctx->frame_data.on_process = true;
+    ctx->frame_data.on_process = Working;
     ctx->frame_data.new_frame = false;
+
+    // Если поток прервался отправляем NULL
+    if (ctx->current_state != Ready) {
+        return NULL;
+    }
 
     // Сохраняем указатель
     uint8_t *ptr = ctx->frame_data.current_frame;
@@ -536,16 +609,13 @@ uint8_t *wait_for_frame(capture_context_t *ctx) {
 
 // Ф-я отпускающая указатель на DMA
 void release_frame(capture_context_t *ctx) {
-    // Проверяем, что указатель на контекст не равен NULL
-    if (ctx == NULL) {
+    // Проверяем, что указатель не NULL
+    if (!ctx) {
         return;
     }
 
     // Блокируем mutex
     pthread_mutex_lock(&ctx->frame_data.lock);
-
-    // Помечаем, что работа окончена
-    ctx->frame_data.on_process = false;
 
     // Если есть указатель на буфер
     if (ctx->frame_data.last_pipewire_buffer) {

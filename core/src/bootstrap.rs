@@ -36,6 +36,7 @@ use algorithms::{
     units::*,
 };
 use config_gen::{__private::*, *};
+use ffi::bindings::CaptureConfig;
 use ffi::bindings::SpaVideoFormat;
 use hardware_output::{
     debug::types::DebugDriver,
@@ -139,18 +140,13 @@ impl ConfigLoader {
     ///
     /// Данная функция подтягивает необходимую конфигурацию в настройки конфигурации
     /// экрана и запускает следующую ступень
-    pub fn run_stages(
-        mut self,
-        screen_width: u32,
-        screen_height: u32,
-        video_format: u32,
-        capture_thread: &CaptureThread,
-    ) {
+    pub fn run_stages(mut self, capture_config: CaptureConfig, capture_thread: &mut CaptureThread) {
         // Подтягиваем конфигурацию экрана из потока захвата
-        self.screen_config.load_px(screen_width, screen_height);
+        self.screen_config
+            .load_px(capture_config.screen_width, capture_config.screen_height);
 
         // И запускаем обработку по стадиям
-        self.stage_1_select_formatter(video_format, capture_thread);
+        self.stage_1_select_formatter(capture_config, capture_thread);
     }
 
     /// 1-я ступень - выбор преобразователя пикселей
@@ -162,34 +158,38 @@ impl ConfigLoader {
     /// - [SpaVideoFormat::BGRA]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_1_select_formatter(self, video_format: u32, capture_thread: &CaptureThread) {
-        let format = SpaVideoFormat::try_from(video_format)
-            .expect(format!("Strange video format id: {}", video_format).as_str());
+    fn stage_1_select_formatter(
+        self,
+        capture_config: CaptureConfig,
+        capture_thread: &mut CaptureThread,
+    ) {
+        let format = SpaVideoFormat::try_from(capture_config.video_format)
+            .expect(format!("Strange video format id: {}", capture_config.video_format).as_str());
 
         match format {
             SpaVideoFormat::RGBx => {
-                self.stage_2_select_chunk_processor::<RGBx>(capture_thread);
+                self.stage_2_select_chunk_processor::<RGBx>(capture_config, capture_thread);
             }
             SpaVideoFormat::BGRx => {
-                self.stage_2_select_chunk_processor::<BGRx>(capture_thread);
+                self.stage_2_select_chunk_processor::<BGRx>(capture_config, capture_thread);
             }
             SpaVideoFormat::xRGB => {
-                self.stage_2_select_chunk_processor::<xRGB>(capture_thread);
+                self.stage_2_select_chunk_processor::<xRGB>(capture_config, capture_thread);
             }
             SpaVideoFormat::xBGR => {
-                self.stage_2_select_chunk_processor::<xBGR>(capture_thread);
+                self.stage_2_select_chunk_processor::<xBGR>(capture_config, capture_thread);
             }
             SpaVideoFormat::RGBA => {
-                self.stage_2_select_chunk_processor::<RGBA>(capture_thread);
+                self.stage_2_select_chunk_processor::<RGBA>(capture_config, capture_thread);
             }
             SpaVideoFormat::BGRA => {
-                self.stage_2_select_chunk_processor::<BGRA>(capture_thread);
+                self.stage_2_select_chunk_processor::<BGRA>(capture_config, capture_thread);
             }
             SpaVideoFormat::ARGB => {
-                self.stage_2_select_chunk_processor::<ARGB>(capture_thread);
+                self.stage_2_select_chunk_processor::<ARGB>(capture_config, capture_thread);
             }
             SpaVideoFormat::ABGR => {
-                self.stage_2_select_chunk_processor::<ABGR>(capture_thread);
+                self.stage_2_select_chunk_processor::<ABGR>(capture_config, capture_thread);
             }
 
             format => {
@@ -204,16 +204,26 @@ impl ConfigLoader {
 
     /// 2-я ступень - выбор обработчика фрагментов
     ///
-    /// Данная ступень выбирает реализацию трейта [ChunkProcessor]
+    /// Данная ступень выбирает реализацию трейта [ChunkProcessor], также
+    /// производит размер кадра в байтах для потока захвата с помощью информации
+    /// из [PixelFormatter] (а именно [PixelFormatter::SIZE] - размер пикселя в
+    /// байтах)
     ///
     /// **Поддерживается обработка для:**
     /// - [ChunkProcessorType::Checkerboard]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_2_select_chunk_processor<Formatter>(self, capture_thread: &CaptureThread)
-    where
+    fn stage_2_select_chunk_processor<Formatter>(
+        self,
+        capture_config: CaptureConfig,
+        capture_thread: &mut CaptureThread,
+    ) where
         Formatter: PixelFormatter,
     {
+        // Считываем размеры экрана из конфига только после того, как удалось
+        // выбрать формат
+        capture_thread.calculate_data(&capture_config, Formatter::SIZE);
+
         // Выбираем тип обработчика фрагмента из конфига
         match self.settings.chunk_processor_type {
             ChunkProcessorType::Checkerboard => {

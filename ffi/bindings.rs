@@ -2,7 +2,6 @@
 
 use std::fmt::Display;
 use std::os::raw::c_void;
-use std::sync::atomic::AtomicBool;
 
 /// Структура для обмена данными с потоком захвата
 ///
@@ -10,13 +9,11 @@ use std::sync::atomic::AtomicBool;
 /// `screen_width`: [u32] - ширина экрана в пикселях
 /// `screen_height`: [u32] - высота экрана в пикселях
 /// `video_format`: [u32] - формат видео (конвертируется в [SpaVideoFormat])
-/// `is_ready`: [AtomicBool] - флаг завершения инициализации
 #[repr(C)]
 pub struct CaptureConfig {
     pub screen_width: u32,    // Заполняет C (PipeWire)
     pub screen_height: u32,   // Заполняет C (PipeWire)
     pub video_format: u32,    // Заполняет C (PipeWire)
-    pub is_ready: AtomicBool, // Флаг для синхронизации
 }
 
 /// Реализация методов для [CaptureConfig]
@@ -29,15 +26,30 @@ impl CaptureConfig {
             screen_width: 0,
             screen_height: 0,
             video_format: 0,
-            is_ready: AtomicBool::new(false),
         };
     }
 }
 
+/// Состояния потока захвата
+#[repr(C)]
+pub enum CaptureEvent {
+    Ready = 0,
+    Error = 1,
+    Stopped = 2,
+    Reconnecting = 3,
+}
+
+/// Тип ф-ии обратного вызова
+pub type EventCallback = extern "C" fn(event: CaptureEvent, message: *const std::os::raw::c_char);
+
 // Используем ф-ии из `C-worker`
 extern "C" {
     /// Ф-я инициализации захвата экрана
-    pub fn screen_capture_init(config: *mut CaptureConfig, apply_conversion: bool) -> *mut c_void;
+    pub fn screen_capture_init(
+        config: *mut CaptureConfig,
+        callback: EventCallback,
+        apply_conversion: bool,
+    ) -> *mut c_void;
 
     /// Ф-я запуска захвата экрана
     pub fn screen_capture_run(ctx: *mut c_void);
@@ -72,7 +84,8 @@ pub enum SpaVideoFormat {
     xRGB = 9,
     xBGR = 10,
     RGBA = 11,
-    BGRA = 12, /// native
+    BGRA = 12,
+    /// native
     ARGB = 13,
     ABGR = 14,
     RGB = 15,
