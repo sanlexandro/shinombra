@@ -34,6 +34,7 @@ fn main() {
     // Обработчик прерывания
     let controller_for_ctrlc = controller.clone();
     ctrlc::set_handler(move || {
+        info!("Got signal");
         controller_for_ctrlc.shutdown();
     })
     .expect("Error setting Ctrl+C handler");

@@ -18,11 +18,11 @@ pub struct Settings {
     pub analytics_type: ColorAnalystType,
     pub filter_chain: Vec<ColorFilterType>,
     pub hardware_output_type: HardwareOutputType,
+    pub session_token: String,
 }
 
 #[derive(Debug, Default)]
 pub struct Flags {
     pub pipewire_conversion: bool,
     pub save_token: bool,
-    pub session_token: String,
 }

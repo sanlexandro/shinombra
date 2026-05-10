@@ -290,11 +290,14 @@ static void on_session_start_response(GObject *source, GAsyncResult *result,
 
     // Формат потоков: (узел_id, словарь_свойств)
     g_variant_iter_init(&stream_iterator, video_streams);
+    GVariant *stream_dict = NULL;
     if (g_variant_iter_next(&stream_iterator, "(u@a{sv})", &video_node_id,
-                            NULL)) {
+                            &stream_dict)) {
         portal_data->video_node_id = video_node_id;
         LOG_FFI("Got PipeWire node_id from portal: %u\n", video_node_id);
         portal_data->ready = TRUE;
+        if (stream_dict)
+            g_variant_unref(stream_dict); // освобождаем
     } else {
         LOG_FFI("Failed to parse portal streams\n");
         portal_data->ready = FALSE;
@@ -354,53 +357,52 @@ struct portal_data *get_screencast_session(const char *token) {
     struct portal_data *portal_data;
     XdpPortal *portal;
 
-    // Выделяем память для структуры
     portal_data = g_new0(struct portal_data, 1);
-
-    // Создаём основной цикл для асинхронных операций D-Bus
     portal_data->event_loop = g_main_loop_new(NULL, FALSE);
     portal_data->video_node_id = 0;
     portal_data->ready = FALSE;
 
-    // Создаём соединение с порталом
     portal = xdp_portal_new();
     if (!portal) {
-        LOG_FFI("Failed to create portal connection\n");
         g_main_loop_unref(portal_data->event_loop);
         g_free(portal_data);
         return NULL;
     }
-
     portal_data->portal = portal;
 
-    LOG_FFI("Waiting for user to select screen/window...\n");
+    // Максимум 2 попытки: с токеном, потом без
+    const char *tokens[2] = {token, NULL};
+    int attempts = token ? 2 : 1;
 
-    // Создаём сессию захвата экрана с параметрами:
-    // - показываем мониторы и окна
-    // - встраиваем курсор в поток
-    xdp_portal_create_screencast_session(
-        portal, XDP_OUTPUT_MONITOR, XDP_SCREENCAST_FLAG_NONE,
-        XDP_CURSOR_MODE_EMBEDDED,
-        // Если токен есть — PERSISTENT, если нет — TRANSIENT
-        token ? XDP_PERSIST_MODE_PERSISTENT : XDP_PERSIST_MODE_TRANSIENT, token,
-        NULL, on_create_screencast_response, portal_data);
+    for (int i = 0; i < attempts; i++) {
+        const char *current_token = tokens[i];
 
-    // Ждём, пока сессия захвата будет готова
-    g_main_loop_run(portal_data->event_loop);
+        // Сбрасываем флаг перед каждой попыткой
+        portal_data->ready = FALSE;
 
-    if (!portal_data->ready) {
-        LOG_FFI("Failed to get screencast session\n");
-        g_object_unref(portal);
-        g_main_loop_unref(portal_data->event_loop);
-        g_free(portal_data);
-        return NULL;
+        xdp_portal_create_screencast_session(
+            portal, XDP_OUTPUT_MONITOR, XDP_SCREENCAST_FLAG_NONE,
+            XDP_CURSOR_MODE_EMBEDDED,
+            current_token ? XDP_PERSIST_MODE_PERSISTENT
+                          : XDP_PERSIST_MODE_TRANSIENT,
+            current_token, NULL, on_create_screencast_response, portal_data);
+
+        g_main_loop_run(portal_data->event_loop);
+
+        if (portal_data->ready) {
+            LOG_FFI("Session ready on attempt %d\n", i + 1);
+            return portal_data;
+        }
+
+        LOG_FFI("Attempt %d failed, %s\n", i + 1,
+                (i + 1 < attempts) ? "retrying without token" : "giving up");
     }
 
-    LOG_FFI("Portal screencast setup complete, PipeWire node_id=%u\n",
-            portal_data->video_node_id);
-
-    // ВАЖНО: портал, сессия и event_loop остаются ОТКРЫТЫМИ!
-    return portal_data;
+    // Все попытки исчерпаны
+    g_object_unref(portal);
+    g_main_loop_unref(portal_data->event_loop);
+    g_free(portal_data);
+    return NULL;
 }
 
 /**
@@ -454,19 +456,23 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     ctx->user_data = user_data;
 
     // --- ИНИЦИАЛИЗИРУЕМ PIPEWIRE --- //
-    const char *token = init_data.token? strdup(init_data.token): NULL;
+    const char *token = init_data.token ? strdup(init_data.token) : NULL;
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
     struct portal_data *portal = get_screencast_session(token);
-    if (token) {free(token);}
+    if (token) {
+        free(token);
+    }
 
     if (!portal) {
         LOG_FFI("Failed to start screencast session\n");
+        free(ctx);
         return NULL;
     }
 
     if (portal->video_node_id == 0) {
         LOG_FFI("Error: No valid PipeWire node_id from portal\n");
         cleanup_portal_data(portal);
+        free(ctx);
         return NULL;
     }
 
@@ -653,6 +659,7 @@ uint8_t *wait_for_frame(capture_context_t *ctx) {
 
     // Если поток прервался отправляем NULL
     if (ctx->current_state != Ready) {
+        pthread_mutex_unlock(&ctx->frame_data.lock);
         return NULL;
     }
 

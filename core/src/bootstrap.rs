@@ -25,11 +25,7 @@ use algorithms::{
         types::*,
     },
 };
-use common::configs::validate_config;
-use common::configs::validate_configs;
-use common::configs::warn_validate;
-use common::configs::ConfigValidate;
-use common::{core::controller::CoreController, units::*};
+use common::{configs::*, core::controller::CoreController, units::*};
 use config_gen::{__private::*, *};
 use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
 use hardware_output::{
@@ -147,7 +143,6 @@ impl ConfigLoader {
             Flags {
                 pipewire_conversion: false,
                 save_token: false,
-                session_token: String::new(),
             }
         }
     }
@@ -272,39 +267,27 @@ impl ConfigLoader {
 
         let mut capture_config = CaptureConfig::new();
 
-        let flags = self.get_flags();
-
-        let c_token = if !flags.session_token.is_empty() {
-            Some(match CString::new(flags.session_token.clone()) {
-                Ok(c) => c,
-                Err(error) => {
-                    error!("Failed to create CString {}", error);
+        // Берем указатель
+        let token_ptr = if !self.settings.session_token.is_empty() {
+            match CString::new(self.settings.session_token.clone()) {
+                Ok(c) => c.into_raw(),
+                Err(e) => {
+                    error!("Failed to create CString {}", e);
                     exit(3)
                 }
-            })
-        } else {
-            None
-        };
-
-        // Берем указатель. Он будет валиден, пока жив c_token
-        let token_ptr = if let Some(ref _c_str) = c_token {
-            // ВАЖНО: Мы клонируем CString и превращаем его в сырой указатель,
-            // за который Rust больше не отвечает.
-            CString::new(flags.session_token.clone())
-                .unwrap()
-                .into_raw()
+            }
         } else {
             std::ptr::null_mut()
         };
 
         debug!("token_ptr is null: {}", token_ptr.is_null());
-        debug!("apply_conversion: {}", flags.pipewire_conversion);
+        debug!("apply_conversion: {}", self.get_flags().pipewire_conversion);
 
         let mut capture_thread = match CaptureThread::new(
             &mut capture_config,
             controller.clone(),
             InitializingData {
-                apply_conversion: flags.pipewire_conversion,
+                apply_conversion: self.get_flags().pipewire_conversion,
                 token: token_ptr,
             },
         ) {
@@ -477,14 +460,15 @@ impl ConfigLoader {
             }
         }
 
-        if let Some(ref mut flags) = self.shadow_root.flags {
+        let flags = self.get_flags();
+        if let Some(ref mut settings) = self.shadow_root.settings {
             if flags.save_token {
                 let token = match capture_thread.get_token() {
                     None => "",
                     Some(s) => &s.to_string(),
                 };
 
-                flags.session_token = token.to_string();
+                settings.session_token = token.to_string();
 
                 // Записываем обновлённый конфиг на диск
                 match toml::to_string_pretty(&self.shadow_root) {
@@ -590,7 +574,7 @@ impl ConfigLoader {
 
                 match serial_driver_config.validate() {
                     Ok(warnings) => warn_validate(warnings, MODULE),
-                    Err(error) => { 
+                    Err(error) => {
                         error!("{}", error);
                         capture_thread.stop();
                         exit(6);
