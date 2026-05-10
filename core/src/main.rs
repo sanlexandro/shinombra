@@ -5,7 +5,7 @@ use algorithms::{
     processing::{processors::ChunkProcessor, types::ColorEngine},
 };
 use common::core::controller::CoreController;
-use ffi::bindings::{CaptureConfig, InitializingData};
+use ffi::bindings::InitializingData;
 use hardware_output::HardwareOutput;
 use std::{ffi::CString, sync::Arc};
 use threads::{
@@ -32,9 +32,6 @@ fn main() {
     })
     .expect("Error setting Ctrl+C handler");
 
-    // Запускаем поток захвата
-    let mut capture_config = CaptureConfig::new();
-
     let flags = config_loader.get_flags();
 
     let c_token = if !flags.session_token.is_empty() {
@@ -49,34 +46,17 @@ fn main() {
         .map(|s| s.as_ptr())
         .unwrap_or(std::ptr::null());
 
-    let mut capture_thread = match CaptureThread::new(
-        &mut capture_config,
+    // Запускаем инициализацию и `run_ambient_loop` в дальнейшем
+    config_loader.run_stages(
         controller.clone(),
         InitializingData {
             apply_conversion: flags.pipewire_conversion,
             save_token: flags.save_token,
             token: token_ptr,
         },
-    ) {
-        Ok(thread) => thread,
-        Err(e) => {
-            eprintln!("[ERROR] Core: {}", e);
-            std::process::exit(1); // Выходим с кодом ошибки
-        }
-    };
-
-    // Ждем запуска
-    while !controller.wait() {
-        // Спим 10мс, чтобы не грузить CPU
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
-
-    // Запускаем инициализацию и `run_ambient_loop` в дальнейшем
-    config_loader.run_stages(capture_config, &mut capture_thread);
+    );
 
     println!("[INFO] Core: Shutting down...");
-
-    capture_thread.stop();
 }
 
 /// Запуск цикла обработки
