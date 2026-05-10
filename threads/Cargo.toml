@@ -10,7 +10,8 @@ pkg-config = "0.3"
 [dependencies]
 algorithms = { path = "../algorithms" }
 hardware_output = { path = "../hardware_output" }
-common ={ path = "../common"}
+common = { path = "../common" }
+logger = { path = "../infra/logger" }
 
 tokio = { version = "1", features = ["full"] }
 ffi = { path = "../ffi" }

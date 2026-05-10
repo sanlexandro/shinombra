@@ -10,3 +10,4 @@ path = "src/lib.rs"
 [dependencies]
 serialport = "4.3.0"
 algorithms = { path = "../algorithms" }
+common = { path = "../common" }

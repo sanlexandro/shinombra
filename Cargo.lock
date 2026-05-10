@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "algorithms"
 version = "0.1.0"
+dependencies = [
+ "common",
+]
 
 [[package]]
 name = "askama"
@@ -201,8 +204,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 name = "common"
 version = "0.1.0"
 dependencies = [
- "cc",
- "pkg-config",
+ "logger",
 ]
 
 [[package]]
@@ -233,6 +235,7 @@ dependencies = [
  "ctrlc",
  "ffi",
  "hardware_output",
+ "logger",
  "threads",
  "tokio",
 ]
@@ -354,6 +357,7 @@ name = "hardware_output"
 version = "0.1.0"
 dependencies = [
  "algorithms",
+ "common",
  "serialport",
 ]
 
@@ -525,6 +529,10 @@ name = "log"
 version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
+
+[[package]]
+name = "logger"
+version = "0.1.0"
 
 [[package]]
 name = "mach2"
@@ -913,6 +921,7 @@ dependencies = [
  "common",
  "ffi",
  "hardware_output",
+ "logger",
  "pkg-config",
  "tokio",
 ]
@@ -1041,6 +1050,7 @@ dependencies = [
  "algorithms",
  "askama_axum",
  "axum",
+ "common",
  "config-gen",
  "core",
  "ffi",

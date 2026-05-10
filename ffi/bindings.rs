@@ -4,7 +4,7 @@ use std::fmt::Display;
 use std::os::raw::{c_char, c_void};
 use std::sync::Arc;
 
-use common::core::controller::CoreController;
+use common::{core::controller::CoreController, units::Pixels};
 
 /// Структура для обмена данными с потоком захвата
 ///
@@ -14,9 +14,9 @@ use common::core::controller::CoreController;
 /// `video_format`: [u32] - формат видео (конвертируется в [SpaVideoFormat])
 #[repr(C)]
 pub struct CaptureConfig {
-    pub screen_width: u32,  // Заполняет C (PipeWire)
-    pub screen_height: u32, // Заполняет C (PipeWire)
-    pub video_format: u32,  // Заполняет C (PipeWire)
+    pub(crate) screen_width: u32,  // Заполняет C (PipeWire)
+    pub(crate) screen_height: u32, // Заполняет C (PipeWire)
+    pub(crate) video_format: u32,  // Заполняет C (PipeWire)
 }
 
 /// Реализация методов для [CaptureConfig]
@@ -31,15 +31,31 @@ impl CaptureConfig {
             video_format: 0,
         };
     }
+
+    /// Ширина в [Pixels]
+    pub fn width(&self) -> Pixels {
+        Pixels(self.screen_width as usize)
+    }
+
+    /// Длина в [Pixels]
+    pub fn height(&self) -> Pixels {
+        Pixels(self.screen_height as usize)
+    }
+
+    /// Формат в [u32]
+    pub fn format(&self) -> u32 {
+        self.video_format
+    }
 }
 
 /// Состояния потока захвата
 #[repr(C)]
 pub enum CaptureEvent {
-    Ready = 0,
-    Error = 1,
-    Stopped = 2,
-    Reconnecting = 3,
+    Initializing = 0,
+    Ready = 1,
+    Error = 2,
+    Stopped = 3,
+    Reconnecting = 4,
 }
 
 /// Данные для инициализации
@@ -51,7 +67,6 @@ pub enum CaptureEvent {
 #[repr(C)]
 pub struct InitializingData {
     pub apply_conversion: bool,
-    pub save_token: bool,
     pub token: *const c_char,
 }
 

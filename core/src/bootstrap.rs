@@ -11,56 +11,48 @@
 //! После подготовки всех ступеней запускается основной цикл программы,
 //! содержащийся в main
 
-use crate::config::Flags;
-use crate::config::Settings;
+const MODULE: &str = "ConfigLoader";
+
+use crate::config::*;
 use crate::run_ambient_loop;
-use algorithms::analytics::configs::ColorHistogramConfig;
-use algorithms::filters::configs::EmaFilterConfig;
-use algorithms::filters::configs::GammaFilterConfig;
 use algorithms::{
-    analytics::{registry::*, types::*, ColorAnalyst},
-    filters::{registry::*, types::*, ColorFilter},
-    pixel_formatter::{
-        types::{xBGR, xRGB, BGRx, RGBx, ABGR, ARGB, BGRA, RGBA},
-        PixelFormatter,
-    },
+    analytics::{configs::*, registry::*, types::*, ColorAnalyst},
+    filters::{configs::*, registry::*, types::*, ColorFilter},
+    pixel_formatter::{types::*, PixelFormatter},
     processing::{
         configs::*,
-        processors::{
-            configs::{CheckerboardConfig, ChunkConfig, ChunkTask},
-            registry::*,
-            types::CheckerboardScanner,
-            ChunkProcessor,
-        },
+        processors::{configs::*, registry::*, types::*, ChunkProcessor, Orientation},
         types::*,
     },
-    units::*,
 };
-use common::core::controller::CoreController;
+use common::configs::validate_config;
+use common::configs::validate_configs;
+use common::configs::warn_validate;
+use common::configs::ConfigValidate;
+use common::{core::controller::CoreController, units::*};
 use config_gen::{__private::*, *};
-use ffi::bindings::CaptureConfig;
-use ffi::bindings::InitializingData;
-use ffi::bindings::SpaVideoFormat;
+use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
 use hardware_output::{
     debug::types::DebugDriver,
     registry::*,
     serial::{config::SerialDriverConfig, types::SerialDriver},
 };
-use std::sync::Arc;
+use logger::*;
+use std::{ffi::CString, process::exit, sync::Arc};
 use threads::screen_capture::screen_capture::CaptureThread;
 
 include_shadow_all!(
-    "./algorithms/src/units.rs",
-    "./algorithms/src/processing/configs.rs",
+    "./common/src/units/units.rs"
+    "./algorithms/src/processing/configs/configs.rs",
     "./algorithms/src/processing/processors/registry.rs",
-    "./algorithms/src/processing/processors/configs.rs",
+    "./algorithms/src/processing/processors/configs/configs.rs",
     "./algorithms/src/analytics/registry.rs",
-    "./algorithms/src/analytics/configs.rs",
+    "./algorithms/src/analytics/configs/configs.rs",
     "./algorithms/src/filters/registry.rs",
-    "./algorithms/src/filters/configs.rs",
+    "./algorithms/src/filters/configs/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
-    "./hardware_output/src/serial/config.rs"
+    "./hardware_output/src/serial/config/config.rs"
 );
 
 pub struct ConfigLoader {
@@ -76,16 +68,28 @@ impl ConfigLoader {
     /// Данная функция пытается:
     /// 1) прочитать данные из файла
     /// 2) извлечь критически важные настройки
-    /// 3) TODO: проверить эти настройки
+    /// 3) проверить эти настройки
     ///
     /// Далее она преобразует их в готовые для работы данные, которые необходимы
     /// для запуска дальнейшей инициализации
     pub fn load() -> Self {
         // Считываем данные из файла
-        let toml_str = std::fs::read_to_string("cfg.toml").expect("Failed to read cfg.toml");
+        let toml_str = match std::fs::read_to_string("cfg.toml") {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                error!("Critical failure during loading: {}", e);
+                exit(1);
+            }
+        };
 
         // Проводим десериализацию
-        let shadow_root: FullConfigShadow = toml::from_str(&toml_str).expect("Parsing error TOML");
+        let shadow_root: FullConfigShadow = match toml::from_str(&toml_str) {
+            Ok(root) => root,
+            Err(e) => {
+                error!("Critical failure during reading toml: {}", e);
+                exit(1);
+            }
+        };
 
         // Достаём критические конфиги
         let (
@@ -116,14 +120,16 @@ impl ConfigLoader {
         let led_position_config: LedPositionConfig = led_position_shadow.into();
         let screen_config: ScreenConfig = screen_config_shadow.into();
 
-        // TODO! Проверка данных из критических конфигов!!!
-        // TODO! Проверка наличия секций для выбранных алгоритмов!!
+        // Проверка (screen_config проверим после запуска потока захвата)
+        validate_configs(&[&screen_reading_config, &led_position_config], MODULE);
 
         // Объединяем конфигурацию
         let geometry_config = GeometryConfig {
             led_pos: led_position_config,
             reading: screen_reading_config,
         };
+
+        debug!("Config loaded successful");
 
         Self {
             settings,
@@ -150,9 +156,9 @@ impl ConfigLoader {
     ///
     /// Данная функция запускает сборку всех компонентов в порядке:
     /// Аналитик -> Фильтр -> Форматтер -> Обходчик -> Поток захвата -> Движок
-    pub fn run_stages(self, controller: Arc<CoreController>, init_data: InitializingData) {
+    pub fn run_stages(self, controller: Arc<CoreController>) {
         // И запускаем обработку по стадиям
-        self.stage_1_select_color_analyst(controller, init_data);
+        self.stage_1_select_color_analyst(controller);
     }
 
     /// 1-я ступень - выбор анализатора цвета в фрагменте
@@ -163,20 +169,20 @@ impl ConfigLoader {
     /// - [ColorAnalystType::ColorHistogram]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_1_select_color_analyst(
-        self,
-        controller: Arc<CoreController>,
-        init_data: InitializingData,
-    ) {
+    fn stage_1_select_color_analyst(self, controller: Arc<CoreController>) {
+        debug!("Running stage 1");
         match self.settings.analytics_type {
             ColorAnalystType::ColorHistogram => {
                 let Some(shadow) = self.shadow_root.color_histogram_config.as_ref() else {
-                    println!("[ERROR] ConfigLoader: Check section [color_histogram_config]");
-                    return;
+                    error!("Check section [color_histogram_config]");
+                    exit(1);
                 };
+                let config: ColorHistogramConfig = shadow.into();
 
-                let analyst = ColorHistogram::new(shadow.into());
-                self.stage_2_select_filter(controller, init_data, analyst);
+                validate_config(&config, MODULE);
+
+                let analyst = ColorHistogram::new(config);
+                self.stage_2_select_filter(controller, analyst);
             }
         }
     }
@@ -189,17 +195,15 @@ impl ConfigLoader {
     /// - [ColorFilterType::EmaFilter]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_2_select_filter<Analyst>(
-        self,
-        controller: Arc<CoreController>,
-        init_data: InitializingData,
-        analyst: Analyst,
-    ) where
+    fn stage_2_select_filter<Analyst>(self, controller: Arc<CoreController>, analyst: Analyst)
+    where
         Analyst: ColorAnalyst,
     {
+        debug!("Running stage 2");
+
         // Если массив пуст
         if self.settings.filter_chain.len() == 0 {
-            self.stage_3_select_formatter(controller, init_data, analyst, NoFilter::new());
+            self.stage_3_run_capture_thread(controller, analyst, NoFilter::new());
             return;
         }
 
@@ -209,30 +213,37 @@ impl ConfigLoader {
         for filter_type in self.settings.filter_chain.iter() {
             let instance = match filter_type {
                 ColorFilterType::NoFilter => {
-                    println!("[WARN] ConfigLoader: NoFilter missed in the chain.");
+                    warn!("NoFilter missed in the chain.");
                     continue;
                 }
 
                 ColorFilterType::EmaFilter => {
                     let Some(shadow) = self.shadow_root.ema_filter_config.as_ref() else {
-                        println!("[ERROR] ConfigLoader: Check section [ema_filter_config]");
-                        return;
+                        error!("Check section [ema_filter_config]");
+                        exit(2);
                     };
                     let shadow_config: EmaFilterConfig = shadow.into();
                     let config = EmaFilterConfig {
                         alpha: shadow_config.alpha,
                         amount: self.geometry_config.calculate_leds_amount(),
                     };
+
+                    validate_config(&config, MODULE);
+
                     let filter = EmaFilter::new(config);
                     FilterInstance::Ema(filter)
                 }
 
                 ColorFilterType::GammaFilter => {
                     let Some(shadow) = self.shadow_root.gamma_filter_config.as_ref() else {
-                        println!("[Error] ConfigLoader: Check section [gamma_filter_config]");
-                        return;
+                        error!("Check section [gamma_filter_config]");
+                        exit(2);
                     };
-                    let filter = GammaFilter::new(shadow.into());
+                    let config: GammaFilterConfig = shadow.into();
+
+                    validate_config(&config, MODULE);
+
+                    let filter = GammaFilter::new(config);
                     FilterInstance::Gamma(filter)
                 }
             };
@@ -240,10 +251,88 @@ impl ConfigLoader {
             filter_chain.add_filter(instance);
         }
 
-        self.stage_3_select_formatter(controller, init_data, analyst, filter_chain);
+        self.stage_3_run_capture_thread(controller, analyst, filter_chain);
     }
 
-    /// 3-я ступень - выбор преобразователя пикселей
+    /// 3-я ступень - запуск потока захвата
+    ///
+    /// Данная ступень безопасно запускает [CaptureThread]
+    ///
+    /// После подготовки запускается следующая ступень
+    fn stage_3_run_capture_thread<Analyst, Filter>(
+        self,
+        controller: Arc<CoreController>,
+        analyst: Analyst,
+        filter: Filter,
+    ) where
+        Analyst: ColorAnalyst,
+        Filter: ColorFilter,
+    {
+        debug!("Running stage 3");
+
+        let mut capture_config = CaptureConfig::new();
+
+        let flags = self.get_flags();
+
+        let c_token = if !flags.session_token.is_empty() {
+            Some(match CString::new(flags.session_token.clone()) {
+                Ok(c) => c,
+                Err(error) => {
+                    error!("Failed to create CString {}", error);
+                    exit(3)
+                }
+            })
+        } else {
+            None
+        };
+
+        // Берем указатель. Он будет валиден, пока жив c_token
+        let token_ptr = if let Some(ref _c_str) = c_token {
+            // ВАЖНО: Мы клонируем CString и превращаем его в сырой указатель,
+            // за который Rust больше не отвечает.
+            CString::new(flags.session_token.clone())
+                .unwrap()
+                .into_raw()
+        } else {
+            std::ptr::null_mut()
+        };
+
+        debug!("token_ptr is null: {}", token_ptr.is_null());
+        debug!("apply_conversion: {}", flags.pipewire_conversion);
+
+        let mut capture_thread = match CaptureThread::new(
+            &mut capture_config,
+            controller.clone(),
+            InitializingData {
+                apply_conversion: flags.pipewire_conversion,
+                token: token_ptr,
+            },
+        ) {
+            Ok(thread) => thread,
+            Err(e) => {
+                error!("{}", e);
+                exit(3); // Выходим с кодом ошибки
+            }
+        };
+
+        // Ждем запуска
+        while !controller.wait() {
+            // Спим 10мс, чтобы не грузить CPU
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        // Сразу после вызова (так как Си уже сделал strdup внутри new),
+        // мы возвращаем указатель в Rust, чтобы он его удалил и не было утечки:
+        if !token_ptr.is_null() {
+            unsafe {
+                let _ = CString::from_raw(token_ptr);
+            }
+        }
+
+        self.stage_4_select_formatter(capture_config, &mut capture_thread, analyst, filter);
+    }
+
+    /// 4-я ступень - выбор преобразователя пикселей
     ///
     /// Данная ступень выбирает реализацию трейта [PixelFormatter] в зависимости
     /// от формата, заданного в конфиге, который будет согласован с потоком захвата
@@ -252,115 +341,105 @@ impl ConfigLoader {
     /// - [SpaVideoFormat::BGRA]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_3_select_formatter<Analyst, Filter>(
+    fn stage_4_select_formatter<Analyst, Filter>(
         self,
-        controller: Arc<CoreController>,
-        init_data: InitializingData,
+        capture_config: CaptureConfig,
+        capture_thread: &mut CaptureThread,
         analyst: Analyst,
         filter: Filter,
     ) where
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
     {
-        // Запускаем поток захвата, чтобы узнать формат
-        let mut capture_config = CaptureConfig::new();
+        debug!("Running stage 4");
 
-        let mut capture_thread =
-            match CaptureThread::new(&mut capture_config, controller.clone(), init_data) {
-                Ok(thread) => thread,
-                Err(e) => {
-                    eprintln!("[ERROR] Core: {}", e);
-                    std::process::exit(1); // Выходим с кодом ошибки
-                }
-            };
-
-        // Ждем запуска
-        while !controller.wait() {
-            // Спим 10мс, чтобы не грузить CPU
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
-
-        let format = SpaVideoFormat::try_from(capture_config.video_format)
-            .expect(format!("Strange video format id: {}", capture_config.video_format).as_str());
+        let format = match SpaVideoFormat::try_from(capture_config.format()) {
+            Ok(f) => f,
+            Err(f) => {
+                error!("Strange video format id: {}", f);
+                capture_thread.stop();
+                exit(4);
+            }
+        };
 
         match format {
             SpaVideoFormat::RGBx => {
-                self.stage_4_select_chunk_processor::<RGBx, _, _>(
+                self.stage_5_select_chunk_processor::<RGBx, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
             SpaVideoFormat::BGRx => {
-                self.stage_4_select_chunk_processor::<BGRx, _, _>(
+                self.stage_5_select_chunk_processor::<BGRx, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
             SpaVideoFormat::xRGB => {
-                self.stage_4_select_chunk_processor::<xRGB, _, _>(
+                self.stage_5_select_chunk_processor::<xRGB, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
             SpaVideoFormat::xBGR => {
-                self.stage_4_select_chunk_processor::<xBGR, _, _>(
+                self.stage_5_select_chunk_processor::<xBGR, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
             SpaVideoFormat::RGBA => {
-                self.stage_4_select_chunk_processor::<RGBA, _, _>(
+                self.stage_5_select_chunk_processor::<RGBA, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
             SpaVideoFormat::BGRA => {
-                self.stage_4_select_chunk_processor::<BGRA, _, _>(
+                self.stage_5_select_chunk_processor::<BGRA, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
             SpaVideoFormat::ARGB => {
-                self.stage_4_select_chunk_processor::<ARGB, _, _>(
+                self.stage_5_select_chunk_processor::<ARGB, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
             SpaVideoFormat::ABGR => {
-                self.stage_4_select_chunk_processor::<ABGR, _, _>(
+                self.stage_5_select_chunk_processor::<ABGR, _, _>(
                     capture_config,
-                    &mut capture_thread,
+                    capture_thread,
                     analyst,
                     filter,
                 );
             }
 
             format => {
-                println!(
-                    "[ERROR] ConfigLoader: Format {} not supported. Try setting the flag `pipewire_conversion = true` in the section `[settings.flags]`",
+                error!(
+                    "Format {} not supported. Try setting the flag `pipewire_conversion = true` in the section `[settings.flags]`",
                     format
                 );
                 capture_thread.stop();
-                return;
+                exit(4);
             }
         };
     }
 
-    /// 4-я ступень - выбор обработчика фрагментов
+    /// 5-я ступень - выбор обработчика фрагментов
     ///
     /// Данная ступень выбирает реализацию трейта [ChunkProcessor], также
     /// производит размер кадра в байтах для потока захвата с помощью информации
@@ -371,7 +450,7 @@ impl ConfigLoader {
     /// - [ChunkProcessorType::Checkerboard]
     ///
     /// После подготовки запускается следующая ступень
-    fn stage_4_select_chunk_processor<Formatter, Analyst, Filter>(
+    fn stage_5_select_chunk_processor<Formatter, Analyst, Filter>(
         mut self,
         capture_config: CaptureConfig,
         capture_thread: &mut CaptureThread,
@@ -382,12 +461,24 @@ impl ConfigLoader {
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
     {
+        debug!("Running stage 5");
+
         // Подтягиваем конфигурацию экрана из потока захвата
         self.screen_config
-            .load_px(capture_config.screen_width, capture_config.screen_height);
+            .load_px(capture_config.width(), capture_config.height());
+
+        // Проверяем, как и обещали
+        match self.screen_config.validate() {
+            Ok(warnings) => warn_validate(warnings, MODULE),
+            Err(error) => {
+                error!("{}", error);
+                capture_thread.stop();
+                exit(5)
+            }
+        }
 
         if let Some(ref mut flags) = self.shadow_root.flags {
-            if flags.save_token && flags.session_token.is_empty() {
+            if flags.save_token {
                 let token = match capture_thread.get_token() {
                     None => "",
                     Some(s) => &s.to_string(),
@@ -399,10 +490,10 @@ impl ConfigLoader {
                 match toml::to_string_pretty(&self.shadow_root) {
                     Ok(toml_str) => {
                         if let Err(e) = std::fs::write("cfg.toml", toml_str) {
-                            eprintln!("[ERROR] ConfigLoader: Failed to write cfg.toml: {}", e);
+                            error!("Failed to save token: {}", e);
                         }
                     }
-                    Err(e) => eprintln!("[ERROR] ConfigLoader: Failed to serialize config: {}", e),
+                    Err(e) => error!("Failed to serialize config: {}", e),
                 }
             }
         }
@@ -411,8 +502,9 @@ impl ConfigLoader {
         match self.settings.chunk_processor_type {
             ChunkProcessorType::Checkerboard => {
                 let Some(shadow) = self.shadow_root.checkerboard_config.as_ref() else {
-                    println!("[ERROR] ConfigLoader: Check section [checkerboard_config]");
-                    return;
+                    error!("Check section [checkerboard_config]");
+                    capture_thread.stop();
+                    exit(5);
                 };
 
                 let mut alg_config: CheckerboardConfig = shadow.into();
@@ -420,11 +512,18 @@ impl ConfigLoader {
                     .geometry_config
                     .calculate_chunk_config(self.screen_config);
 
+                match alg_config.validate() {
+                    Ok(warnings) => warn_validate(warnings, MODULE),
+                    Err(error) => {
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(5);
+                    }
+                }
+
                 let processor = CheckerboardScanner::new(alg_config, self.screen_config);
 
-                // TODO! Проверка конфига!!
-
-                self.stage_5_select_hardware_driver::<Formatter, _, _, _>(
+                self.stage_6_select_hardware_driver::<Formatter, _, _, _>(
                     capture_thread,
                     processor,
                     analyst,
@@ -434,7 +533,7 @@ impl ConfigLoader {
         }
     }
 
-    /// 5-я ступень - сборка движка и выбор вывода на устройство
+    /// 6-я ступень - сборка движка и выбор вывода на устройство
     ///
     /// Данная ступень выбирает реализацию трейта [hardware_output::HardwareOutput]
     ///
@@ -443,7 +542,7 @@ impl ConfigLoader {
     /// - [HardwareOutputType::SerialDriver]
     ///
     /// После обработки запускается основной цикл, содержащийся в `main`
-    fn stage_5_select_hardware_driver<Formatter, Processor, Analyst, Filter>(
+    fn stage_6_select_hardware_driver<Formatter, Processor, Analyst, Filter>(
         self,
         capture_thread: &mut CaptureThread,
         processor: Processor,
@@ -455,6 +554,8 @@ impl ConfigLoader {
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
     {
+        debug!("Running stage 6");
+
         let led_amount = self.geometry_config.calculate_leds_amount();
         let hardware_output_type = self.settings.hardware_output_type;
 
@@ -481,17 +582,26 @@ impl ConfigLoader {
 
             HardwareOutputType::SerialDriver => {
                 let Some(shadow) = self.shadow_root.serial_driver_config else {
-                    println!("[ERROR] ConfigLoader: Check section [serial_driver_config]");
-                    return;
+                    error!("Check section [serial_driver_config]");
+                    capture_thread.stop();
+                    exit(6);
                 };
                 let serial_driver_config: SerialDriverConfig = shadow.into();
+
+                match serial_driver_config.validate() {
+                    Ok(warnings) => warn_validate(warnings, MODULE),
+                    Err(error) => { 
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(6);
+                    }
+                }
+
                 let hardware_output = SerialDriver::new(serial_driver_config);
 
                 // В этот момент всё лишнее уничтожается
                 run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
             }
         }
-
-        capture_thread.stop();
     }
 }

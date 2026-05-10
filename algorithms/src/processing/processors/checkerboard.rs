@@ -9,9 +9,13 @@
 use super::types::CheckerboardScanner;
 use crate::analytics::ColorAnalyst;
 use crate::pixel_formatter::{PixelFormatter, PixelIter};
-use crate::processing::configs::ScreenConfig;
-use crate::processing::processors::configs::{CheckerboardConfig, ChunkTask};
-use crate::units::*;
+use crate::processing::{
+    configs::ScreenConfig,
+    processors::{
+        configs::{CheckerboardConfig, ChunkTask},
+        Orientation,
+    },
+};
 
 /// Реализация методов CheckerboardConfig
 impl CheckerboardConfig {

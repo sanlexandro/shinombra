@@ -28,7 +28,7 @@ typedef struct {
 typedef struct capture_context capture_context_t;
 
 // Состояния потока
-typedef enum { Ready, Error, Stopped, Reconnecting } capture_event_t;
+typedef enum { Init, Ready, Error, Stopped, Reconnecting } capture_event_t;
 
 // Тип обратного вызова
 typedef void (*event_callback_t)(void *user_data, int event, const char *msg);

@@ -1,7 +1,6 @@
-use crate::{
-    processing::{configs::*, measures::calculate_mm_to_px_k, processors::configs::ChunkConfig},
-    units::*,
-};
+use common::units::{logic::*, *};
+
+use crate::processing::{configs::*, processors::configs::ChunkConfig};
 
 // Реализация методов GeometryConfig
 impl GeometryConfig {
@@ -39,11 +38,21 @@ impl GeometryConfig {
 impl ScreenConfig {
     /// Сохранение размера экрана в пикселях
     ///
-    /// **Поля:**
-    /// - `frame_width_px`: [u32]  - ширина экрана в пикселях
-    /// - `frame_height_px`: [u32] - высота экрана в пикселях
-    pub fn load_px(&mut self, frame_width_px: u32, frame_height_px: u32) {
-        self.frame_width_px = Pixels(frame_width_px as usize);
-        self.frame_height_px = Pixels(frame_height_px as usize);
+    /// **Аргументы:**
+    /// - `frame_width_px`: [Pixels]  - ширина экрана в пикселях
+    /// - `frame_height_px`: [Pixels] - высота экрана в пикселях
+    pub fn load_px(&mut self, frame_width_px: Pixels, frame_height_px: Pixels) {
+        self.frame_width_px = frame_width_px;
+        self.frame_height_px = frame_height_px;
+    }
+
+    /// Расчёт коэффициента преобразования mm->px по вертикали
+    pub fn calculate_y_k(&self) -> f64 {
+        calculate_mm_to_px_k(self.frame_height_mm, self.frame_height_px)
+    }
+
+    /// Расчёт коэффициента преобразования mm->px по горизонтали
+    pub fn calculate_x_k(&self) -> f64 {
+        calculate_mm_to_px_k(self.frame_width_mm, self.frame_width_px)
     }
 }

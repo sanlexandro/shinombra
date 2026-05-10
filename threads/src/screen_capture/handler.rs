@@ -2,11 +2,9 @@
 
 use std::{ffi::CStr, os::raw::c_void, sync::Arc};
 
-use common::core::{
-    controller::{CoreController},
-    event_handlers::EventHandler,
-};
+use common::core::{controller::CoreController, event_handlers::EventHandler};
 use ffi::bindings::CaptureEvent;
+use logger::*;
 
 pub struct CaptureHandler;
 
@@ -15,30 +13,33 @@ pub struct CaptureEventWrapper {
     pub(crate) message: String,
 }
 
+const MODULE: &str = "ScreenCapture";
+
 impl EventHandler<CaptureEventWrapper> for CaptureHandler {
     fn handle(wrapper: CaptureEventWrapper, controller: &CoreController) {
         match wrapper.event {
+            CaptureEvent::Initializing => {}
             CaptureEvent::Ready => {
-                println!(
-                    "[INFO] ScreenCapture: Streaming started ({})",
+                info!(
+                    "Streaming started ({})",
                     wrapper.message
                 );
                 controller.start();
             }
             CaptureEvent::Error => {
-                eprintln!("[ERROR] ScreenCapture: Capture error: {}", wrapper.message);
+                error!("Capture error: {}", wrapper.message);
                 controller.shutdown();
             }
             CaptureEvent::Stopped => {
-                println!(
-                    "[INFO] ScreenCapture: Streaming stopped: {}",
+                info!(
+                    "Streaming stopped: {}",
                     wrapper.message
                 );
                 controller.shutdown();
             }
             CaptureEvent::Reconnecting => {
-                println!(
-                    "[INFO] ScreenCapture: Streaming reconnecting: {}",
+                error!(
+                    "Streaming reconnecting: {}",
                     wrapper.message
                 );
                 controller.shutdown();
@@ -58,9 +59,7 @@ pub(crate) extern "C" fn callback(
     }
 
     let arc_ptr = user_data as *const CoreController;
-    let controller = std::mem::ManuallyDrop::new(unsafe {
-        Arc::from_raw(arc_ptr)
-    });
+    let controller = std::mem::ManuallyDrop::new(unsafe { Arc::from_raw(arc_ptr) });
 
     let string_message = if message.is_null() {
         String::new()

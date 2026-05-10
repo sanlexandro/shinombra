@@ -14,24 +14,24 @@ use algorithms::{
         configs::*,
         processors::{configs::*, registry::*},
     },
-    units::*,
 };
 use ambient_core::config::*;
+use common::units::*;
 use hardware_output::{registry::*, serial::config::*};
 
 // Подключаем все тени
 include_shadow_all!(
-    "./algorithms/src/units.rs",
-    "./algorithms/src/processing/configs.rs",
+    "./common/src/units/units.rs"
+    "./algorithms/src/processing/configs/configs.rs",
     "./algorithms/src/processing/processors/registry.rs",
-    "./algorithms/src/processing/processors/configs.rs",
+    "./algorithms/src/processing/processors/configs/configs.rs",
     "./algorithms/src/analytics/registry.rs",
-    "./algorithms/src/analytics/configs.rs",
+    "./algorithms/src/analytics/configs/configs.rs",
     "./algorithms/src/filters/registry.rs",
-    "./algorithms/src/filters/configs.rs",
+    "./algorithms/src/filters/configs/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
-    "./hardware_output/src/serial/config.rs"
+    "./hardware_output/src/serial/config/config.rs"
 );
 // Генерируем ui
 generate_ui!(
@@ -43,11 +43,10 @@ generate_ui!(
             filter_chain: WrapperVec( Registry {"./algorithms/src/filters/registry.rs" => ColorFilterType} ),
         },
         Flags => {
-            pipewire_conversion: BoolField {}, 
-            save_token: BoolField{}
+            pipewire_conversion: BoolField {},
         },
     },
-    "./algorithms/src/processing/configs.rs" => {
+    "./algorithms/src/processing/configs/configs.rs" => {
         ScreenConfig => {
             frame_width_mm: Wrapper(Millimeters, NumericField {0}),
             frame_height_mm: Wrapper(Millimeters, NumericField {0})
@@ -72,13 +71,13 @@ generate_ui!(
         },
         ChunkTask => {},
     },
-    "./algorithms/src/analytics/configs.rs" => {
+    "./algorithms/src/analytics/configs/configs.rs" => {
         @show_if(Settings.analytics_type == "ColorHistogram")
         ColorHistogramConfig => {
             precision_level: SliderField { 0.0, 20.0, 1 }
         }
     },
-    "./algorithms/src/filters/configs.rs" => {
+    "./algorithms/src/filters/configs/configs.rs" => {
         @show_if(Settings.filter_chain.includes("GammaFilter"))
         GammaFilterConfig => {
             gamma: SliderField { 0.01, 4.0, 0.01}
@@ -88,7 +87,7 @@ generate_ui!(
             alpha: SliderField { 0.01, 1.0, 0.01 }
         },
     },
-    "./hardware_output/src/serial/config.rs" => {
+    "./hardware_output/src/serial/config/config.rs" => {
         @show_if(Settings.hardware_output_type == "SerialDriver")
         SerialDriverConfig => {
             port_path: TextField {"port path"},
@@ -134,18 +133,8 @@ async fn save_config(axum::Json(raw_json): axum::Json<serde_json::Value>) -> imp
     let toml_str = std::fs::read_to_string("./cfg.toml").unwrap_or_default();
     let mut current_config: FullConfigShadow = toml::from_str(&toml_str).unwrap_or_default();
 
-    let s = raw_json.to_string();
-    println!("{}", s);
-
     // Создаем "патч" из пришедшего JSON
     let patch = FullConfigShadow::from_json(raw_json);
-
-    if let Some(flags) = patch.flags.clone() {
-        println!("flags in patch: {}", flags);
-    } else {
-        println!("no flags in patch");
-    }
-
 
     // Накладываем патч на текущий конфиг
     current_config.apply_patch(patch);

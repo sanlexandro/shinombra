@@ -1,4 +1,11 @@
-use crate::units::{Orientation, Pixels};
+use common::units::Pixels;
+
+// Тип ориентации фрагмента
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum Orientation {
+    Horizontal,
+    Vertical,
+}
 
 /// Информация о размере фрагмента
 ///

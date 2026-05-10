@@ -84,7 +84,7 @@ static void unlock_wait(void *user_ctx) {
 static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
     capture_context_t *ctx = user_ctx;
-    LOG_FFI("Stream state changed: %d -> %d", old, state);
+    LOG_FFI("Stream state changed: %d -> %d, %s", old, state, error);
 
     // В зависимости от состояния вызываем обработчик с соответствующим флагом
     switch (state) {
@@ -444,6 +444,8 @@ capture_context_t *screen_capture_init(capture_config_t *config,
 
     // Выделяем память под структуру контекста
     capture_context_t *ctx = malloc(sizeof(capture_context_t));
+    // Инициализируемся
+    ctx->current_state = Init;
     // Сохраняем адрес конфига
     ctx->config = config;
     // Сохраняем функцию обратного вызова
@@ -452,10 +454,10 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     ctx->user_data = user_data;
 
     // --- ИНИЦИАЛИЗИРУЕМ PIPEWIRE --- //
-    const char *token = strdup(init_data.token);
+    const char *token = init_data.token? strdup(init_data.token): NULL;
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
     struct portal_data *portal = get_screencast_session(token);
-    free(token);
+    if (token) {free(token);}
 
     if (!portal) {
         LOG_FFI("Failed to start screencast session\n");

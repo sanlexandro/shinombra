@@ -5,8 +5,11 @@ use ffi::bindings::*;
 use std::ffi::{c_void, CStr};
 use std::sync::Arc;
 use std::thread::JoinHandle;
+use logger::*;
 
-use crate::screen_capture::handler::callback;
+use super::handler::callback;
+
+const MODULE: &str = "CaptureThread";
 
 /// Поток захвата кадра
 ///
@@ -38,7 +41,7 @@ impl CaptureThread {
         init_data: InitializingData,
     ) -> Result<Self, String> {
         if init_data.apply_conversion {
-            println!("[WARN] CaptureThread: PipeWire conversion applied")
+            warn!("PipeWire conversion applied")
         }
 
         // Запускаем поток захвата и сохраняем контекст и данные об экране
@@ -52,7 +55,7 @@ impl CaptureThread {
             unsafe {
                 Arc::from_raw(user_data as *const CoreController);
             } // Вернули и дропнули
-            println!("[ERROR] CaptureThread: Failed to initialize C context");
+            error!("Failed to initialize C context");
             return Err("Failed to initialize C context".to_string());
         }
 
@@ -88,27 +91,27 @@ impl CaptureThread {
         let config_ptr: *mut CaptureConfig = unsafe { get_capture_config(self.ctx_ptr) };
 
         if config_ptr.is_null() {
-            eprintln!("[ERROR] CaptureThread: Config pointer is NULL");
+            error!("Config pointer is NULL");
             return;
         }
 
         // Превращаем указатель в безопасную ссылку (разыменовываем внутри unsafe)
         let config = unsafe { &*config_ptr };
 
-        let format_str = SpaVideoFormat::try_from(config.video_format)
+        let format_str = SpaVideoFormat::try_from(config.format())
             .map(|f| f.to_string())
-            .unwrap_or_else(|_| format!("unknown ({})", config.video_format));
+            .unwrap_or_else(|_| format!("unknown ({})", config.format()));
 
-        println!("[INFO] CaptureThread: video format: {}", format_str);
+        info!("video format: {}", format_str);
 
         // Рассчитываем размер кадра
-        self.frame_size = (config.screen_height * config.screen_width) as usize * pixel_size;
+        self.frame_size = (config.height() * config.width()).as_bytes(pixel_size);
     }
 
     /// Остановка потока
     pub fn stop(&mut self) {
         if self.ctx_ptr.is_null() {
-            println!("[WARN] CaptureThread: No context to stop");
+            warn!("No context to stop");
             return;
         }
 
@@ -122,7 +125,7 @@ impl CaptureThread {
                 .join()
                 .expect("[ERROR] CaptureThread: Couldn't join thread");
             self.ctx_ptr = std::ptr::null_mut(); // Обнуляем после завершения
-            println!("[INFO] CaptureThread: Capture thread stopped");
+            info!("Capture thread stopped");
         }
     }
 

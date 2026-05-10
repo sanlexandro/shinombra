@@ -4,4 +4,5 @@ members = [
     "config-gen-macros",
     "ui-gen",
     "ui-gen-macros",
+    "logger",
 ]

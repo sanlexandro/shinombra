@@ -16,6 +16,8 @@ pub mod configs;
 pub mod types;
 pub mod registry;
 
+pub use configs::Orientation;
+
 
 /// Трейт обработки фрагмента
 ///

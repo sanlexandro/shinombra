@@ -2,27 +2,29 @@
 
 use common::core::{controller::CoreController, event_handlers::EventHandler};
 use hardware_output::HardwareEvents;
+use logger::*;
 
 pub struct HardwareHandler;
 
+const MODULE: &str = "HardwareOutput";
 
 impl EventHandler<HardwareEvents> for HardwareHandler {
     fn handle(event: HardwareEvents, controller: &CoreController) {
         match event {
             HardwareEvents::InternalError(error) => {
-                println!("[ERROR] HardwareOutput: internal error: {}", error);
+                error!("Internal error: {}", error);
                 controller.shutdown();
             }
             HardwareEvents::Disconnected => {
-                println!("[ERROR] HardwareOutput: device disconnected");
+                error!("Device disconnected");
                 controller.shutdown();
-            },
+            }
             HardwareEvents::NoAccess => {
-                println!("[ERROR] HardwareOutput: no access");
+                error!("No access");
                 controller.shutdown();
             }
             HardwareEvents::RetryNeeded => {
-                println!("[ERROR] HardwareOutput: retry needed");
+                error!("Retry needed");
                 controller.shutdown();
             }
         }
