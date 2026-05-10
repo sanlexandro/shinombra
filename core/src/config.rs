@@ -1,12 +1,14 @@
 //! Конфигурация, необходимая для непосредственной работы ядра
 
-use algorithms::{analytics::registry::*, filters::registry::ColorFilterType, processing::processors::registry::*};
+use algorithms::{
+    analytics::registry::*, filters::registry::ColorFilterType, processing::processors::registry::*,
+};
 use hardware_output::registry::*;
 
 /// Структура для хранения основных критических настроек
-/// 
+///
 /// **Поля:**
-/// - `chunk_processor_type`: [ChunkProcessorType] - тип обработчика фрагмента 
+/// - `chunk_processor_type`: [ChunkProcessorType] - тип обработчика фрагмента
 /// - `analytics_type`: [ColorAnalystType]         - тип анализатора цвета
 /// - `filter_chain`: [Vec]<[ColorFilterType]>     - цепь фильтров
 /// - `hardware_output_type`: [HardwareOutputType] - тип вывода
@@ -16,10 +18,11 @@ pub struct Settings {
     pub analytics_type: ColorAnalystType,
     pub filter_chain: Vec<ColorFilterType>,
     pub hardware_output_type: HardwareOutputType,
-    pub flags: Flags,
 }
 
 #[derive(Debug, Default)]
 pub struct Flags {
     pub pipewire_conversion: bool,
+    pub save_token: bool,
+    pub session_token: String,
 }

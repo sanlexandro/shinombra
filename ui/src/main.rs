@@ -42,7 +42,10 @@ generate_ui!(
             hardware_output_type: Registry {"./hardware_output/src/registry.rs" => HardwareOutputType },
             filter_chain: WrapperVec( Registry {"./algorithms/src/filters/registry.rs" => ColorFilterType} ),
         },
-        Flags => {pipewire_conversion: BoolField {}, },
+        Flags => {
+            pipewire_conversion: BoolField {}, 
+            save_token: BoolField{}
+        },
     },
     "./algorithms/src/processing/configs.rs" => {
         ScreenConfig => {
@@ -79,7 +82,7 @@ generate_ui!(
         @show_if(Settings.filter_chain.includes("GammaFilter"))
         GammaFilterConfig => {
             gamma: SliderField { 0.01, 4.0, 0.01}
-        }, 
+        },
         @show_if(Settings.filter_chain.includes("EmaFilter"))
         EmaFilterConfig => {
             alpha: SliderField { 0.01, 1.0, 0.01 }
@@ -131,8 +134,18 @@ async fn save_config(axum::Json(raw_json): axum::Json<serde_json::Value>) -> imp
     let toml_str = std::fs::read_to_string("./cfg.toml").unwrap_or_default();
     let mut current_config: FullConfigShadow = toml::from_str(&toml_str).unwrap_or_default();
 
+    let s = raw_json.to_string();
+    println!("{}", s);
+
     // Создаем "патч" из пришедшего JSON
     let patch = FullConfigShadow::from_json(raw_json);
+
+    if let Some(flags) = patch.flags.clone() {
+        println!("flags in patch: {}", flags);
+    } else {
+        println!("no flags in patch");
+    }
+
 
     // Накладываем патч на текущий конфиг
     current_config.apply_patch(patch);

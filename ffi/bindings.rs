@@ -1,7 +1,7 @@
 //! Подключение ф-ий из C
 
 use std::fmt::Display;
-use std::os::raw::c_void;
+use std::os::raw::{c_char, c_void};
 use std::sync::Arc;
 
 use common::core::controller::CoreController;
@@ -42,12 +42,22 @@ pub enum CaptureEvent {
     Reconnecting = 3,
 }
 
+/// Данные для инициализации
+///
+/// **Поля:**
+/// - `apply_conversion`: [bool] - разрешение применения конвертации форматов
+/// - `save_token`: [bool] - разрешение на сохранение токена
+/// - `token`: *const [c_char] - сам токен
+#[repr(C)]
+pub struct InitializingData {
+    pub apply_conversion: bool,
+    pub save_token: bool,
+    pub token: *const c_char,
+}
+
 /// Тип ф-ии обратного вызова
-pub type CaptureEventCallback = extern "C" fn(
-    user_data: *mut c_void,
-    event: CaptureEvent,
-    message: *const std::os::raw::c_char,
-);
+pub type CaptureEventCallback =
+    extern "C" fn(user_data: *mut c_void, event: CaptureEvent, message: *const c_char);
 
 // Используем ф-ии из `C-worker`
 extern "C" {
@@ -56,7 +66,7 @@ extern "C" {
         config: *mut CaptureConfig,
         callback: CaptureEventCallback,
         user_data: *const c_void,
-        apply_conversion: bool,
+        init_data: InitializingData,
     ) -> *mut c_void;
 
     /// Запуск захвата экрана
@@ -67,6 +77,9 @@ extern "C" {
 
     /// Получение текущей конфигурации захвата экрана
     pub fn get_capture_config(ctx: *mut c_void) -> *mut CaptureConfig;
+
+    // Получение токена для восстановления сессии захвата экрана
+    pub fn get_restore_token(ctx: *mut c_void) -> *const c_char;
 
     /// Получение указателя DMA
     pub fn wait_for_frame(ctx: *mut c_void) -> *mut u8;

@@ -2,7 +2,7 @@
 
 use common::core::controller::CoreController;
 use ffi::bindings::*;
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr};
 use std::sync::Arc;
 use std::thread::JoinHandle;
 
@@ -28,34 +28,30 @@ impl CaptureThread {
     /// **Аргументы:**
     /// - `config`: &mut [CaptureConfig] - место, куда будет сохранён конфиг захвата
     /// - `core_controller`: [Arc]<[CoreController]> - контроллер ядра
-    /// - `apply_conversion`: [bool] - флаг разрешения использовать
-    ///   преобразования pipewire
-    /// 
+    /// - `init_data`: [InitializingData] - данные инициализации
+    ///
     /// **Выходные поля:**
     /// - [Result]<Self, [String]> - результат или текст ошибки
     pub fn new(
         config: &mut CaptureConfig,
         core_controller: Arc<CoreController>,
-        apply_conversion: bool,
+        init_data: InitializingData,
     ) -> Result<Self, String> {
-        if apply_conversion {
+        if init_data.apply_conversion {
             println!("[WARN] CaptureThread: PipeWire conversion applied")
         }
 
         // Запускаем поток захвата и сохраняем контекст и данные об экране
         let user_data = Arc::into_raw(core_controller.clone()) as *mut c_void;
         let ctx: *mut std::ffi::c_void = unsafe {
-            screen_capture_init(
-                config as *mut CaptureConfig,
-                callback,
-                user_data,
-                apply_conversion,
-            )
+            screen_capture_init(config as *mut CaptureConfig, callback, user_data, init_data)
         };
 
         // Проверяем, что получили не нулевой контекст
         if ctx.is_null() {
-            unsafe { Arc::from_raw(user_data as *const CoreController); } // Вернули и дропнули
+            unsafe {
+                Arc::from_raw(user_data as *const CoreController);
+            } // Вернули и дропнули
             println!("[ERROR] CaptureThread: Failed to initialize C context");
             return Err("Failed to initialize C context".to_string());
         }
@@ -127,6 +123,27 @@ impl CaptureThread {
                 .expect("[ERROR] CaptureThread: Couldn't join thread");
             self.ctx_ptr = std::ptr::null_mut(); // Обнуляем после завершения
             println!("[INFO] CaptureThread: Capture thread stopped");
+        }
+    }
+
+    /// Получение токена для сохранения
+    ///
+    /// **Выходные поля:**
+    /// - [Option]<[String]> - сам токен или ничего
+    pub fn get_token(&self) -> Option<String> {
+        if self.ctx_ptr.is_null() {
+            return None;
+        }
+        let token = unsafe { get_restore_token(self.ctx_ptr) };
+
+        if token.is_null() {
+            return None;
+        } else {
+            return Some(
+                unsafe { CStr::from_ptr(token) }
+                    .to_string_lossy()
+                    .into_owned(),
+            );
         }
     }
 

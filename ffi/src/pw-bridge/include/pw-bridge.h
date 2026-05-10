@@ -11,14 +11,20 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 
-// Структура для хранения конфигурации захвата
+// Конфигурации захвата
 typedef struct {
     uint32_t screen_width;
     uint32_t screen_height;
     uint32_t video_format;
 } capture_config_t;
 
-// Структура для хранения данных портала и состояния захвата
+// Флаги инициализации
+typedef struct {
+    bool apply_conversion; // Разрешение применения конвертации форматов
+    char *token;      // Сам токен
+} initializing_data_t;
+
+// Данные портала и состояния захвата
 typedef struct capture_context capture_context_t;
 
 // Состояния потока
@@ -36,16 +42,18 @@ void release_user_data(void *user_data);
  * @brief Инициализация захвата экрана
  *
  * @param config Указатель на структуру capture_config_t с настройками захвата
- * @param apply_conversion Флаг включения преобразования формата видео на уровне
- * pipewire
- * @param callback Указатель на функцию обратного вызова `(int, const char *)`
+ * @param callback Указатель на функцию обратного вызова `(void *, int, const
+ * char *)`
+ * @param user_data Пользовательские данные для структуры обратного вызова
+ * @param init_data Данные для инициализации
  *
  * @return Указатель на структуру capture_context_t с состоянием захвата, или
  * NULL
  */
 capture_context_t *screen_capture_init(capture_config_t *config,
                                        event_callback_t callback,
-                                       void *user_data, bool apply_conversion);
+                                       void *user_data,
+                                       initializing_data_t init_data);
 
 /**
  * @brief Запуск процесса захвата экрана
@@ -70,13 +78,23 @@ void screen_capture_stop(capture_context_t *ctx);
 
 /**
  * @brief Получение текущей конфигурации захвата
- * 
+ *
  * @param ctx Указатель на структуру capture_context_t, возвращённую функцией
  * инициализации
- * 
+ *
  * @return Указатель на текущий конфиг захвата
  */
 capture_config_t *get_capture_config(capture_context_t *ctx);
+
+/**
+ * @brief Получение токена для восстановления сессии
+ *
+ * @param ctx Указатель на структуру capture_context_t, возвращённую функцией
+ * инициализации
+ *
+ * @return токен
+ */
+const char *get_restore_token(capture_context_t *ctx);
 
 /**
  * @brief Получение указателя на текущий кадр из видеопотока

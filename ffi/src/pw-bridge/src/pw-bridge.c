@@ -344,11 +344,13 @@ static void on_create_screencast_response(GObject *source, GAsyncResult *result,
  * подключения. ВАЖНО: сессия портала остаётся открытой для длительного
  * использования!
  *
+ * @param token Токен для восстановления сессии
+ *
  * @return указатель на структуру portal_data с сессией и видеоузлом,
  *         или NULL в случае ошибки. Структура должна быть освобождена
  *         функцией cleanup_portal_data() по завершению!
  */
-struct portal_data *get_screencast_session(void) {
+struct portal_data *get_screencast_session(const char *token) {
     struct portal_data *portal_data;
     XdpPortal *portal;
 
@@ -376,11 +378,12 @@ struct portal_data *get_screencast_session(void) {
     // Создаём сессию захвата экрана с параметрами:
     // - показываем мониторы и окна
     // - встраиваем курсор в поток
-    // - не восстанавливаем из токена
     xdp_portal_create_screencast_session(
         portal, XDP_OUTPUT_MONITOR, XDP_SCREENCAST_FLAG_NONE,
-        XDP_CURSOR_MODE_EMBEDDED, XDP_PERSIST_MODE_TRANSIENT, NULL, NULL,
-        on_create_screencast_response, portal_data);
+        XDP_CURSOR_MODE_EMBEDDED,
+        // Если токен есть — PERSISTENT, если нет — TRANSIENT
+        token ? XDP_PERSIST_MODE_PERSISTENT : XDP_PERSIST_MODE_TRANSIENT, token,
+        NULL, on_create_screencast_response, portal_data);
 
     // Ждём, пока сессия захвата будет готова
     g_main_loop_run(portal_data->event_loop);
@@ -422,7 +425,8 @@ static void cleanup_portal_data(struct portal_data *portal_data) {
 // Инициализация, запуск и остановка захвата экрана
 capture_context_t *screen_capture_init(capture_config_t *config,
                                        event_callback_t callback,
-                                       void *user_data, bool apply_conversion) {
+                                       void *user_data,
+                                       initializing_data_t init_data) {
     // Проверяем, что указатель на конфиг не NULL
     if (!config) {
         return NULL;
@@ -448,9 +452,11 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     ctx->user_data = user_data;
 
     // --- ИНИЦИАЛИЗИРУЕМ PIPEWIRE --- //
-
+    const char *token = strdup(init_data.token);
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
-    struct portal_data *portal = get_screencast_session();
+    struct portal_data *portal = get_screencast_session(token);
+    free(token);
+
     if (!portal) {
         LOG_FFI("Failed to start screencast session\n");
         return NULL;
@@ -493,7 +499,7 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     LOG_FFI("PipeWire stream created\n");
 
     // Задаём формат видео:
-    if (apply_conversion) {
+    if (init_data.apply_conversion) {
         // если есть флаг преобразования, то забираем любой тип
         format_parameters[0] = spa_pod_builder_add_object(
             &pod_builder, SPA_TYPE_OBJECT_Format, SPA_PARAM_EnumFormat,
@@ -583,22 +589,45 @@ void screen_capture_stop(capture_context_t *ctx) {
     }
 }
 
-// Ф-я получения текущей конфигурации
+// Получение текущей конфигурации
 capture_config_t *get_capture_config(capture_context_t *ctx) {
     // Проверяем, что контекст не NULL
     if (!ctx) {
         return NULL;
     }
 
+    // Вытягиваем данные из конфига
     pthread_mutex_lock(&ctx->frame_data.lock);
     capture_config_t *ret = ctx->config;
     pthread_mutex_unlock(&ctx->frame_data.lock);
 
-    // Вытягиваем данные из конфига
     return ret;
 }
 
-// Ф-я получения указателя на DMA
+// Получение токена для восстановления сессии
+const char *get_restore_token(capture_context_t *ctx) {
+    // Проверяем, что контекст не NULL
+    if (!ctx) {
+        return NULL;
+    }
+
+    pthread_mutex_lock(&ctx->frame_data.lock);
+
+    // Проверяем, что мы в рабочем состояние для избежания ошибок
+    if (ctx->current_state != Ready) {
+        pthread_mutex_unlock(&ctx->frame_data.lock);
+        return NULL;
+    }
+
+    // Вытягиваем данные из сессии
+    const char *token =
+        xdp_session_get_restore_token(ctx->portal_data->session);
+    pthread_mutex_unlock(&ctx->frame_data.lock);
+
+    return token;
+}
+
+// Получение указателя на DMA
 uint8_t *wait_for_frame(capture_context_t *ctx) {
     // Проверяем, что контекст не NULL
     if (!ctx) {
@@ -634,7 +663,7 @@ uint8_t *wait_for_frame(capture_context_t *ctx) {
     return ptr;
 }
 
-// Ф-я отпускающая указатель на DMA
+// Освобождение указатель на DMA
 void release_frame(capture_context_t *ctx) {
     // Проверяем, что указатель не NULL
     if (!ctx) {

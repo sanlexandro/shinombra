@@ -5,9 +5,9 @@ use algorithms::{
     processing::{processors::ChunkProcessor, types::ColorEngine},
 };
 use common::core::controller::CoreController;
-use ffi::bindings::CaptureConfig;
+use ffi::bindings::{CaptureConfig, InitializingData};
 use hardware_output::HardwareOutput;
-use std::sync::Arc;
+use std::{ffi::CString, sync::Arc};
 use threads::{
     hardware_output::hardware_output::HardwareOutputThread,
     screen_capture::screen_capture::CaptureThread,
@@ -35,10 +35,28 @@ fn main() {
     // Запускаем поток захвата
     let mut capture_config = CaptureConfig::new();
 
+    let flags = config_loader.get_flags();
+
+    let c_token = if !flags.session_token.is_empty() {
+        Some(CString::new(flags.session_token.clone()).expect("Failed to create CString"))
+    } else {
+        None
+    };
+
+    // Берем указатель. Он будет валиден, пока жив c_token
+    let token_ptr = c_token
+        .as_ref()
+        .map(|s| s.as_ptr())
+        .unwrap_or(std::ptr::null());
+
     let mut capture_thread = match CaptureThread::new(
         &mut capture_config,
         controller.clone(),
-        config_loader.get_flags().pipewire_conversion,
+        InitializingData {
+            apply_conversion: flags.pipewire_conversion,
+            save_token: flags.save_token,
+            token: token_ptr,
+        },
     ) {
         Ok(thread) => thread,
         Err(e) => {
@@ -79,7 +97,8 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
 {
     capture_thread.calculate_data(Formatter::SIZE);
 
-    let mut hardware_output_ctx = HardwareOutputThread::new(hardware_output, led_amount, capture_thread.get_controller());
+    let mut hardware_output_ctx =
+        HardwareOutputThread::new(hardware_output, led_amount, capture_thread.get_controller());
 
     println!("[INFO] Core: The system is running!");
 

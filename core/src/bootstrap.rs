@@ -131,8 +131,14 @@ impl ConfigLoader {
 
     /// Получение специальных флагов
     pub fn get_flags(&self) -> Flags {
-        Flags {
-            pipewire_conversion: self.settings.flags.pipewire_conversion,
+        if let Some(flags) = self.shadow_root.flags.clone() {
+            flags.into()
+        } else {
+            Flags {
+                pipewire_conversion: false,
+                save_token: false,
+                session_token: String::new(),
+            }
         }
     }
 
@@ -144,6 +150,27 @@ impl ConfigLoader {
         // Подтягиваем конфигурацию экрана из потока захвата
         self.screen_config
             .load_px(capture_config.screen_width, capture_config.screen_height);
+
+        if let Some(ref mut flags) = self.shadow_root.flags {
+            if flags.save_token && flags.session_token.is_empty() {
+                let token = match capture_thread.get_token() {
+                    None => "",
+                    Some(s) => &s.to_string()
+                };
+                
+                flags.session_token = token.to_string();
+
+                // Записываем обновлённый конфиг на диск
+                match toml::to_string_pretty(&self.shadow_root) {
+                    Ok(toml_str) => {
+                        if let Err(e) = std::fs::write("cfg.toml", toml_str) {
+                            eprintln!("[ERROR] ConfigLoader: Failed to write cfg.toml: {}", e);
+                        }
+                    }
+                    Err(e) => eprintln!("[ERROR] ConfigLoader: Failed to serialize config: {}", e),
+                }
+            }
+        }
 
         // И запускаем обработку по стадиям
         self.stage_1_select_formatter(capture_config, capture_thread);

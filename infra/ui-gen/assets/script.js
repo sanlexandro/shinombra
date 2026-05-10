@@ -22,6 +22,17 @@ const getFormData = (form) => {
             data[key] = parsedValue;
         }
     }
+    form.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => {
+        const parts = cb.name.split(/[\[\]]/).filter(p => p !== "");
+        const val = cb.checked; // true или false
+        if (parts.length === 2) {
+            if (!data[parts[0]]) data[parts[0]] = {};
+            data[parts[0]][parts[1]] = val;
+        } else if (parts.length === 1) {
+            data[parts[0]] = val;
+        }
+    });
+
     return data;
 };
 
