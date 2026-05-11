@@ -52,10 +52,11 @@ impl CaptureConfig {
 #[repr(C)]
 pub enum CaptureEvent {
     Initializing = 0,
-    Ready = 1,
-    Error = 2,
-    Stopped = 3,
-    Reconnecting = 4,
+    Connecting = 1,
+    Ready = 2,
+    Error = 3,
+    Paused = 4,
+    Stopped = 5,
 }
 
 /// Данные для инициализации

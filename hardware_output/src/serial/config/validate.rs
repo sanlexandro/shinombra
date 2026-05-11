@@ -8,6 +8,7 @@ impl ConfigValidate for SerialDriverConfig {
     ///
     /// **Проверки:**
     /// - `port_path` не пустой. Путь необходим для инициализации системного вызова открытия порта.
+    /// - `port_path` существует и открывается
     /// - `baud_rate` > 0. Скорость передачи данных не может быть нулевой.
     /// - `baud_rate` стандартные значения (предупреждение). Если скорость не из ряда
     ///   стандартных (9600, 115200 и т.д.), возможны проблемы с синхронизацией.
@@ -19,6 +20,13 @@ impl ConfigValidate for SerialDriverConfig {
                 section,
                 field: "port_path",
                 message: "Path to serial device cannot be empty (e.g., /dev/ttyUSB0)".into(),
+            });
+        }
+        if !std::path::Path::new(&self.port_path).exists() {
+            return Err(ValidationError::InvalidValue {
+                section,
+                field: "port_path",
+                message: format!("Device path {} does not exist", self.port_path),
             });
         }
 

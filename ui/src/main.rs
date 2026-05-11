@@ -44,6 +44,7 @@ generate_ui!(
         },
         Flags => {
             pipewire_conversion: BoolField {},
+            save_token: BoolField {},
         },
     },
     "./algorithms/src/processing/configs/configs.rs" => {

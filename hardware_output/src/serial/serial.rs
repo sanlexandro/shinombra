@@ -15,17 +15,22 @@ impl SerialDriver {
     /// **Аргументы:**
     /// - `port_path`: &[str] - путь к устройству (например, "/dev/ttyUSB0")
     /// - `baud_rate`: [u32]  - скорость обмена данными
-    pub fn new(config: SerialDriverConfig) -> Self {
+    pub fn new(config: SerialDriverConfig) -> Result<Self, String> {
         // Настройка порта
-        let port = serialport::new(config.port_path, config.baud_rate)
+        let port = match serialport::new(config.port_path, config.baud_rate)
             .timeout(Duration::from_millis(10))
             .open()
-            .expect("Failed to open port");
+        {
+            Ok(p) => p,
+            Err(error) => {
+                return Err(error.description);
+            }
+        };
 
         // Даем время на перезагрузку после открытия порта
         std::thread::sleep(std::time::Duration::from_secs(2));
 
-        return Self { port };
+        return Ok(Self { port });
     }
 
     /// Отправка массива цвета на устройство
@@ -64,9 +69,7 @@ impl SerialDriver {
                     }
 
                     // Всё остальное, что мы не ожидали
-                    _ => {
-                        HardwareEvents::InternalError(error.to_string())
-                    }
+                    _ => HardwareEvents::InternalError(error.to_string()),
                 };
                 Err(event)
             }

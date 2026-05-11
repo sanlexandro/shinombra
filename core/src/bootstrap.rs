@@ -581,7 +581,14 @@ impl ConfigLoader {
                     }
                 }
 
-                let hardware_output = SerialDriver::new(serial_driver_config);
+                let hardware_output = match SerialDriver::new(serial_driver_config) {
+                    Ok(h) => h,
+                    Err(error) => {
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(6);
+                    }
+                };
 
                 // В этот момент всё лишнее уничтожается
                 run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);

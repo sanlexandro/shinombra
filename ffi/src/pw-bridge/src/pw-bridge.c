@@ -84,6 +84,7 @@ static void unlock_wait(void *user_ctx) {
 static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
     capture_context_t *ctx = user_ctx;
+    (void) old; // чтобы не ругался
     LOG_FFI("Stream state changed: %d -> %d, %s", old, state, error);
 
     // В зависимости от состояния вызываем обработчик с соответствующим флагом
@@ -96,9 +97,22 @@ static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                             error ? error : "Unknown error");
         break;
 
+    case PW_STREAM_STATE_CONNECTING:
+        ctx->current_state = Connecting;
+        unlock_wait(user_ctx);
+        ctx->event_callback(ctx->user_data, Connecting, "Initializing");
+        break;
+
     case PW_STREAM_STATE_STREAMING:
         ctx->current_state = Ready;
+        unlock_wait(user_ctx);
         ctx->event_callback(ctx->user_data, Ready, "Streaming started");
+        break;
+
+    case PW_STREAM_STATE_PAUSED:
+        ctx->current_state = Paused;
+        unlock_wait(user_ctx);
+        ctx->event_callback(ctx->user_data, Paused, "Streaming paused");
         break;
 
     case PW_STREAM_STATE_UNCONNECTED:
@@ -108,12 +122,6 @@ static void on_state_changed(void *user_ctx, enum pw_stream_state old,
         break;
 
     default:
-        if (ctx->current_state == Ready) {
-            ctx->current_state = Reconnecting;
-            unlock_wait(user_ctx);
-            ctx->event_callback(ctx->user_data, Reconnecting,
-                                "Streaming reconnecting");
-        }
         break;
     }
 }
@@ -460,7 +468,7 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     // Инициализируем портал и создаём сессию захвата (сессия остаётся ОТКРЫТОЙ)
     struct portal_data *portal = get_screencast_session(token);
     if (token) {
-        free(token);
+        free((void *)token);
     }
 
     if (!portal) {

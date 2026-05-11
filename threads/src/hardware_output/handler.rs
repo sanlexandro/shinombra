@@ -24,8 +24,7 @@ impl EventHandler<HardwareEvents> for HardwareHandler {
                 controller.shutdown();
             }
             HardwareEvents::RetryNeeded => {
-                error!("Retry needed");
-                controller.shutdown();
+                info!("Retry needed");
             }
         }
     }
