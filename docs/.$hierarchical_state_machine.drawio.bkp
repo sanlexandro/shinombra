@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.1 Chrome/142.0.7444.265 Electron/39.8.9 Safari/537.36" version="29.6.1">
   <diagram name="Page-1" id="lWzQkIIeL7WBhjU7Pi3X">
-    <mxGraphModel dx="1188" dy="737" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="951" dy="589" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -100,15 +100,28 @@
         <mxCell id="e5HMZ6Loo14BitpxMPTZ-19" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;fontFamily=JetBrains Mono;fontSize=14;labelBackgroundColor=#FFFFFFB3;" value="Exited" vertex="1">
           <mxGeometry height="20" width="20" x="150" y="350" as="geometry" />
         </mxCell>
-        <mxCell id="e5HMZ6Loo14BitpxMPTZ-79" edge="1" parent="1" source="e5HMZ6Loo14BitpxMPTZ-20" style="edgeStyle=orthogonalEdgeStyle;shape=connector;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=JetBrains Mono;fontSize=14;fontColor=default;labelBackgroundColor=#FFFFFFB3;endArrow=classic;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="e5HMZ6Loo14BitpxMPTZ-19">
+        <mxCell id="ShGAOSwaa_pIGZLNQFpJ-2" edge="1" parent="1" source="e5HMZ6Loo14BitpxMPTZ-20" style="edgeStyle=orthogonalEdgeStyle;shape=connector;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=1;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=JetBrains Mono;fontSize=14;fontColor=default;labelBackgroundColor=#FFFFFFB3;endArrow=classic;" target="e5HMZ6Loo14BitpxMPTZ-28">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="190" y="240" />
-              <mxPoint x="190" y="353" />
+              <mxPoint x="160" y="210" />
+              <mxPoint x="87" y="210" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="e5HMZ6Loo14BitpxMPTZ-20" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;fontFamily=JetBrains Mono;fontSize=14;labelBackgroundColor=#FFFFFFB3;" value="Reconnected" vertex="1">
+        <mxCell id="ShGAOSwaa_pIGZLNQFpJ-3" edge="1" parent="1" source="e5HMZ6Loo14BitpxMPTZ-20" style="edgeStyle=orthogonalEdgeStyle;shape=connector;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=JetBrains Mono;fontSize=14;fontColor=default;labelBackgroundColor=#FFFFFFB3;endArrow=classic;" target="e5HMZ6Loo14BitpxMPTZ-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ShGAOSwaa_pIGZLNQFpJ-4" edge="1" parent="1" source="e5HMZ6Loo14BitpxMPTZ-20" style="edgeStyle=orthogonalEdgeStyle;shape=connector;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=JetBrains Mono;fontSize=14;fontColor=default;labelBackgroundColor=#FFFFFFB3;endArrow=classic;exitX=0;exitY=1;exitDx=0;exitDy=0;" target="e5HMZ6Loo14BitpxMPTZ-19">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="130" y="247" />
+              <mxPoint x="130" y="300" />
+              <mxPoint x="110" y="300" />
+              <mxPoint x="110" y="353" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5HMZ6Loo14BitpxMPTZ-20" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;fontFamily=JetBrains Mono;fontSize=14;labelBackgroundColor=#FFFFFFB3;" value="Paused" vertex="1">
           <mxGeometry height="20" width="20" x="150" y="230" as="geometry" />
         </mxCell>
         <mxCell id="e5HMZ6Loo14BitpxMPTZ-77" edge="1" parent="1" source="e5HMZ6Loo14BitpxMPTZ-28" style="edgeStyle=orthogonalEdgeStyle;shape=connector;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=JetBrains Mono;fontSize=14;fontColor=default;labelBackgroundColor=#FFFFFFB3;endArrow=classic;" target="e5HMZ6Loo14BitpxMPTZ-19">
@@ -267,16 +280,6 @@
         </mxCell>
         <mxCell id="e5HMZ6Loo14BitpxMPTZ-70" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;fontFamily=JetBrains Mono;fontSize=14;direction=west;labelBackgroundColor=#FFFFFFB3;" value="Connecting" vertex="1">
           <mxGeometry height="20" width="20" x="149.97" y="150" as="geometry" />
-        </mxCell>
-        <mxCell id="e5HMZ6Loo14BitpxMPTZ-118" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;rounded=0;align=center;verticalAlign=middle;fontFamily=JetBrains Mono;fontSize=14;fontColor=default;labelBackgroundColor=#FFFFFFB3;fillColor=none;gradientColor=none;" value="мягкая перезагрузка" vertex="1">
-          <mxGeometry height="80" width="120" x="49.97000000000003" y="460" as="geometry" />
-        </mxCell>
-        <mxCell id="e5HMZ6Loo14BitpxMPTZ-120" edge="1" parent="1" source="e5HMZ6Loo14BitpxMPTZ-20" style="edgeStyle=orthogonalEdgeStyle;shape=connector;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.4;entryY=0.1;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=default;align=center;verticalAlign=middle;fontFamily=JetBrains Mono;fontSize=14;fontColor=default;labelBackgroundColor=#FFFFFFB3;endArrow=classic;" target="e5HMZ6Loo14BitpxMPTZ-118">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="98" y="240" />
-            </Array>
-          </mxGeometry>
         </mxCell>
         <mxCell id="e5HMZ6Loo14BitpxMPTZ-12" parent="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=none;labelPosition=center;verticalLabelPosition=top;align=center;verticalAlign=bottom;fontFamily=JetBrains Mono;fontSize=14;labelBackgroundColor=#FFFFFFB3;" value="Exited" vertex="1">
           <mxGeometry height="20" width="20" x="350" y="270" as="geometry" />
