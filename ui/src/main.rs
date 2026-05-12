@@ -134,15 +134,12 @@ async fn save_config(axum::Json(raw_json): axum::Json<serde_json::Value>) -> imp
     let toml_str = std::fs::read_to_string("./cfg.toml").unwrap_or_default();
     let mut current_config: FullConfigShadow = toml::from_str(&toml_str).unwrap_or_default();
 
-    // Создаем "патч" из пришедшего JSON
-    let patch = FullConfigShadow::from_json(raw_json);
-
-    // Накладываем патч на текущий конфиг
-    current_config.apply_patch(patch);
+    // Накладываем патч из пришедшего JSON непосредственно на существующий конфиг
+    current_config.apply_json_patch(raw_json);
 
     // Сохраняем результат
-    if let Ok(toml_str) = toml::to_string_pretty(&current_config) {
-        let _ = std::fs::write("./cfg.toml", toml_str);
+    if let Ok(new_toml_str) = toml::to_string_pretty(&current_config) {
+        let _ = std::fs::write("./cfg.toml", new_toml_str);
     }
 
     axum::http::StatusCode::OK

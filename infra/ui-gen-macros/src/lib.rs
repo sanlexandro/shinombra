@@ -137,7 +137,7 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
                                 field_parsers.push(quote! {
                                     if let Some(val) = struct_obj.get(#field_name_str) {
                                         if let Ok(parsed_val) = ::serde_json::from_value::<_>(val.clone()) {
-                                            new_shadow.#field_ident = #wrapper_shadow_ident(parsed_val);
+                                            target.#field_ident = #wrapper_shadow_ident(parsed_val);
                                         }
                                     }
                                 });
@@ -146,7 +146,7 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
                                 field_parsers.push(quote! {
                                     if let Some(val) = struct_obj.get(#field_name_str) {
                                         if let Ok(parsed_val) = ::serde_json::from_value(val.clone()) {
-                                            new_shadow.#field_ident = parsed_val;
+                                            target.#field_ident = parsed_val;
                                         }
                                     }
                                 });
@@ -157,9 +157,12 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
                     generated_json_parsers.push(quote! {
                         if let Some(data) = obj.get(stringify!(#struct_name)) {
                             if let Some(struct_obj) = data.as_object() {
-                                let mut new_shadow = #shadow_struct_name::default();
-                                #(#field_parsers)*
-                                root.#name_snake_ident = Some(new_shadow);
+                                if self.#name_snake_ident.is_none() {
+                                    self.#name_snake_ident = Some(#shadow_struct_name::default());
+                                }
+                                if let Some(ref mut target) = self.#name_snake_ident {
+                                    #(#field_parsers)*
+                                }
                             }
                         }
                     });
@@ -202,9 +205,8 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
         }
     }
 
-    // Генерация функции для логики генерации html и для обработки json
+    // Генерация функции для логики генерации html
     let mut generated_render_function = Vec::new(); // Хранилище сгенерированных методов для отрисовки UI
-    let mut generated_merge_logic = Vec::new(); // Хранилище для логики склейки двух FullConfigShadow
 
     for name in struct_types {
         let shadow_name_ident = quote::format_ident!("{}Shadow", name);
@@ -216,12 +218,6 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
                     Some(s) => ::ui_gen::RenderMode::Edit(&s),
                     None => ::ui_gen::RenderMode::Create,
             }));
-        });
-
-        generated_merge_logic.push(quote! {
-            if let Some(new_val) = patch.#name_snake_ident {
-                self.#name_snake_ident = Some(new_val);
-            }
         });
     }
 
@@ -239,17 +235,11 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
     // Сборка парсера и применения патчей для FullConfigShadow
     generated_functions.push(quote! {
         impl FullConfigShadow {
-            pub fn from_json(json: ::serde_json::Value) -> Self {
-                let mut root = Self::default();
+            /// Применяет новые данные к существующей структуре на уровне полей, не затирая отсутствующие поля
+            pub fn apply_json_patch(&mut self, json: ::serde_json::Value) {
                 if let Some(obj) = json.as_object() {
                     #( #generated_json_parsers )*
                 }
-                root
-            }
-
-            /// Применяет новые данные к существующей структуре, не затирая отсутствующие
-            pub fn apply_patch(&mut self, patch: Self) {
-                #( #generated_merge_logic )*
             }
         }
     });
