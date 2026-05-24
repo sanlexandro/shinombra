@@ -9,7 +9,11 @@
 //!   сектора. Каждый переданный пиксель голосует за сектор, в котором
 //!   находится, в результате чего определяется сектор с большим количеством
 //!   голосов
+//! - Среднее арифметическое [types::ColorAverage] - простейшее среднее
+//!   арифметическое. Использует только целочисленные операции, что делает
+//!   алгоритм максимально дешёвым по потреблению ресурсов
 
+pub mod average;
 pub mod configs;
 pub mod histogram;
 pub mod registry;
@@ -31,25 +35,12 @@ pub trait ColorAnalyst: Clone {
     /// Этот метод вызывается для каждого выбранного пикселя в чанке
     ///
     /// **Аргументы:**
-    /// - `rgb: RGBPixel` - пиксель в RGB формате
+    /// - `rgb`: [RGBPixel] - пиксель в RGB формате
     fn add_data(&mut self, rgb: RGBPixel);
 
     /// Вычисление итогового "победившего" цвета на основе накопленных данных
     ///
     /// **Выходные данные:**
-    ///  - `RGBPixel` - победивший цвет в RGB формате
+    ///  - [RGBPixel] - победивший цвет в RGB формате
     fn get_winner(&mut self) -> RGBPixel;
-}
-
-// Реализация трейта для ColorHistogram
-impl ColorAnalyst for types::ColorHistogram {
-    fn clear(&mut self) {
-        self.clear();
-    }
-    fn add_data(&mut self, rgb: RGBPixel) {
-        self.process_vote(rgb);
-    }
-    fn get_winner(&mut self) -> RGBPixel {
-        self.determining_winner()
-    }
 }

@@ -2,5 +2,6 @@
 
 #[derive(Debug)]
 pub enum ColorAnalystType {
-    ColorHistogram
+    ColorHistogram,
+    ColorAverage
 }

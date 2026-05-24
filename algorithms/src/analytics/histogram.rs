@@ -2,7 +2,7 @@
 
 use super::types::{ColorBin, ColorHistogram};
 use crate::{
-    analytics::{configs::ColorHistogramConfig, types::MAX_BINS},
+    analytics::{configs::ColorHistogramConfig, types::MAX_BINS, ColorAnalyst},
     color::{
         conversion::{convert_hsv_to_rgb, convert_rgb_to_hsv},
         types::{HSVPixel, RGBPixel},
@@ -47,9 +47,12 @@ impl ColorHistogram {
             hue_to_bin_scale,
         }
     }
+}
 
+// Реализация трейта для ColorHistogram
+impl ColorAnalyst for ColorHistogram {
     /// Сброс (очистка) анализа
-    pub fn clear(&mut self) {
+    fn clear(&mut self) {
         // Сбрасываем голоса о каждом сегменте
         for idx in 0..self.active_amount {
             self.bins[idx].clear();
@@ -62,7 +65,7 @@ impl ColorHistogram {
     ///
     /// **Аргументы:**
     /// - `hsv_pixel`:[RGBPixel]   - голосующий HSV-пиксель
-    pub fn process_vote(&mut self, rgb_pixel: RGBPixel) {
+    fn add_data(&mut self, rgb_pixel: RGBPixel) {
         // Преобразуем
         let hsv_pixel = convert_rgb_to_hsv(rgb_pixel);
 
@@ -108,7 +111,7 @@ impl ColorHistogram {
     ///
     /// **Выходные данные:**
     /// - `HSVPixel` - пиксель-победитель в HSV формате
-    pub fn determining_winner(&mut self) -> RGBPixel {
+    fn get_winner(&mut self) -> RGBPixel {
         // Ищем сектор с максимальным весом
         let (winner_idx, winner_bin) = self.bins[..self.active_amount] // Итерируемся только по активным!
             .iter()
@@ -147,11 +150,5 @@ impl ColorHistogram {
             saturation: avg_sat,
             value: avg_val,
         })
-    }
-
-    /// Доступ к сегментам (только для тестов)
-    #[cfg(test)]
-    pub fn get_bins(&self) -> &[ColorBin; MAX_BINS + 1] {
-        &self.bins
     }
 }

@@ -2,7 +2,7 @@
 
 use crate::color::types::HSVPixel;
 
-/// Информация о секторе
+/// Сектор гистограммы
 ///
 /// **Поля:**
 /// * `weight`:[u64]        - вес
@@ -19,7 +19,7 @@ pub struct ColorBin {
 // Максимальное количество корзин (3 градуса - это уже на грани восприятия)
 pub const MAX_BINS: usize = 120;
 
-/// Информация о гистограмме
+/// Гистограмма
 ///
 /// **Поля:**
 /// - `bins`:[[ColorBin]; [MAX_BINS] + 1] - приватный массив сегментов
@@ -32,4 +32,19 @@ pub struct ColorHistogram {
     pub(super) bins: [ColorBin; MAX_BINS + 1],
     pub(super) active_amount: usize,
     pub(super) hue_to_bin_scale: f32,
+}
+
+/// Среднее арифметическое
+///
+/// **Поля:**
+/// `sum_red`: [u32] - сумма по красному цвету
+/// `sum_green`: [u32] - сумма по зелёному цвету
+/// `sum_blue`: [u32] - сумма по синему цвету
+/// `amount`: [usize] - счётчик полученных на анализ пикселей
+#[derive(Clone)]
+pub struct ColorAverage {
+    pub(super) sum_red: u32,
+    pub(super) sum_green: u32,
+    pub(super) sum_blue: u32,
+    pub(super) amount: usize,
 }

@@ -1,10 +1,9 @@
-[led_position_config]
-gap = 5
-vertical_offset = 15
-horizontal_offset = 20
-led_length = 62
-vertical_led_amount = 5
-horizontal_led_amount = 9
+[ema_filter_config]
+alpha = 0.10000000149011612
+amount = 0
+
+[color_histogram_config]
+precision_level = 20
 
 [checkerboard_config]
 pixel_step = 10
@@ -14,12 +13,15 @@ row_stride = 5
 width = 0
 height = 0
 
-[gamma_filter_config]
-gamma = 2.200000047683716
+[screen_config]
+frame_width_px = 0
+frame_height_px = 0
+frame_width_mm = 590
+frame_height_mm = 330
 
-[serial_driver_config]
-port_path = "/dev/ttyUSB0"
-baud_rate = 115200
+[screen_reading_config]
+deep_in = 40
+deep_out = 0
 
 [settings]
 chunk_processor_type = "Checkerboard"
@@ -29,25 +31,23 @@ filter_chain = [
     "GammaFilter",
 ]
 hardware_output_type = "SerialDriver"
-session_token = "04c15ffe-79f5-4092-bfab-10fffc6c0190"
+session_token = "8766ce54-f01a-4137-9e1e-36773936fefe"
 
-[color_histogram_config]
-precision_level = 20
+[gamma_filter_config]
+gamma = 2.200000047683716
 
-[screen_reading_config]
-deep_in = 40
-deep_out = 0
-
-[screen_config]
-frame_width_px = 0
-frame_height_px = 0
-frame_width_mm = 590
-frame_height_mm = 330
-
-[ema_filter_config]
-alpha = 0.10000000149011612
-amount = 0
+[led_position_config]
+gap = 5
+vertical_offset = 15
+horizontal_offset = 20
+led_length = 62
+vertical_led_amount = 5
+horizontal_led_amount = 9
 
 [flags]
 pipewire_conversion = false
 save_token = true
+
+[serial_driver_config]
+port_path = "/dev/ttyUSB0"
+baud_rate = 115200

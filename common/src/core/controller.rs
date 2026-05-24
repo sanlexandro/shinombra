@@ -23,11 +23,6 @@ impl CoreController {
         }
     }
 
-    /// Ожидание на флаге `keep_running`
-    pub fn wait(&self) -> bool {
-        self.keep_running.load(Ordering::Relaxed)
-    }
-
     /// Получение значения флага `keep_running`
     pub fn keep_running(&self) -> bool {
         self.keep_running.load(Ordering::Relaxed)

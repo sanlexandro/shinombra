@@ -162,6 +162,7 @@ impl ConfigLoader {
     ///
     /// **Поддерживается обработка для:**
     /// - [ColorAnalystType::ColorHistogram]
+    /// - [ColorAnalystType::ColorAverage]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_1_select_color_analyst(self, controller: Arc<CoreController>) {
@@ -177,6 +178,10 @@ impl ConfigLoader {
                 validate_config(&config, MODULE);
 
                 let analyst = ColorHistogram::new(config);
+                self.stage_2_select_filter(controller, analyst);
+            }
+            ColorAnalystType::ColorAverage => {
+                let analyst = ColorAverage::new();
                 self.stage_2_select_filter(controller, analyst);
             }
         }
@@ -299,7 +304,7 @@ impl ConfigLoader {
         };
 
         // Ждем запуска
-        while !controller.wait() {
+        while !controller.keep_running() {
             // Спим 10мс, чтобы не грузить CPU
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
@@ -321,7 +326,14 @@ impl ConfigLoader {
     /// от формата, заданного в конфиге, который будет согласован с потоком захвата
     ///
     /// **Поддерживается обработка для:**
+    /// - [SpaVideoFormat::ABGR]
+    /// - [SpaVideoFormat::ARGB]
+    /// - [SpaVideoFormat::xBGR]
+    /// - [SpaVideoFormat::xRGB]
     /// - [SpaVideoFormat::BGRA]
+    /// - [SpaVideoFormat::RGBA]
+    /// - [SpaVideoFormat::BGRx]
+    /// - [SpaVideoFormat::RGBx]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_4_select_formatter<Analyst, Filter>(
