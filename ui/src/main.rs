@@ -65,6 +65,8 @@ generate_ui!(
             deep_out: Wrapper(Millimeters, NumericField {0})
         },
         GeometryConfig => {},
+    },
+    "./algorithms/src/processing/processors/configs/configs.rs" => {
         ChunkConfig => {},
         CheckerboardConfig => {
             pixel_step: NumericField{1},
@@ -109,6 +111,7 @@ async fn show_index() -> impl IntoResponse {
         <head>
             <title>Config UI</title>
             <link rel="stylesheet" href="/style.css">
+            <link rel="icon" href="/image.jpg" type="image/jpeg">
         </head>
         <body>
             <form action="/save" method="post">
@@ -155,11 +158,22 @@ async fn style_css() -> impl IntoResponse {
     )
 }
 
+/// Поддержка изображений
+async fn image_imge() -> impl IntoResponse {
+    let image = include_bytes!("../assets/image.jpg");
+    (
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
+        image.to_vec(),
+    )
+}
+
 #[tokio::main]
 async fn main() {
     let app = Router::new()
         .route("/", get(show_index))
         .route("/style.css", get(style_css))
+        .route("/image.jpg", get(image_imge))
         .route("/save", axum::routing::post(save_config));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
