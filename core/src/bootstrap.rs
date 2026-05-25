@@ -546,7 +546,7 @@ impl ConfigLoader {
         filter: Filter,
     ) where
         Formatter: PixelFormatter,
-        Processor: ChunkProcessor<Formatter>,
+        Processor: ChunkProcessor<Formatter, Analyst>,
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
     {

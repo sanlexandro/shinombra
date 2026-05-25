@@ -56,7 +56,7 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
     capture_thread: &mut CaptureThread,
 ) where
     Formatter: PixelFormatter,
-    Processor: ChunkProcessor<Formatter>,
+    Processor: ChunkProcessor<Formatter, Analyst>,
     Analyst: ColorAnalyst,
     Filter: ColorFilter,
     Output: HardwareOutput + Send + 'static,

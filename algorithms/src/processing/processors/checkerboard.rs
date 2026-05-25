@@ -9,6 +9,8 @@
 use super::types::CheckerboardScanner;
 use crate::analytics::ColorAnalyst;
 use crate::pixel_formatter::{PixelFormatter, PixelIter};
+use crate::processing::processors::types::EmptyState;
+use crate::processing::processors::ChunkProcessor;
 use crate::processing::{
     configs::ScreenConfig,
     processors::{
@@ -53,6 +55,13 @@ impl CheckerboardScanner {
             screen_config,
         };
     }
+}
+
+/// Реализация трейта для CheckerboardScanner
+impl<Formatter: PixelFormatter, Analyst: ColorAnalyst> ChunkProcessor<Formatter, Analyst>
+    for CheckerboardScanner
+{
+    type State = EmptyState;
 
     /// Обработка фрагмента (жёсткий шахматный порядок)
     ///
@@ -60,18 +69,21 @@ impl CheckerboardScanner {
     /// анализа в предоставленный метод обработки цвета
     ///
     /// **Аргументы:**
-    /// - `byte_frame`: &[[u8]]                  - указатель на кадр (массив
-    ///   пикселей)
-    /// - `chunk_task`: [ChunkTask]              - "задание" фрагмента
-    /// - `analyst`: &mut [ColorAnalyst] - метод анализа цвета
-    pub fn process_checkerboard_chunk<Formatter: PixelFormatter, Analyst: ColorAnalyst>(
+    /// - `byte_frame`: &[[u8]]            - указатель на кадр (массив пикселей)
+    /// - `chunk_task`: &[ChunkTask]       - "задание" фрагмента
+    /// - `chunk_state`: &mut [EmptyState] - пустое состояние фрагмента
+    /// - `&mut analyst`: [ColorAnalyst]   - указатель на структуру
+    ///   (метод) накопления данных для дальнейшего определения результирующего
+    ///   цвета
+    fn process_chunk(
         &self,
         byte_frame: &[u8],
-        chunk_task: ChunkTask,
+        chunk_task: &ChunkTask,
+        _chunk_state: &mut Self::State,
         analyst: &mut Analyst,
     ) {
         // Определяем реальный размер строки в байтах
-        let row_width = self.screen_config.frame_width_px.0 * 4;
+        let row_width = self.screen_config.frame_width_px.as_bytes(Formatter::SIZE);
 
         // В зависимости от положения кадра определяем его ширину и высоту
         let (chunk_width, chunk_height, row_stride, pixel_step) =

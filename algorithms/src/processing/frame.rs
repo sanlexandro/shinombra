@@ -6,14 +6,15 @@ use crate::analytics::ColorAnalyst;
 use crate::color::types::RGBPixel;
 use crate::filters::ColorFilter;
 use crate::pixel_formatter::PixelFormatter;
-use crate::processing::processors::{configs::ChunkTask, Orientation, ChunkProcessor};
+use crate::processing::processors::ChunkState;
+use crate::processing::processors::{configs::ChunkTask, ChunkProcessor, Orientation};
 use common::units::{logic::*, *};
 
 /// Реализация методов ColorEngine
 impl<Formatter, Processor, Analyst, Filter> ColorEngine<Formatter, Processor, Analyst, Filter>
 where
     Formatter: PixelFormatter,
-    Processor: ChunkProcessor<Formatter>,
+    Processor: ChunkProcessor<Formatter, Analyst>,
     Analyst: ColorAnalyst,
     Filter: ColorFilter,
 {
@@ -33,6 +34,7 @@ where
     ) -> Self {
         let chunk_map = Self::init_chunk_map(geometry, screen_config);
         let output_buffer = vec![RGBPixel::black(); chunk_map.len()];
+        let chunk_states = vec![Processor::State::new(); chunk_map.len()];
 
         return Self {
             processor,
@@ -40,6 +42,7 @@ where
             filter,
             chunk_map,
             output_buffer,
+            chunk_states,
             _formatter: std::marker::PhantomData,
         };
     }
@@ -233,13 +236,18 @@ where
     pub fn process_frame(&mut self, byte_frame: &[u8]) {
         // Обрабатываем каждый фрагмент, используя предоставленный метод и
         // сохранённое в карте значение
-        for (chunk_task, led_color) in self.chunk_map.iter().zip(self.output_buffer.iter_mut()) {
+        for ((chunk_task, led_color), chunk_state) in self
+            .chunk_map
+            .iter()
+            .zip(self.output_buffer.iter_mut())
+            .zip(self.chunk_states.iter_mut())
+        {
             // Сбрасываем анализ
             self.analyst.clear();
 
             // Вызываем обработчик кадра
             self.processor
-                .process_chunk(byte_frame, *chunk_task, &mut self.analyst);
+                .process_chunk(byte_frame, chunk_task, chunk_state, &mut self.analyst);
 
             // Сохраняем результат анализа
             *led_color = self.analyst.get_winner();

@@ -11,3 +11,7 @@ pub struct CheckerboardScanner {
     pub(crate) alg_config: CheckerboardConfig,
     pub(crate) screen_config: ScreenConfig,
 }
+
+/// Пустое состояние
+#[derive(Clone, Copy)]
+pub struct EmptyState();
