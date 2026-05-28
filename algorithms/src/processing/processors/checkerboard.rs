@@ -98,11 +98,11 @@ impl<Formatter: PixelFormatter, Analyst: ColorAnalyst> ChunkProcessor<Formatter,
             // В зависимости от чётности строки начинаем строку либо с самого начала
             // либо со сдвигом на половину шага чтения строки
             let start = if (row_idx / row_stride) % 2 == 1 {
-                row_start_index + (pixel_step / 2) * 4
+                row_start_index + (pixel_step / 2) * Formatter::SIZE
             } else {
                 row_start_index
             };
-            let end = row_start_index + chunk_width * 4;
+            let end = row_start_index + chunk_width * Formatter::SIZE;
 
             // Делаем срез строки (от стартового индекса строки, до (него + ширина
             // фрагмента))

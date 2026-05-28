@@ -68,9 +68,18 @@ generate_ui!(
     },
     "./algorithms/src/processing/processors/configs/configs.rs" => {
         ChunkConfig => {},
+        @show_if(Settings.chunk_processor_type == "Checkerboard")
         CheckerboardConfig => {
             pixel_step: NumericField{1},
             row_stride: NumericField{1}
+        },
+        @show_if(Settings.chunk_processor_type == "DynamicCheckerboard")
+        DynamicCheckerboardConfig => {
+            pixel_step: NumericField{1},
+            row_stride: NumericField{1},
+
+            column_crawl: NumericField{1},
+            row_crawl: NumericField{1},
         },
         ChunkTask => {},
     },

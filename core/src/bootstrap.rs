@@ -526,6 +526,36 @@ impl ConfigLoader {
                     filter,
                 );
             }
+            ChunkProcessorType::DynamicCheckerboard => {
+                let Some(shadow) = self.shadow_root.dynamic_checkerboard_config.as_ref() else {
+                    error!("Check section [dynamic_checkerboard_config]");
+                    capture_thread.stop();
+                    exit(5);
+                };
+
+                let mut alg_config: DynamicCheckerboardConfig = shadow.into();
+                alg_config.config = self
+                    .geometry_config
+                    .calculate_chunk_config(self.screen_config);
+
+                // match alg_config.validate() {
+                //     Ok(warnings) => warn_validate(warnings, MODULE),
+                //     Err(error) => {
+                //         error!("{}", error);
+                //         capture_thread.stop();
+                //         exit(5);
+                //     }
+                // }
+
+                let processor = DynamicCheckerboardScanner::new(alg_config, self.screen_config);
+
+                self.stage_6_select_hardware_driver::<Formatter, _, _, _>(
+                    capture_thread,
+                    processor,
+                    analyst,
+                    filter,
+                );
+            }
         }
     }
 

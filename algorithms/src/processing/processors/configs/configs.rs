@@ -31,6 +31,24 @@ pub struct CheckerboardConfig {
     pub row_stride: usize,
 }
 
+/// Данные для шахматного обхода фрагмента
+///
+/// **Поля:**
+/// - `config`: [ChunkConfig] - конфигурация фрагмента
+/// - `pixel_step`: [usize]   - шаг чтения пикселей строки
+/// - `row_stride`: [usize]   - шаг чтения строк
+/// - `column_crawl`: [usize] - шаг сдвига сетки по колонке
+/// - `row_crawl`: [usize]    - шаг сдвига сетки по строке
+#[derive(Default)]
+pub struct DynamicCheckerboardConfig {
+    pub config: ChunkConfig,
+    pub pixel_step: usize,
+    pub row_stride: usize,
+
+    pub column_crawl: usize,
+    pub row_crawl: usize,
+}
+
 /// Информация для обработки фрагмента
 ///
 /// Данная структура необходима для корректной обработки фрагментов

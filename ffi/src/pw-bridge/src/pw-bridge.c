@@ -66,18 +66,22 @@ struct capture_context {
 };
 
 /**
- * @brief Разблокировка ожидания
+ * @brief Разблокировка ожидания и установка состояния
+ * 
+ * @param user_ctx указатель на контекст
+ * @param state состояние
  */
-static void unlock_wait(void *user_ctx) {
+static void set_sate_unlock_wait(void *user_ctx, capture_event_t state) {
     capture_context_t *ctx = user_ctx;
 
-    LOG_FFI("unlock_wait: entering\n");
+    LOG_FFI("set_sate_unlock_wait: entering\n");
     pthread_mutex_lock(&ctx->frame_data.lock);
-    LOG_FFI("unlock_wait: got lock\n");
+    LOG_FFI("set_sate_unlock_wait: got lock\n");
+    ctx->current_state = state;
     pthread_cond_signal(&ctx->frame_data.cond);
-    LOG_FFI("unlock_wait: signaled\n");
+    LOG_FFI("set_sate_unlock_wait: signaled\n");
     pthread_mutex_unlock(&ctx->frame_data.lock);
-    LOG_FFI("unlock_wait: released lock\n");
+    LOG_FFI("set_sate_unlock_wait: released lock\n");
 }
 
 /**
@@ -88,49 +92,43 @@ static void unlock_wait(void *user_ctx) {
 static void on_state_changed(void *user_ctx, enum pw_stream_state old,
                              enum pw_stream_state state, const char *error) {
     capture_context_t *ctx = user_ctx;
-    (void) old; // чтобы не ругался
+    (void)old; // чтобы не ругался
     LOG_FFI("Stream state changed: %d -> %d, %s\n", old, state, error);
-    
 
     // В зависимости от состояния вызываем обработчик с соответствующим флагом
     switch (state) {
     case PW_STREAM_STATE_ERROR:
         LOG_FFI("  -> ERROR\n");
-        ctx->current_state = Error;
-        unlock_wait(user_ctx);
+        set_sate_unlock_wait(user_ctx, Error);
         ctx->event_callback(ctx->user_data, Error,
                             error ? error : "Unknown error");
         break;
 
     case PW_STREAM_STATE_CONNECTING:
         LOG_FFI("  -> CONNECTING\n");
-        ctx->current_state = Connecting;
-        unlock_wait(user_ctx);
+        set_sate_unlock_wait(user_ctx, Connecting);
         LOG_FFI("  calling event_callback for CONNECTING\n");
-        
+
         ctx->event_callback(ctx->user_data, Connecting, "Initializing");
         LOG_FFI("  event_callback returned\n");
-        
+
         break;
 
     case PW_STREAM_STATE_STREAMING:
         LOG_FFI("  -> STREAMING\n");
-        ctx->current_state = Ready;
-        unlock_wait(user_ctx);
+        set_sate_unlock_wait(user_ctx, Ready);
         ctx->event_callback(ctx->user_data, Ready, "Streaming started");
         break;
 
     case PW_STREAM_STATE_PAUSED:
         LOG_FFI("  -> PAUSED\n");
-        ctx->current_state = Paused;
-        unlock_wait(user_ctx);
+        set_sate_unlock_wait(user_ctx, Paused);
         ctx->event_callback(ctx->user_data, Paused, "Streaming paused");
         break;
 
     case PW_STREAM_STATE_UNCONNECTED:
         LOG_FFI("  -> UNCONNECTED\n");
-        ctx->current_state = Stopped;
-        unlock_wait(user_ctx);
+        set_sate_unlock_wait(user_ctx, Stopped);
         ctx->event_callback(ctx->user_data, Stopped, "Streaming stopped");
         break;
 
@@ -151,7 +149,6 @@ static void on_process(void *user_ctx) {
     struct pw_buffer *pipewire_buffer; // буфер из PipeWire
 
     LOG_FFI("on_process called\n");
-    
 
     // Получаем буфер из видеопотока
     if ((pipewire_buffer = pw_stream_dequeue_buffer(ctx->video_stream)) ==
@@ -563,8 +560,7 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     // Явно указываем video_node_id с флагом DRIVER (не AUTOCONNECT), иначе
     // будет подключаться камера
     LOG_FFI("calling pw_stream_connect...\n");
-    
-    
+
     pw_stream_connect(ctx->video_stream, PW_DIRECTION_INPUT,
                       portal->video_node_id,
                       PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS |
@@ -572,7 +568,6 @@ capture_context_t *screen_capture_init(capture_config_t *config,
                       format_parameters, 1);
 
     LOG_FFI("pw_stream_connect returned\n");
-    
 
     return ctx;
 }
@@ -585,13 +580,11 @@ void screen_capture_run(capture_context_t *ctx) {
     }
 
     LOG_FFI("screen_capture_run: starting main loop\n");
-    
 
     // Запускаем основной цикл
     pw_main_loop_run(ctx->main_loop);
 
     LOG_FFI("screen_capture_run: main loop ended\n");
-    
 
     // Освобождаем ресурсы в том же потоке, где работал PipeWire loop
     if (ctx->video_stream && ctx->current_state == Ready) {

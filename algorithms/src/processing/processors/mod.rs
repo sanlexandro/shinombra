@@ -15,6 +15,7 @@ use crate::{
 
 pub mod checkerboard;
 pub mod configs;
+pub mod dynamic_checkerboard;
 pub mod registry;
 pub mod states;
 pub mod types;
