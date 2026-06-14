@@ -1,6 +1,11 @@
 //! Структуры хранения цвета
 
 /// Пиксель в формате HSV *(Hue Saturation Value)*
+///
+/// **Формат**:
+/// - `hue`: [0; 360]
+/// - `saturation`: [0; 1]
+/// - `value`: [0; 255]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct HSVPixel {
     pub hue: f32,

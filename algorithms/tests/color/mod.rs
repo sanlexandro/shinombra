@@ -1,52 +1,29 @@
-//! Тестирование основных методов форматов
-//!
-//! Здесь тестируются основные методы форматов, а именно - заданные цвета
+//! Тестирование базовых цветов по значению
 
-use algorithms::color::types::*;
-pub mod conversion;
+use algorithms::color::types::{HSVPixel, RGBPixel};
 
-/// Проверка корректности конструкторов базовых цветов в RGB формате
+pub mod conversions;
+
+/// Проверка значений чёрного цвета для RGB
 ///
-/// Данный тест проверяет правильность инициализации константных цветов.
-///
-/// **Поля таблицы:**
-/// - `color` - сгенерированный цвет (RGBPixel)
-/// - `expected_r` - ожидаемое значение красного (Red)
-/// - `expected_g` - ожидаемое значение зеленого (Green)
-/// - `expected_b` - ожидаемое значение синего (Blue)
+/// Все значения должны быть 0
 #[test]
-fn test_rgb_base_colors() {
-    let cases = vec![
-        // (color, expected_r, expected_g, expected_b)
-        (RGBPixel::black(), 0, 0, 0),
-    ];
+fn test_black_rgb() {
+    let rgb = RGBPixel::black();
 
-    for (color, expected_r, expected_g, expected_b) in cases {
-        assert_eq!(color.red, expected_r);
-        assert_eq!(color.green, expected_g);
-        assert_eq!(color.blue, expected_b);
-    }
+    assert!(rgb.red == 0, "Red in RGBPixel::black() is NOT 0!");
+    assert!(rgb.green == 0, "Green in RGBPixel::black() is NOT 0!");
+    assert!(rgb.blue == 0, "Blue in RGBPixel::black() is NOT 0!");
 }
 
-/// Проверка корректности конструкторов базовых цветов в HSV формате
+/// Проверка значений чёрного цвета для HSV
 ///
-/// Данный тест проверяет правильность инициализации константных цветов.
-///
-/// **Поля таблицы:**
-/// - `color` - сгенерированный цвет (HSVPixel)
-/// - `expected_h` - ожидаемое значение тона (Hue)
-/// - `expected_s` - ожидаемое значение насыщенности (Saturation)
-/// - `expected_v` - ожидаемое значение яркости (Value)
+/// Все значения должны быть 0.0
 #[test]
-fn test_hsv_base_colors() {
-    let cases = vec![
-        // (color, expected_h, expected_s, expected_v)
-        (HSVPixel::black(), 0.0, 0.0, 0.0),
-    ];
+fn test_black_hsv() {
+    let hsv = HSVPixel::black();
 
-    for (color, expected_h, expected_s, expected_v) in cases {
-        assert_eq!(color.hue, expected_h);
-        assert_eq!(color.saturation, expected_s);
-        assert_eq!(color.value, expected_v);
-    }
+    assert!(hsv.hue == 0.0, "Hue in HSVPixel::black() is NOT 0!");
+    assert!(hsv.saturation == 0.0, "Saturation in HSVPixel::black() is NOT 0!");
+    assert!(hsv.value == 0.0, "Value in HSVPixel::black() is NOT 0!");
 }
