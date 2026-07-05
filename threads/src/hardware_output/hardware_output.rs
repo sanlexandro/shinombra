@@ -13,7 +13,7 @@ use std::sync::{
 };
 use std::thread;
 
-use crate::hardware_output::handler::HardwareHandler;
+use crate::hardware_output::handler::{shutdown_error, HardwareHandler};
 
 /// Поток отправки данных на устройство
 ///
@@ -64,13 +64,12 @@ impl HardwareOutputThread {
             buffer: vec![RGBPixel::black(); buffer_size],
             mailbox: Arc::clone(&mailbox),
             keep_running: Arc::clone(&keep_running),
-            core_controller
+            core_controller,
         };
 
         // Отрываем от главного потока
         let handle = thread::spawn(move || {
             worker.run();
-            // TODO: Отправить сигнал завершения на устройство!!
         });
 
         // Возвращаем наружу красивый Контроллер
@@ -114,7 +113,7 @@ impl HardwareOutputThread {
 }
 
 /// "Работник" потока отправки
-/// 
+///
 /// **Поля:**
 /// - `output`: [HardwareOutput] - способ отправки данных
 /// - `buffer`: [Vec]<[RGBPixel]> - собственный буфер
@@ -138,6 +137,8 @@ impl<Output: HardwareOutput + Send + 'static> HardwareOutputWorker<Output> {
     /// 2) захватить `lock` и скопировать буфер
     /// 3) сбросить флаг и отпустить мьютекс
     /// 4) отправить данные на устройство
+    ///
+    /// Когда `keep_running = false` на устройство отправляется сигнал завершения
     fn run(mut self) {
         while self.keep_running.load(Ordering::Relaxed) {
             {
@@ -163,6 +164,12 @@ impl<Output: HardwareOutput + Send + 'static> HardwareOutputWorker<Output> {
                 Ok(_) => (),
                 Err(event) => HardwareHandler::handle(event, &self.core_controller),
             }
+        }
+
+        // После работы отправляем сигнал завершения
+        if let Err(error) = self.output.send_shutdown_signal() {
+            // Ругаемся на ошибку, но всё равно просто завершаемся
+            shutdown_error(error);
         }
     }
 }

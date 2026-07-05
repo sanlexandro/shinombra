@@ -2,7 +2,7 @@
 
 use crate::{
     serial::{config::SerialDriverConfig, types::SerialDriver},
-    HardwareEvents,
+    HardwareEvents, HardwareOutput,
 };
 use algorithms::color::types::RGBPixel;
 use serialport;
@@ -32,12 +32,19 @@ impl SerialDriver {
 
         return Ok(Self { port });
     }
+}
 
+impl HardwareOutput for SerialDriver {
     /// Отправка массива цвета на устройство
+    ///
+    /// Отправляет массив в формате `[Префикс ] + [R_1, G_1, B_1, R_2, G_2, B_2,
+    /// ...]`
+    ///
+    /// В качестве префикса было выбрано слово "AD" (AmbiData)
     ///
     /// **Поля:**
     /// - `colors`: &[[RGBPixel]] - массив из RGBPixel
-    pub fn internal_send(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
+    fn send_colors(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
         // Формируем пакет: [Префикс] + [RGB данные]
         let mut payload = Vec::with_capacity(2 + colors.len() * 3);
         payload.extend_from_slice(b"AD"); // Magic Word (AmbiData)
@@ -73,6 +80,16 @@ impl SerialDriver {
                 };
                 Err(event)
             }
+        }
+    }
+
+    /// Отправка сигнала завершения
+    ///
+    /// Отправляет на устройство сигнал завершения - слово "SD" (ShutDown)
+    fn send_shutdown_signal(&mut self) -> Result<(), String> {
+        match self.port.write_all(b"TERM") {
+            Ok(_) => Ok(()),
+            Err(error) => Err(format!("Failed to send TERM signal via serial: {}", error)),
         }
     }
 }

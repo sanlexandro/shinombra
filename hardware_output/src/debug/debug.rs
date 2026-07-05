@@ -2,7 +2,7 @@
 
 use algorithms::color::types::RGBPixel;
 
-use crate::HardwareEvents;
+use crate::{HardwareEvents, HardwareOutput};
 
 use super::types::DebugDriver;
 
@@ -31,7 +31,9 @@ impl DebugDriver {
             led_height,
         };
     }
+}
 
+impl HardwareOutput for DebugDriver {
     /// Отладочный вывод на экран
     ///
     /// Выводит рамку из цветов так, как эти цвета выводились бы на экран с
@@ -39,7 +41,7 @@ impl DebugDriver {
     ///
     /// **Аргументы:**
     /// - `colors`: &[RGBPixel] - массив цветов для вывода
-    pub fn print_debug_frame(&self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
+    fn send_colors(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
         // Верхняя строка
         print!("       "); // 7 пробелов
         for idx in 0..self.led_width {
@@ -77,6 +79,12 @@ impl DebugDriver {
         println!("");
         println!("");
 
+        Ok(())
+    }
+
+    /// Отправка завершающего сигнала
+    fn send_shutdown_signal(&mut self) -> Result<(), String> {
+        println!("Got shutdown signal!");
         Ok(())
     }
 }

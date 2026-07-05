@@ -29,3 +29,7 @@ impl EventHandler<HardwareEvents> for HardwareHandler {
         }
     }
 }
+
+pub(crate) fn shutdown_error(error: String) {
+    warn!("Could not cleanly shutdown hardware: {}", error)
+}
