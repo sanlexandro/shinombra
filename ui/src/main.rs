@@ -13,6 +13,7 @@ use algorithms::{
     processing::{
         configs::*,
         processors::{configs::*, registry::*},
+        registry::*,
     },
 };
 use ambient_core::config::*;
@@ -21,7 +22,8 @@ use hardware_output::{registry::*, serial::config::*};
 
 // Подключаем все тени
 include_shadow_all!(
-    "./common/src/units/units.rs"
+    "./common/src/units/units.rs",
+    "./algorithms/src/processing/registry.rs",
     "./algorithms/src/processing/configs/configs.rs",
     "./algorithms/src/processing/processors/registry.rs",
     "./algorithms/src/processing/processors/configs/configs.rs",
@@ -63,6 +65,10 @@ generate_ui!(
         ScreenReadingConfig => {
             deep_in: Wrapper(Millimeters, NumericField {0}),
             deep_out: Wrapper(Millimeters, NumericField {0})
+        },
+        FrameConnectionConfig => {
+            start_from: Registry {"./algorithms/src/processing/registry.rs" => FrameElement},
+            direction: Registry {"./algorithms/src/processing/registry.rs" => ClockDirection},
         },
         GeometryConfig => {},
     },

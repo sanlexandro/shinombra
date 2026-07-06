@@ -1,5 +1,6 @@
 use common::units::*;
 
+use crate::processing::registry::{ClockDirection, FrameElement};
 
 /// Информация о дисплее
 ///
@@ -60,14 +61,27 @@ pub struct ScreenReadingConfig {
     pub deep_out: Millimeters,
 }
 
+/// Информация о подключении ленты
+///
+/// **Поля:**
+/// `start_from`: [FrameElement]  - начальный подключенный блок
+/// `direction`: [ClockDirection] - направление (по/против часовой)
+#[derive(Clone, Copy)]
+pub struct FrameConnectionConfig {
+    pub start_from: FrameElement,
+    pub direction: ClockDirection,
+}
+
 /// Информация о физическом положении летны и настройках
 ///
 /// **Поля:**
-/// - `led_pos`: [LedPositionConfig]   - информация о физическом расположении
+/// - `led_pos`: [LedPositionConfig]    - информация о физическом расположении
 ///   ленты
-/// - `reading`: [ScreenReadingConfig] - информация о настройках чтения дисплея
+/// - `frame_connection`: [FrameConnectionConfig] - информация о подключении ленты
+/// - `reading`: [ScreenReadingConfig]  - информация о настройках чтения дисплея
 #[derive(Clone, Copy)]
 pub struct GeometryConfig {
     pub led_pos: LedPositionConfig,
+    pub frame_connection: FrameConnectionConfig,
     pub reading: ScreenReadingConfig,
 }

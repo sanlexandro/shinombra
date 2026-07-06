@@ -8,6 +8,8 @@ use crate::filters::ColorFilter;
 use crate::pixel_formatter::PixelFormatter;
 use crate::processing::processors::ChunkState;
 use crate::processing::processors::{configs::ChunkTask, ChunkProcessor, Orientation};
+use crate::processing::registry::ClockDirection;
+use crate::processing::registry::FrameElement;
 use common::units::{logic::*, *};
 
 /// Реализация методов ColorEngine
@@ -47,9 +49,56 @@ where
         };
     }
 
+    /// Расчёт общей карты
     fn init_chunk_map(geometry: GeometryConfig, screen_config: ScreenConfig) -> Vec<ChunkTask> {
-        let mut chunk_map = Vec::<ChunkTask>::new();
+        // Резервируем память сразу под всю ленту
+        let mut chunk_map = Vec::<ChunkTask>::with_capacity(geometry.calculate_leds_amount());
 
+        // Строгий порядок обработки для направления по часовой
+        let clockwise_direction: [FrameElement; 4] = [
+            FrameElement::Up,
+            FrameElement::Right,
+            FrameElement::Down,
+            FrameElement::Left,
+        ];
+
+        // Находим индекс стартовой грани
+        let start_i = clockwise_direction
+            .iter()
+            .position(|&side| side == geometry.frame_connection.start_from)
+            .unwrap_or(0); // На случай, если что-то пошло не так
+
+        // Определяем шаг по кольцу граней в зависимости от направления подключения
+        let step = match geometry.frame_connection.direction {
+            ClockDirection::Clockwise => 1,
+            ClockDirection::Counterclockwise => 3, // Шаг назад (-1) по модулю 4 равен +3
+        };
+
+        // Проходим ровно 4 грани, начиная со стартовой
+        for i in 0..4 {
+            let current_side = clockwise_direction[(start_i + i * step) % 4];
+
+            // Генерируем карту для конкретной стороны
+            let side_chunks = Self::calculate_chunk_map_by_side(
+                &geometry,
+                &screen_config,
+                current_side,
+                geometry.frame_connection.direction,
+            );
+
+            chunk_map.extend(side_chunks);
+        }
+
+        return chunk_map;
+    }
+
+    /// Расчёт карты для одной стороны
+    pub(super) fn calculate_chunk_map_by_side(
+        geometry: &GeometryConfig,
+        screen_config: &ScreenConfig,
+        side: FrameElement,
+        direction: ClockDirection,
+    ) -> Vec<ChunkTask> {
         // Координаты заданы в виде:
         // ------> x
         // |
@@ -77,153 +126,176 @@ where
         // Количество пикселей в строке
         let px_in_row = screen_config.frame_width_px;
 
-        //======================================//
-        // ============= В Е Р Х ============== //
-        //======================================//
-        // Расчёт положения верхней ленты, начиная с верхнего левого угла
+        let mut chunk_map = Vec::<ChunkTask>::new();
 
-        // x = просто `отступ от ленты до края экрана слева`
-        let start_up_x_px = geometry.led_pos.horizontal_offset.as_pixels(k_x);
-        // y = `отступ от грани экрана` - `глубина чтения к краям`
-        let start_up_y_px = Pixels::new(
-            ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_y).round() as usize,
-        );
+        // В зависимости от переданной стороны обрабатываем
+        // ПО ЧАСОВОЙ СТРЕЛКЕ!!!
+        match side {
+            FrameElement::Up => {
+                //======================================//
+                // ============= В Е Р Х ============== //
+                //======================================//
+                // Расчёт положения верхней ленты, начиная с верхнего левого угла
 
-        for idx in 0..geometry.led_pos.horizontal_led_amount {
-            // Изменяем x, добавляя к `стартовому значению` произведение `длины
-            // блока светодиодов по x` и `порядкового номера блока`
-            let current_up_x_px = Pixels::new(start_up_x_px.0 + (led_length_x_px.0 * idx));
+                // x = просто `отступ от ленты до края экрана слева`
+                let start_up_x_px = geometry.led_pos.horizontal_offset.as_pixels(k_x);
+                // y = `отступ от грани экрана` - `глубина чтения к краям`
+                let start_up_y_px = Pixels::new(
+                    ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_y).round()
+                        as usize,
+                );
 
-            // `y` в данном случае не изменяется
-            chunk_map.push(ChunkTask {
-                start_index: calculate_px_x_y_to_bytes(
-                    current_up_x_px,
-                    start_up_y_px,
-                    px_in_row,
-                    Formatter::SIZE,
-                ),
-                orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
-            });
+                for idx in 0..geometry.led_pos.horizontal_led_amount {
+                    // Изменяем x, добавляя к `стартовому значению` произведение `длины
+                    // блока светодиодов по x` и `порядкового номера блока`
+                    let current_up_x_px = Pixels::new(start_up_x_px.0 + (led_length_x_px.0 * idx));
+
+                    // `y` в данном случае не изменяется
+                    chunk_map.push(ChunkTask {
+                        start_index: calculate_px_x_y_to_bytes(
+                            current_up_x_px,
+                            start_up_y_px,
+                            px_in_row,
+                            Formatter::SIZE,
+                        ),
+                        orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
+                    });
+                }
+            }
+            FrameElement::Right => {
+                //======================================//
+                // ============ П Р А В О ============= //
+                //======================================//
+                // Расчёт положения правой ленты (если смотреть на экран монитора),
+                // начиная с левого верхнего угла
+
+                // x = `длина экрана` - `отступ от грани экрана` - `глубина чтения к центру`
+                let start_right_x_px = Pixels::new(
+                    ((screen_config.frame_width_mm.0
+                        - geometry.led_pos.gap.0
+                        - geometry.reading.deep_in.0) as f64
+                        * k_x)
+                        .round() as usize,
+                );
+
+                // y = просто `отступ от края экрана`
+                let start_right_y_px = geometry.led_pos.vertical_offset.as_pixels(k_y);
+
+                for idx in 0..geometry.led_pos.vertical_led_amount {
+                    // Изменяем `y`, добавляя к `стартовому значению` произведение
+                    // `длины блока светодиодов по y` и `порядкового номера блока`
+                    let current_right_y_px =
+                        Pixels::new(start_right_y_px.0 + (led_length_y_px.0 * idx));
+
+                    // `x` в данном случае не изменяется
+                    chunk_map.push(ChunkTask {
+                        start_index: calculate_px_x_y_to_bytes(
+                            start_right_x_px,
+                            current_right_y_px,
+                            px_in_row,
+                            Formatter::SIZE,
+                        ),
+                        orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
+                    });
+                }
+            }
+            FrameElement::Down => {
+                //======================================//
+                // =============== Н И З ============== //
+                //======================================//
+                // Расчёт положения нижней ленты, начиная с левого верхнего угла
+                // **самого правого блока**
+                // Здесь инвертируем порядок чтения. Читаем справа налево
+
+                // x = `ширина экрана` - `отступ от края экрана` - `ширина блока
+                // светодиодов`
+                let start_down_x_px = Pixels::new(
+                    ((screen_config.frame_width_mm.0
+                        - geometry.led_pos.horizontal_offset.0
+                        - geometry.led_pos.led_length.0) as f64
+                        * k_x)
+                        .round() as usize,
+                );
+
+                // y = `длина экрана` - `отступ от грани экрана` - `глубина чтения к
+                // центру`
+                let start_down_y_px = Pixels::new(
+                    ((screen_config.frame_height_mm.0
+                        - geometry.led_pos.gap.0
+                        - geometry.reading.deep_in.0) as f64
+                        * k_y)
+                        .round() as usize,
+                );
+
+                for idx in 0..geometry.led_pos.horizontal_led_amount {
+                    // Изменяем x, вычитая из `стартового значения` произведение `длины
+                    // блока светодиодов по x` и `порядкового номера блока`
+                    let current_down_x_px =
+                        Pixels::new(start_down_x_px.0 - (led_length_x_px.0 * idx));
+
+                    // `y` в данном случае не изменяется
+                    chunk_map.push(ChunkTask {
+                        start_index: calculate_px_x_y_to_bytes(
+                            current_down_x_px,
+                            start_down_y_px,
+                            px_in_row,
+                            Formatter::SIZE,
+                        ),
+                        orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
+                    });
+                }
+            }
+            FrameElement::Left => {
+                //======================================//
+                // ============= Л Е В О ============== //
+                //======================================//
+                // Расчёт положения левой ленты (если смотреть на экран монитора),
+                // начиная с левого верхнего угла **самого нижнего блока**
+                // Здесь инвертируем порядок чтения. Читаем снизу вверх
+
+                // x = `отступ от грани экрана` - `глубина чтения к краям`
+                let start_left_x_px = Pixels::new(
+                    ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_x).round()
+                        as usize,
+                );
+
+                // y = `высота экрана` - `отступ от края экрана` - `ширина блока
+                // светодиодов`
+                let start_left_y_px = Pixels::new(
+                    ((screen_config.frame_height_mm.0
+                        - geometry.led_pos.vertical_offset.0
+                        - geometry.led_pos.led_length.0) as f64
+                        * k_y)
+                        .round() as usize,
+                );
+
+                for idx in 0..geometry.led_pos.vertical_led_amount {
+                    // Изменяем `y`, вычитая из `стартового значения` произведение
+                    // `длины блока светодиодов по y` и `порядкового номера блока`
+                    let current_left_y_px =
+                        Pixels::new(start_left_y_px.0 - (led_length_y_px.0 * idx));
+
+                    // `x` в данном случае не изменяется
+                    chunk_map.push(ChunkTask {
+                        start_index: calculate_px_x_y_to_bytes(
+                            start_left_x_px,
+                            current_left_y_px,
+                            px_in_row,
+                            Formatter::SIZE,
+                        ),
+                        orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
+                    });
+                }
+            }
+        };
+
+        match direction {
+            ClockDirection::Clockwise => chunk_map,
+            ClockDirection::Counterclockwise => {
+                chunk_map.reverse();
+                chunk_map
+            }
         }
-
-        //======================================//
-        // ============ П Р А В О ============= //
-        //======================================//
-        // Расчёт положения правой ленты (если смотреть на экран монитора),
-        // начиная с левого верхнего угла
-
-        // x = `длина экрана` - `отступ от грани экрана` - `глубина чтения к центру`
-        let start_right_x_px = Pixels::new(
-            ((screen_config.frame_width_mm.0 - geometry.led_pos.gap.0 - geometry.reading.deep_in.0)
-                as f64
-                * k_x)
-                .round() as usize,
-        );
-
-        // y = просто `отступ от края экрана`
-        let start_right_y_px = geometry.led_pos.vertical_offset.as_pixels(k_y);
-
-        for idx in 0..geometry.led_pos.vertical_led_amount {
-            // Изменяем `y`, добавляя к `стартовому значению` произведение
-            // `длины блока светодиодов по y` и `порядкового номера блока`
-            let current_right_y_px = Pixels::new(start_right_y_px.0 + (led_length_y_px.0 * idx));
-
-            // `x` в данном случае не изменяется
-            chunk_map.push(ChunkTask {
-                start_index: calculate_px_x_y_to_bytes(
-                    start_right_x_px,
-                    current_right_y_px,
-                    px_in_row,
-                    Formatter::SIZE,
-                ),
-                orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
-            });
-        }
-
-        //======================================//
-        // =============== Н И З ============== //
-        //======================================//
-        // Расчёт положения нижней ленты, начиная с левого верхнего угла
-        // **самого правого блока**
-        // Здесь инвертируем порядок чтения. Читаем справа налево
-
-        // x = `ширина экрана` - `отступ от края экрана` - `ширина блока
-        // светодиодов`
-        let start_down_x_px = Pixels::new(
-            ((screen_config.frame_width_mm.0
-                - geometry.led_pos.horizontal_offset.0
-                - geometry.led_pos.led_length.0) as f64
-                * k_x)
-                .round() as usize,
-        );
-
-        // y = `длина экрана` - `отступ от грани экрана` - `глубина чтения к
-        // центру`
-        let start_down_y_px = Pixels::new(
-            ((screen_config.frame_height_mm.0 - geometry.led_pos.gap.0 - geometry.reading.deep_in.0)
-                as f64
-                * k_y)
-                .round() as usize,
-        );
-
-        for idx in 0..geometry.led_pos.horizontal_led_amount {
-            // Изменяем x, вычитая из `стартового значения` произведение `длины
-            // блока светодиодов по x` и `порядкового номера блока`
-            let current_down_x_px = Pixels::new(start_down_x_px.0 - (led_length_x_px.0 * idx));
-
-            // `y` в данном случае не изменяется
-            chunk_map.push(ChunkTask {
-                start_index: calculate_px_x_y_to_bytes(
-                    current_down_x_px,
-                    start_down_y_px,
-                    px_in_row,
-                    Formatter::SIZE,
-                ),
-                orientation: Orientation::Horizontal, // горизонтальные, т.к. они на горизонтальной ленте
-            });
-        }
-
-        //======================================//
-        // ============= Л Е В О ============== //
-        //======================================//
-        // Расчёт положения левой ленты (если смотреть на экран монитора),
-        // начиная с левого верхнего угла **самого нижнего блока**
-        // Здесь инвертируем порядок чтения. Читаем снизу вверх
-
-        // x = `отступ от грани экрана` - `глубина чтения к краям`
-        let start_left_x_px = Pixels::new(
-            ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_x).round() as usize,
-        );
-
-        // y = `высота экрана` - `отступ от края экрана` - `ширина блока
-        // светодиодов`
-        let start_left_y_px = Pixels::new(
-            ((screen_config.frame_height_mm.0
-                - geometry.led_pos.vertical_offset.0
-                - geometry.led_pos.led_length.0) as f64
-                * k_y)
-                .round() as usize,
-        );
-
-        for idx in 0..geometry.led_pos.vertical_led_amount {
-            // Изменяем `y`, вычитая из `стартового значения` произведение
-            // `длины блока светодиодов по y` и `порядкового номера блока`
-            let current_left_y_px = Pixels::new(start_left_y_px.0 - (led_length_y_px.0 * idx));
-
-            // `x` в данном случае не изменяется
-            chunk_map.push(ChunkTask {
-                start_index: calculate_px_x_y_to_bytes(
-                    start_left_x_px,
-                    current_left_y_px,
-                    px_in_row,
-                    Formatter::SIZE,
-                ),
-                orientation: Orientation::Vertical, // вертикальные, т.к. они на вертикальной ленте
-            });
-        }
-
-        // Возвращаем рассчитанную карту
-        return chunk_map;
     }
 
     /// Обработка кадра

@@ -22,6 +22,7 @@ use algorithms::{
     processing::{
         configs::*,
         processors::{configs::*, registry::*, types::*, ChunkProcessor, Orientation},
+        registry::*,
         types::*,
     },
 };
@@ -38,7 +39,8 @@ use std::{ffi::CString, process::exit, sync::Arc};
 use threads::screen_capture::screen_capture::CaptureThread;
 
 include_shadow_all!(
-    "./common/src/units/units.rs"
+    "./common/src/units/units.rs",
+    "./algorithms/src/processing/registry.rs",
     "./algorithms/src/processing/configs/configs.rs",
     "./algorithms/src/processing/processors/registry.rs",
     "./algorithms/src/processing/processors/configs/configs.rs",
@@ -93,20 +95,23 @@ impl ConfigLoader {
             Some(screen_reading_shadow),
             Some(led_position_shadow),
             Some(screen_config_shadow),
+            Some(frame_connection_config_shadow),
         ) = (
             shadow_root.settings.as_ref(),
             shadow_root.screen_reading_config.as_ref(),
             shadow_root.led_position_config.as_ref(),
             shadow_root.screen_config.as_ref(),
+            shadow_root.frame_connection_config.as_ref(),
         )
         else {
             // В случае ошибки прерываем выполнение кода
             panic!(
-                "Check sections: 
-                    \n    [settings]; 
-                    \n    [screen_reading_config]; 
-                    \n    [screen_config];
-                    \n    [led_position_config]"
+                "Check sections: \
+                \n    [settings]; \
+                \n    [screen_reading_config]; \
+                \n    [screen_config]; \
+                \n    [led_position_config]; \
+                \n    [frame_connection_config];"
             );
         };
 
@@ -115,6 +120,7 @@ impl ConfigLoader {
         let screen_reading_config: ScreenReadingConfig = screen_reading_shadow.into();
         let led_position_config: LedPositionConfig = led_position_shadow.into();
         let screen_config: ScreenConfig = screen_config_shadow.into();
+        let frame_connection_config: FrameConnectionConfig = frame_connection_config_shadow.into();
 
         // Проверка (screen_config проверим после запуска потока захвата)
         validate_configs(&[&screen_reading_config, &led_position_config], MODULE);
@@ -122,6 +128,7 @@ impl ConfigLoader {
         // Объединяем конфигурацию
         let geometry_config = GeometryConfig {
             led_pos: led_position_config,
+            frame_connection: frame_connection_config,
             reading: screen_reading_config,
         };
 
