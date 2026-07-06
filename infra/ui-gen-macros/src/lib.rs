@@ -63,7 +63,7 @@ fn name_to_snake_case(name_ident: &String) -> String {
 /// **Реализуемые методы функции:**
 /// - `render_full_html(shadow_root: &FullShadowConfig) -> String` - функция для
 ///   генерации полного html-текста всех структур
-/// - `from_json(json: ::serde_json::Value) -> Self` - метод `FullShadowConfig`,
+/// - `from_json(json: ::ui_gen::__private::serde_json::Value) -> Self` - метод `FullShadowConfig`,
 ///   позволяющий распарсить данную структуру из Json
 /// - `apply_patch(&mut self, patch: Self)` - метод `FullShadowConfig`,
 ///   позволяющий применить "патч", дополняющий поля в состоянии [None]
@@ -136,7 +136,7 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
                                 let wrapper_shadow_ident = quote::format_ident!("{}Shadow", wrapper_ident);
                                 field_parsers.push(quote! {
                                     if let Some(val) = struct_obj.get(#field_name_str) {
-                                        if let Ok(parsed_val) = ::serde_json::from_value::<_>(val.clone()) {
+                                        if let Ok(parsed_val) = ::ui_gen::__private::serde_json::from_value::<_>(val.clone()) {
                                             target.#field_ident = #wrapper_shadow_ident(parsed_val);
                                         }
                                     }
@@ -145,7 +145,7 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
                             _ => {
                                 field_parsers.push(quote! {
                                     if let Some(val) = struct_obj.get(#field_name_str) {
-                                        if let Ok(parsed_val) = ::serde_json::from_value(val.clone()) {
+                                        if let Ok(parsed_val) = ::ui_gen::__private::serde_json::from_value(val.clone()) {
                                             target.#field_ident = parsed_val;
                                         }
                                     }
@@ -236,7 +236,7 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
     generated_functions.push(quote! {
         impl FullConfigShadow {
             /// Применяет новые данные к существующей структуре на уровне полей, не затирая отсутствующие поля
-            pub fn apply_json_patch(&mut self, json: ::serde_json::Value) {
+            pub fn apply_json_patch(&mut self, json: ::ui_gen::__private::serde_json::Value) {
                 if let Some(obj) = json.as_object() {
                     #( #generated_json_parsers )*
                 }

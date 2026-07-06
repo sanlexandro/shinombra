@@ -5,7 +5,7 @@ use axum::{
 };
 
 use config_gen::{__private::*, *};
-use ui_gen::{add_js, generate_ui, Renderable};
+use ui_gen::{add_js, generate_ui, Renderable, __private::serde_json};
 
 use algorithms::{
     analytics::{configs::*, registry::*},
@@ -155,8 +155,19 @@ async fn save_config(axum::Json(raw_json): axum::Json<serde_json::Value>) -> imp
     // Накладываем патч из пришедшего JSON непосредственно на существующий конфиг
     current_config.apply_json_patch(raw_json);
 
+    // Читаем исходный файл в таблицу
+    let mut file_toml: toml::Table = toml::from_str(&toml_str).unwrap_or_default();
+
+    // Сериализуем обновленную структуру во временное TOML-значение
+    if let Ok(toml::Value::Table(patched_table)) = toml::Value::try_from(current_config) {
+        // Просто обновляем значения в file_toml
+        for (key, value) in patched_table {
+            file_toml.insert(key, value);
+        }
+    }
+
     // Сохраняем результат
-    if let Ok(new_toml_str) = toml::to_string_pretty(&current_config) {
+    if let Ok(new_toml_str) = toml::to_string_pretty(&file_toml) {
         let _ = std::fs::write("./cfg.toml", new_toml_str);
     }
 

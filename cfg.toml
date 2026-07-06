@@ -1,11 +1,3 @@
-[checkerboard_config]
-pixel_step = 10
-row_stride = 5
-
-[checkerboard_config.config]
-width = 0
-height = 0
-
 [settings]
 chunk_processor_type = "DynamicCheckerboard"
 analytics_type = "ColorHistogram"
@@ -14,43 +6,15 @@ filter_chain = [
     "GammaFilter",
 ]
 hardware_output_type = "SerialDriver"
-session_token = "_lE_lASnJYJ4XSXWoEZijQ"
-
-[gamma_filter_config]
-gamma = 2.200000047683716
-
-[screen_reading_config]
-deep_in = 40
-deep_out = 0
-
-[ema_filter_config]
-alpha = 0.05000000074505806
-amount = 0
+session_token = "LFaNFe5ijyq_nOeyCQdr2A"
 
 [flags]
 pipewire_conversion = false
 save_token = true
 
-[color_histogram_config]
-precision_level = 20
-
 [frame_connection_config]
 start_from = "Left"
 direction = "Clockwise"
-
-[dynamic_checkerboard_config]
-pixel_step = 10
-row_stride = 5
-column_crawl = 2
-row_crawl = 1
-
-[dynamic_checkerboard_config.config]
-width = 0
-height = 0
-
-[serial_driver_config]
-port_path = "/dev/ttyUSB0"
-baud_rate = 115200
 
 [screen_config]
 frame_width_px = 0
@@ -65,3 +29,39 @@ horizontal_offset = 20
 led_length = 62
 vertical_led_amount = 5
 horizontal_led_amount = 9
+
+[checkerboard_config]
+pixel_step = 10
+row_stride = 5
+
+[checkerboard_config.config]
+width = 0
+height = 0
+
+[gamma_filter_config]
+gamma = 2.200000047683716
+
+[screen_reading_config]
+deep_in = 40
+deep_out = 0
+
+[ema_filter_config]
+alpha = 0.05000000074505806
+amount = 0
+
+[color_histogram_config]
+precision_level = 20
+
+[dynamic_checkerboard_config]
+pixel_step = 10
+row_stride = 5
+column_crawl = 2
+row_crawl = 1
+
+[dynamic_checkerboard_config.config]
+width = 0
+height = 0
+
+[serial_driver_config]
+port_path = "/dev/ttyUSB0"
+baud_rate = 115200

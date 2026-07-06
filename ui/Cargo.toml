@@ -11,11 +11,10 @@ threads = { path = "../threads" }
 ffi = { path = "../ffi" }
 hardware_output = { path = "../hardware_output" }
 core = { path = "../core" }
-common ={ path = "../common"}
+common = { path = "../common" }
 
 tokio = { version = "1.0", features = ["full"] }
 axum = "0.7"
-serde_json = "1.0"
 
 [[bin]]
 name = "ambient-lighting-ui"

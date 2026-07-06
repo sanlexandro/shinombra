@@ -489,14 +489,26 @@ impl ConfigLoader {
 
                 settings.session_token = token.to_string();
 
-                // Записываем обновлённый конфиг на диск
-                match toml::to_string_pretty(&self.shadow_root) {
-                    Ok(toml_str) => {
-                        if let Err(e) = std::fs::write("cfg.toml", toml_str) {
-                            error!("Failed to save token: {}", e);
+                // Читаем исходный файл в таблицу (чтобы сохранить порядок из файла)
+                let toml_str = std::fs::read_to_string("cfg.toml").unwrap_or_default();
+                if let Ok(mut file_toml) = toml::from_str::<toml::Table>(&toml_str) {
+                    if let Ok(struct_toml_str) = toml::to_string(&self.shadow_root) {
+                        if let Ok(patched_table) = toml::from_str::<toml::Table>(&struct_toml_str) {
+                            // Накатываем обновленные секции на исходную таблицу, сохраняя исходный порядок
+                            for (key, value) in patched_table {
+                                file_toml.insert(key, value);
+                            }
                         }
                     }
-                    Err(e) => error!("Failed to serialize config: {}", e),
+
+                    match toml::to_string_pretty(&file_toml) {
+                        Ok(new_toml_str) => {
+                            if let Err(e) = std::fs::write("cfg.toml", new_toml_str) {
+                                error!("Failed to save token to file: {}", e);
+                            }
+                        }
+                        Err(e) => error!("Failed to serialize config table: {}", e),
+                    }
                 }
             }
         }

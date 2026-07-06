@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 config-gen-macros = { path = "../config-gen-macros" }
 serde = { version = "1.0", features = ["derive"] }
-toml = "0.8"
+toml = { version = "0.8", features = ["preserve_order"] }
