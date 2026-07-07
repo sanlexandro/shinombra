@@ -18,7 +18,6 @@ pub struct Settings {
     pub analytics_type: ColorAnalystType,
     pub filter_chain: Vec<ColorFilterType>,
     pub hardware_output_type: HardwareOutputType,
-    pub session_token: String,
 }
 
 #[derive(Debug, Default)]

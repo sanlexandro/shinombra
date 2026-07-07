@@ -26,6 +26,7 @@ use algorithms::{
         types::*,
     },
 };
+use common::crypto::xor_crypt;
 use common::{configs::*, core::controller::CoreController, units::*};
 use config_gen::{__private::*, *};
 use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
@@ -280,8 +281,22 @@ impl ConfigLoader {
         let mut capture_config = CaptureConfig::new();
 
         // Берем указатель
-        let token_ptr = if !self.settings.session_token.is_empty() {
-            match CString::new(self.settings.session_token.clone()) {
+        let token = if let Ok(encrypted_bytes) = std::fs::read("./session.bin") {
+            let decrypted_bytes = xor_crypt(&encrypted_bytes);
+
+            if let Ok(token_str) = String::from_utf8(decrypted_bytes) {
+                token_str
+            } else {
+                warn!("Can not get token from session.bin file.\nIt could be corrupted");
+                String::new()
+            }
+        } else {
+            info!("Can not open session.bin file.");
+            String::new()
+        };
+
+        let token_ptr = if !token.is_empty() {
+            match CString::new(token) {
                 Ok(c) => c.into_raw(),
                 Err(e) => {
                     error!("Failed to create CString {}", e);
@@ -480,36 +495,16 @@ impl ConfigLoader {
         }
 
         let flags = self.get_flags();
-        if let Some(ref mut settings) = self.shadow_root.settings {
-            if flags.save_token {
-                let token = match capture_thread.get_token() {
-                    None => "",
-                    Some(s) => &s.to_string(),
-                };
+        if flags.save_token {
+            let token = match capture_thread.get_token() {
+                None => Vec::new(),
+                Some(s) => s.into_bytes(),
+            };
 
-                settings.session_token = token.to_string();
+            let encrypted_bytes = xor_crypt(&token);
 
-                // Читаем исходный файл в таблицу (чтобы сохранить порядок из файла)
-                let toml_str = std::fs::read_to_string("cfg.toml").unwrap_or_default();
-                if let Ok(mut file_toml) = toml::from_str::<toml::Table>(&toml_str) {
-                    if let Ok(struct_toml_str) = toml::to_string(&self.shadow_root) {
-                        if let Ok(patched_table) = toml::from_str::<toml::Table>(&struct_toml_str) {
-                            // Накатываем обновленные секции на исходную таблицу, сохраняя исходный порядок
-                            for (key, value) in patched_table {
-                                file_toml.insert(key, value);
-                            }
-                        }
-                    }
-
-                    match toml::to_string_pretty(&file_toml) {
-                        Ok(new_toml_str) => {
-                            if let Err(e) = std::fs::write("cfg.toml", new_toml_str) {
-                                error!("Failed to save token to file: {}", e);
-                            }
-                        }
-                        Err(e) => error!("Failed to serialize config table: {}", e),
-                    }
-                }
+            if let Err(e) = std::fs::write("./session.bin", encrypted_bytes) {
+                warn!("Can not write session.bin: {}", e);
             }
         }
 
