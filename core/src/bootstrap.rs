@@ -13,6 +13,7 @@
 
 const MODULE: &str = "ConfigLoader";
 
+use crate::cli_flags::CLIFlags;
 use crate::config::*;
 use crate::run_ambient_loop;
 use algorithms::{
@@ -27,6 +28,7 @@ use algorithms::{
     },
 };
 use common::crypto::xor_crypt;
+use common::names::*;
 use common::{configs::*, core::controller::CoreController, units::*};
 use config_gen::{__private::*, *};
 use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
@@ -59,6 +61,7 @@ pub struct ConfigLoader {
     shadow_root: FullConfigShadow, // Храним временно для инициализации алгоритмов
     geometry_config: GeometryConfig,
     screen_config: ScreenConfig,
+    cli_flags: CLIFlags,
 }
 
 impl ConfigLoader {
@@ -87,6 +90,26 @@ impl ConfigLoader {
         }
     }
 
+    /// Определение положения файла сессии
+    pub(super) fn get_session_path() -> PathBuf {
+        // Пытаемся получить путь к $HOME/.local/share
+        let mut path = if let Ok(home) = std::env::var("HOME") {
+            PathBuf::from(home).join(".local").join("share")
+        } else {
+            // Запасной вариант на случай странного окружения
+            PathBuf::from(".")
+        };
+        path.push(APP_NAME);
+
+        // Создаем папку, если её ещё нет (mkdir -p)
+        if let Err(e) = std::fs::create_dir_all(&path) {
+            warn!("Failed to create session directory {:?}: {}", path, e);
+        }
+
+        // Имя самого файла сессии
+        path.join(SESSION_NAME)
+    }
+
     /// Инициализация конфигурации
     ///
     /// Данная функция пытается:
@@ -98,14 +121,15 @@ impl ConfigLoader {
     ///
     /// Далее она преобразует их в готовые для работы данные, которые необходимы
     /// для запуска дальнейшей инициализации
-    pub fn load() -> Self {
+    pub fn load(cli_flags: CLIFlags) -> Self {
         // Считываем данные из манифеста
-        let manifest_str = match std::fs::read_to_string("config.toml") {
+        let manifest_str = match std::fs::read_to_string(&cli_flags.manifest_path) {
             Ok(cfg) => cfg,
             Err(e) => {
                 error!(
                     "Critical failure during loading manifest {} : {}",
-                    "config.toml", e
+                    cli_flags.manifest_path.to_string_lossy(),
+                    e
                 );
                 exit(1);
             }
@@ -125,9 +149,9 @@ impl ConfigLoader {
         let manifest: Manifest = shadow_manifest.into();
 
         // Получаем абсолютный путь к самому манифесту
-        let manifest_path = std::path::Path::new("config.toml")
+        let manifest_path = std::path::Path::new(&cli_flags.manifest_path)
             .canonicalize()
-            .unwrap_or_else(|_| std::path::PathBuf::from("config.toml"));
+            .unwrap_or_else(|_| std::path::PathBuf::from(&cli_flags.manifest_path));
         let manifest_dir = manifest_path.parent().unwrap_or(std::path::Path::new("."));
 
         // Превращаем путь к базовому конфигу в абсолютный, если он относительный
@@ -195,7 +219,7 @@ impl ConfigLoader {
             ConfigLoader::merge_toml_tables(&mut final_table, overlay_table);
         }
 
-        // 3. Переводим готовую склеенную таблицу в твою типизированную структуру
+        // Переводим готовую склеенную таблицу в типизированную структуру
         let shadow_root: FullConfigShadow = match final_table.try_into() {
             Ok(root) => root,
             Err(e) => {
@@ -257,6 +281,7 @@ impl ConfigLoader {
             shadow_root,
             geometry_config,
             screen_config,
+            cli_flags,
         }
     }
 
@@ -274,9 +299,24 @@ impl ConfigLoader {
 
     /// Запуск подготовки и основного цикла
     ///
+    /// Выполняет действия из флагов, если это возможно на данной ступени
+    ///
     /// Данная функция запускает сборку всех компонентов в порядке:
     /// Аналитик -> Фильтр -> Форматтер -> Обходчик -> Поток захвата -> Движок
     pub fn run_stages(self, controller: Arc<CoreController>) {
+        //Если есть флаг на очистку сессии, очищаем её
+        if self.cli_flags.reset_pipewire_token {
+            let session_path = Self::get_session_path();
+
+            if let Err(e) = std::fs::remove_file(&session_path) {
+                warn!(
+                    "Can not remove session file {}: {}",
+                    session_path.to_string_lossy(),
+                    e
+                );
+            }
+        }
+
         // И запускаем обработку по стадиям
         self.stage_1_select_color_analyst(controller);
     }
@@ -398,17 +438,23 @@ impl ConfigLoader {
         let mut capture_config = CaptureConfig::new();
 
         // Берем указатель
-        let token = if let Ok(encrypted_bytes) = std::fs::read("./session.bin") {
+        let token = if let Ok(encrypted_bytes) = std::fs::read(Self::get_session_path()) {
             let decrypted_bytes = xor_crypt(&encrypted_bytes);
 
             if let Ok(token_str) = String::from_utf8(decrypted_bytes) {
                 token_str
             } else {
-                warn!("Can not get token from session.bin file.\nIt could be corrupted");
+                warn!(
+                    "Can not get token from {} file.\nIt could be corrupted",
+                    Self::get_session_path().to_string_lossy()
+                );
                 String::new()
             }
         } else {
-            info!("Can not open session.bin file.");
+            info!(
+                "Can not open {} file.",
+                Self::get_session_path().to_string_lossy()
+            );
             String::new()
         };
 
@@ -620,8 +666,12 @@ impl ConfigLoader {
 
             let encrypted_bytes = xor_crypt(&token);
 
-            if let Err(e) = std::fs::write("./session.bin", encrypted_bytes) {
-                warn!("Can not write session.bin: {}", e);
+            if let Err(e) = std::fs::write(Self::get_session_path(), encrypted_bytes) {
+                warn!(
+                    "Can not write {}: {}",
+                    Self::get_session_path().to_string_lossy(),
+                    e
+                );
             }
         }
 

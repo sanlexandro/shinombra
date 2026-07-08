@@ -8,7 +8,7 @@ use algorithms::{
     pixel_formatter::PixelFormatter,
     processing::{processors::ChunkProcessor, types::ColorEngine},
 };
-use common::core::controller::CoreController;
+use common::{core::controller::CoreController, names::*};
 use hardware_output::HardwareOutput;
 use logger::*;
 use std::sync::Arc;
@@ -18,15 +18,20 @@ use threads::{
 };
 
 pub mod bootstrap;
+pub mod cli_flags;
 pub mod config;
 
-use crate::bootstrap::ConfigLoader;
+use crate::{bootstrap::ConfigLoader, cli_flags::CLIFlagsManager};
 
 fn main() {
     set_max_log_level(LogLevel::Info);
-    debug!("Hello from sanlexandro!");
+    debug!("Hello from {}!", AUTHOR_NAME);
+
+    // Считываем cli флаги
+    let cli_flags = CLIFlagsManager::parse();
+
     // Инициализируем конфиг
-    let config_loader = ConfigLoader::load();
+    let config_loader = ConfigLoader::load(cli_flags);
 
     // Создаём контроллер
     let controller = Arc::new(CoreController::new(false));
