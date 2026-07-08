@@ -36,7 +36,7 @@ use hardware_output::{
     serial::{config::SerialDriverConfig, types::SerialDriver},
 };
 use logger::*;
-use std::{ffi::CString, process::exit, sync::Arc};
+use std::{ffi::CString, path::PathBuf, process::exit, sync::Arc};
 use threads::screen_capture::screen_capture::CaptureThread;
 
 include_shadow_all!(
@@ -62,30 +62,147 @@ pub struct ConfigLoader {
 }
 
 impl ConfigLoader {
+    /// Вспомогательная ф-я для склеивания toml-таблиц
+    ///
+    /// Необходима для корректной работы с overlays
+    pub(super) fn merge_toml_tables(base: &mut toml::Table, overlay: toml::Table) {
+        for (key, value) in overlay {
+            match value {
+                // Если внутри оверлея лежит подтаблица (например, [settings])
+                toml::Value::Table(overlay_sub_table) => {
+                    // Проверяем, есть ли такая таблица в базе
+                    if let Some(toml::Value::Table(base_sub_table)) = base.get_mut(&key) {
+                        // Если есть, рекурсивно мержим их внутренности
+                        ConfigLoader::merge_toml_tables(base_sub_table, overlay_sub_table);
+                    } else {
+                        // Если в базе такой таблицы не было вообще, просто вставляем целиком
+                        base.insert(key, toml::Value::Table(overlay_sub_table));
+                    }
+                }
+                // Для всех остальных типов данных (строки, числа, массивы) — оверлей просто затирает базу
+                _ => {
+                    base.insert(key, value);
+                }
+            }
+        }
+    }
+
     /// Инициализация конфигурации
     ///
     /// Данная функция пытается:
-    /// 1) прочитать данные из файла
-    /// 2) извлечь критически важные настройки
-    /// 3) проверить эти настройки
+    /// 1) прочитать данные из манифеста
+    /// 2) прочитать данные из файла конфигурации
+    /// 3) наложить на них данные из overlays
+    /// 4) извлечь критически важные настройки
+    /// 5) проверить эти настройки
     ///
     /// Далее она преобразует их в готовые для работы данные, которые необходимы
     /// для запуска дальнейшей инициализации
     pub fn load() -> Self {
-        // Считываем данные из файла
-        let toml_str = match std::fs::read_to_string("cfg.toml") {
+        // Считываем данные из манифеста
+        let manifest_str = match std::fs::read_to_string("config.toml") {
             Ok(cfg) => cfg,
             Err(e) => {
-                error!("Critical failure during loading: {}", e);
+                error!(
+                    "Critical failure during loading manifest {} : {}",
+                    "config.toml", e
+                );
                 exit(1);
             }
         };
 
-        // Проводим десериализацию
-        let shadow_root: FullConfigShadow = match toml::from_str(&toml_str) {
+        // Проводим десериализцию
+        let shadow_manifest: ManifestShadow = match toml::from_str(&manifest_str) {
             Ok(root) => root,
             Err(e) => {
-                error!("Critical failure during reading toml: {}", e);
+                error!(
+                    "Critical failure during reading manifest toml {} : {}",
+                    manifest_str, e
+                );
+                exit(1);
+            }
+        };
+        let manifest: Manifest = shadow_manifest.into();
+
+        // Получаем абсолютный путь к самому манифесту
+        let manifest_path = std::path::Path::new("config.toml")
+            .canonicalize()
+            .unwrap_or_else(|_| std::path::PathBuf::from("config.toml"));
+        let manifest_dir = manifest_path.parent().unwrap_or(std::path::Path::new("."));
+
+        // Превращаем путь к базовому конфигу в абсолютный, если он относительный
+        let base_config_path = if manifest.config.is_relative() {
+            manifest_dir.join(&manifest.config)
+        } else {
+            manifest.config.clone()
+        };
+
+        // Считываем и парсим базовый конфиг как динамическую таблицу
+        let main_toml_str = match std::fs::read_to_string(&base_config_path) {
+            Ok(text) => text,
+            Err(e) => {
+                error!(
+                    "Critical failure during loading main config {} : {}",
+                    base_config_path.to_string_lossy(),
+                    e
+                );
+                exit(1);
+            }
+        };
+
+        let mut final_table: toml::Table = match toml::from_str(&main_toml_str) {
+            Ok(table) => table,
+            Err(e) => {
+                error!("Critical failure during parsing main config: {}", e);
+                exit(1);
+            }
+        };
+
+        // Накладываем оверлеи поверх
+        for overlay_path in manifest.overlays {
+            // Если путь относительный - клеим его к папке манифеста
+            let resolved_overlay_path = if overlay_path.is_relative() {
+                manifest_dir.join(&overlay_path)
+            } else {
+                overlay_path
+            };
+
+            let overlay_str = match std::fs::read_to_string(&resolved_overlay_path) {
+                Ok(text) => text,
+                Err(err) => {
+                    error!(
+                        "Failed to read overlay {}: {}",
+                        resolved_overlay_path.to_string_lossy(),
+                        err
+                    );
+                    exit(1);
+                }
+            };
+
+            let overlay_table: toml::Table = match toml::from_str(&overlay_str) {
+                Ok(table) => table,
+                Err(e) => {
+                    error!(
+                        "Failed to parse overlay TOML {}: {}",
+                        resolved_overlay_path.to_string_lossy(),
+                        e
+                    );
+                    exit(1);
+                }
+            };
+
+            // Мержим секции оверлея в финальную таблицу
+            ConfigLoader::merge_toml_tables(&mut final_table, overlay_table);
+        }
+
+        // 3. Переводим готовую склеенную таблицу в твою типизированную структуру
+        let shadow_root: FullConfigShadow = match final_table.try_into() {
+            Ok(root) => root,
+            Err(e) => {
+                error!(
+                    "Critical failure during mapping result toml to shadow struct: {}",
+                    e
+                );
                 exit(1);
             }
         };
