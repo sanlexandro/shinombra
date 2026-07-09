@@ -2,6 +2,7 @@
 
 use std::{path::PathBuf, process::exit};
 
+use common::names::*;
 use logger::*;
 
 const MODULE: &str = "CLIFlagsManager";
@@ -9,11 +10,13 @@ const MODULE: &str = "CLIFlagsManager";
 /// Все возможные cli флаги
 ///
 /// **Поля:**
-/// `manifest_path`: [PathBuf]     - путь до манифеста
-/// `reset_pipewire_token`: [bool] - сброс pipewire-токена
+/// `manifest_path`: [PathBuf]               - путь до манифеста
+/// `reset_pipewire_token`: [bool]           - сброс pipewire-токена
+/// `max_log_level`: [Option]<[LogLevel]>    - максимальный уровень логов
 pub struct CLIFlags {
     pub manifest_path: PathBuf,
     pub reset_pipewire_token: bool,
+    pub max_log_level: Option<LogLevel>,
 }
 
 pub struct CLIFlagsManager;
@@ -26,6 +29,7 @@ impl CLIFlagsManager {
         // Дефолтные значения
         let mut manifest_path = PathBuf::from("config.toml");
         let mut reset_pipewire_token = false;
+        let mut max_log_level = Option::<LogLevel>::None;
 
         while let Some(arg) = args.next() {
             match arg.as_str() {
@@ -40,6 +44,18 @@ impl CLIFlagsManager {
                 "-r" | "--reset" => {
                     reset_pipewire_token = true;
                 }
+                "-v" | "--verbose" | "--debug" => {
+                    max_log_level = Some(LogLevel::Debug);
+                }
+                "-V" | "--version" => {
+                    println!(
+                        "{} v{}\nauthor: {}",
+                        APP_NAME,
+                        env!("CARGO_PKG_VERSION"),
+                        AUTHOR_NAME
+                    );
+                    exit(0);
+                }
                 "-h" | "--help" => {
                     Self::print_help();
                     exit(0);
@@ -53,6 +69,7 @@ impl CLIFlagsManager {
         CLIFlags {
             manifest_path,
             reset_pipewire_token,
+            max_log_level
         }
     }
 

@@ -1,10 +1,12 @@
 Shinombra v0.1.0
 Author: sanlexandro
 
-Use:
+Usage:
   shinombra [FLAGS]
 
 Flags:
   -p, --path <path/to/file> Path to the root manifest (default: ./config.toml)
   -r, --reset               Reset saved PipeWire session token
+  -v, --verbose, --debug    Set max log level to debug
+  -V, --version             Show version
   -h, --help                Show this text

@@ -1,21 +1,14 @@
 //! Простой логгер
 
+pub use crate::registry::LogLevel;
+pub mod registry;
 use std::sync::atomic::{AtomicU8, Ordering};
 
-/// Уровни ошибок
-#[derive(Copy, Clone, PartialEq, PartialOrd)]
-pub enum LogLevel {
-    Error = 0,
-    Warn = 1,
-    Info = 2,
-    Debug = 3,
-}
-
-// Глобальная переменная уровня логов (по умолчанию INFO)
-pub static MAX_LOG_LEVEL: AtomicU8 = AtomicU8::new(2);
+// Глобальная переменная уровня логов (по умолчанию WARN)
+pub static MAX_LOG_LEVEL: AtomicU8 = AtomicU8::new(LogLevel::Warn as u8);
 
 pub fn set_max_log_level(level: LogLevel) {
-    MAX_LOG_LEVEL.store(level as u8, Ordering::Relaxed);
+    MAX_LOG_LEVEL.store(level as u8, Ordering::SeqCst);
 }
 
 #[macro_export]

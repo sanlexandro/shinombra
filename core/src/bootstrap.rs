@@ -53,15 +53,17 @@ include_shadow_all!(
     "./algorithms/src/filters/configs/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
-    "./hardware_output/src/serial/config/config.rs"
+    "./hardware_output/src/serial/config/config.rs",
+    "./infra/logger/src/registry.rs",
 );
 
 pub struct ConfigLoader {
-    settings: Settings,
-    shadow_root: FullConfigShadow, // Храним временно для инициализации алгоритмов
-    geometry_config: GeometryConfig,
-    screen_config: ScreenConfig,
-    cli_flags: CLIFlags,
+    pub settings: Settings,
+    pub daemon_settings: Option<DaemonSettings>,
+    pub shadow_root: FullConfigShadow, // Храним временно для инициализации алгоритмов
+    pub geometry_config: GeometryConfig,
+    pub screen_config: ScreenConfig,
+    pub cli_flags: CLIFlags,
 }
 
 impl ConfigLoader {
@@ -154,11 +156,20 @@ impl ConfigLoader {
             .unwrap_or_else(|_| std::path::PathBuf::from(&cli_flags.manifest_path));
         let manifest_dir = manifest_path.parent().unwrap_or(std::path::Path::new("."));
 
+        // Пробуем вытащить пути до конфигурации
+        let manifest_paths = match manifest.paths {
+            None => {
+                error!("No [paths] table in manifest. Can not find any config.");
+                exit(1);
+            }
+            Some(paths) => paths,
+        };
+
         // Превращаем путь к базовому конфигу в абсолютный, если он относительный
-        let base_config_path = if manifest.config.is_relative() {
-            manifest_dir.join(&manifest.config)
+        let base_config_path = if manifest_paths.config.is_relative() {
+            manifest_dir.join(&manifest_paths.config)
         } else {
-            manifest.config.clone()
+            manifest_paths.config.clone()
         };
 
         // Считываем и парсим базовый конфиг как динамическую таблицу
@@ -183,7 +194,7 @@ impl ConfigLoader {
         };
 
         // Накладываем оверлеи поверх
-        for overlay_path in manifest.overlays {
+        for overlay_path in manifest_paths.overlays {
             // Если путь относительный - клеим его к папке манифеста
             let resolved_overlay_path = if overlay_path.is_relative() {
                 manifest_dir.join(&overlay_path)
@@ -278,6 +289,7 @@ impl ConfigLoader {
 
         Self {
             settings,
+            daemon_settings: manifest.daemon_settings,
             shadow_root,
             geometry_config,
             screen_config,

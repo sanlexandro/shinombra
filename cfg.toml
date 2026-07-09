@@ -1,11 +1,12 @@
 [settings]
-chunk_processor_type = "DynamicCheckerboard"
+chunk_processor_type = "Checkerboard"
 analytics_type = "ColorHistogram"
 filter_chain = [
     "EmaFilter",
     "GammaFilter",
 ]
 hardware_output_type = "SerialDriver"
+log_level = "Info"
 
 [flags]
 pipewire_conversion = false
@@ -35,12 +36,11 @@ row_stride = 5
 gamma = 2.200000047683716
 
 [screen_reading_config]
-deep_in = 20
+deep_in = 30
 deep_out = 0
 
 [ema_filter_config]
-alpha = 0.05000000074505806
-amount = 0
+alpha = 0.2000000074505806
 
 [color_histogram_config]
 precision_level = 20

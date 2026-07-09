@@ -24,14 +24,24 @@ pub mod config;
 use crate::{bootstrap::ConfigLoader, cli_flags::CLIFlagsManager};
 
 fn main() {
-    set_max_log_level(LogLevel::Info);
-    debug!("Hello from {}!", AUTHOR_NAME);
-
     // Считываем cli флаги
     let cli_flags = CLIFlagsManager::parse();
 
+    // Переустанавливаем уровень логирования, если из cli пришёл новый
+    let initial_log_level = cli_flags.max_log_level.unwrap_or(LogLevel::Warn);
+    set_max_log_level(initial_log_level);
+
     // Инициализируем конфиг
     let config_loader = ConfigLoader::load(cli_flags);
+
+    // Если из cli не было уровня логов, пробуем установить его из конфигурации
+    if config_loader.cli_flags.max_log_level.is_none() {
+        if let Some(settings) = config_loader.daemon_settings.as_ref() {
+            set_max_log_level(settings.log_level);
+        }
+    }
+
+    debug!("Hello from {}!", AUTHOR_NAME);
 
     // Создаём контроллер
     let controller = Arc::new(CoreController::new(false));

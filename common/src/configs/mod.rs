@@ -1,6 +1,6 @@
 //! Общая информация о конфигах
 
-use logger::{log, LogLevel};
+use logger::{log, registry::LogLevel};
 
 /// Возможные ошибки
 ///

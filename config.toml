@@ -1,2 +1,6 @@
+[paths]
 config = "./cfg.toml"
-overlays = ["./over.toml"]
+overlays = ["over.toml"]
+
+[daemon_settings]
+log_level = "Debug"

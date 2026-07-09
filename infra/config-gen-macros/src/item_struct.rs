@@ -59,6 +59,10 @@ fn gen_conversion(
                 // Если это Vec, конвертируем каждый элемент
                 return quote! { #field_tokens.into_iter().map(|v| v.into()).collect() };
             }
+            if seg.ident == "Option" {
+                // Если это Option, трансформируем внутреннее значение через .map
+                return quote! { #field_tokens.map(|v| v.into()) };
+            }
         }
     }
     // Для обычных типов оставляем как было
