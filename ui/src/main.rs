@@ -1,11 +1,13 @@
+use std::{path::PathBuf, process::exit, sync::Arc};
+
 use axum::{
+    extract::{Form, State},
     response::{Html, IntoResponse},
     routing::get,
     Router,
 };
-
-use config_gen::{__private::*, *};
-use ui_gen::{add_js, generate_ui, Renderable, __private::serde_json};
+use serde::Deserialize;
+use tokio::sync::RwLock;
 
 use algorithms::{
     analytics::{configs::*, registry::*},
@@ -17,8 +19,11 @@ use algorithms::{
     },
 };
 use ambient_core::config::*;
-use common::units::*;
+use common::{names::*, units::*};
+use config_gen::{__private::*, *};
 use hardware_output::{registry::*, serial::config::*};
+use logger::*;
+use ui_gen::{add_js, generate_ui, Renderable, __private::serde_json};
 
 // Подключаем все тени
 include_shadow_all!(
@@ -33,7 +38,8 @@ include_shadow_all!(
     "./algorithms/src/filters/configs/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
-    "./hardware_output/src/serial/config/config.rs"
+    "./hardware_output/src/serial/config/config.rs",
+    "./infra/logger/src/registry.rs",
 );
 // Генерируем ui
 generate_ui!(
@@ -48,6 +54,11 @@ generate_ui!(
             pipewire_conversion: BoolField {},
             save_token: BoolField {},
         },
+        Paths => {},
+        DaemonSettings => {
+            log_level: Registry {"./infra/logger/src/registry.rs" => LogLevel },
+        },
+        Manifest => {},
     },
     "./algorithms/src/processing/configs/configs.rs" => {
         ScreenConfig => {
@@ -114,17 +125,64 @@ generate_ui!(
     },
 );
 
+/// Состояние приложения
+#[derive(Clone)]
+pub struct AppState {
+    pub config_path: Arc<RwLock<Option<PathBuf>>>,
+}
+
+#[derive(Deserialize)]
+struct ConfigPathForm {
+    config_path: String,
+}
+
+async fn render_start_page() -> Html<String> {
+    let html = format!(
+        r#"<!DOCTYPE html>
+        <html>
+        <head>
+            <title>{} v{}</title>
+            <link rel="stylesheet" href="/style.css">
+            <link rel="icon" href="/image.jpg" type="image/jpeg">
+        </head>
+        <body>
+            <main style="max-width: 720px; margin: 64px auto; padding: 24px;">
+                <h1>Choose config file</h1>
+                <p>Start the app by selecting the path to your config file first.</p>
+                <form action="/config-path" method="post" style="display: flex; gap: 12px; align-items: end; flex-wrap: wrap;">
+                    <label style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 8px;">
+                        <span>Config path</span>
+                        <input type="text" name="config_path" placeholder="/path/to/config.toml" required style="width: 100%;">
+                    </label>
+                    <button type="submit">Open Config</button>
+                </form>
+            </main>
+        </body>
+        </html>"#,
+        APP_NAME,
+        env!("CARGO_PKG_VERSION")
+    );
+
+    Html(html)
+}
+
 /// Основная страница
-async fn show_index() -> impl IntoResponse {
+async fn show_index(State(state): State<AppState>) -> axum::response::Response {
+    let config_path = state.config_path.read().await.clone();
+
+    let Some(config_path) = config_path else {
+        return render_start_page().await.into_response();
+    };
+
     // Подгружаем данные из файла
-    let toml_str = std::fs::read_to_string("./cfg.toml").expect("no_file");
+    let toml_str = std::fs::read_to_string(&config_path).unwrap_or_default();
     let shadow_root: FullConfigShadow = toml::from_str(&toml_str).unwrap_or_default();
 
     let html = format!(
         r#"<!DOCTYPE html>
         <html>
         <head>
-            <title>Config UI</title>
+            <title>{} v{}</title>
             <link rel="stylesheet" href="/style.css">
             <link rel="icon" href="/image.jpg" type="image/jpeg">
         </head>
@@ -138,6 +196,8 @@ async fn show_index() -> impl IntoResponse {
             </script>
         </body>
         </html>"#,
+        APP_NAME,
+        env!("CARGO_PKG_VERSION"),
         render_full_html(&shadow_root),
         add_js()
     );
@@ -147,9 +207,18 @@ async fn show_index() -> impl IntoResponse {
 }
 
 /// Обработчик сохранения
-async fn save_config(axum::Json(raw_json): axum::Json<serde_json::Value>) -> impl IntoResponse {
+async fn save_config(
+    State(state): State<AppState>,
+    axum::Json(raw_json): axum::Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let config_path = state.config_path.read().await.clone();
+
+    let Some(config_path) = config_path else {
+        return axum::http::StatusCode::BAD_REQUEST;
+    };
+
     // Читаем текущее состояние файла
-    let toml_str = std::fs::read_to_string("./cfg.toml").unwrap_or_default();
+    let toml_str = std::fs::read_to_string(&config_path).unwrap_or_default();
     let mut current_config: FullConfigShadow = toml::from_str(&toml_str).unwrap_or_default();
 
     // Накладываем патч из пришедшего JSON непосредственно на существующий конфиг
@@ -168,10 +237,25 @@ async fn save_config(axum::Json(raw_json): axum::Json<serde_json::Value>) -> imp
 
     // Сохраняем результат
     if let Ok(new_toml_str) = toml::to_string_pretty(&file_toml) {
-        let _ = std::fs::write("./cfg.toml", new_toml_str);
+        let _ = std::fs::write(&config_path, new_toml_str);
     }
 
     axum::http::StatusCode::OK
+}
+
+/// Выбор пути к конфигу
+async fn set_config_path(
+    State(state): State<AppState>,
+    Form(form): Form<ConfigPathForm>,
+) -> impl IntoResponse {
+    let config_path = PathBuf::from(form.config_path);
+
+    {
+        let mut stored_path = state.config_path.write().await;
+        *stored_path = Some(config_path);
+    }
+
+    axum::response::Redirect::to("/")
 }
 
 /// Поддержка стилей
@@ -185,24 +269,74 @@ async fn style_css() -> impl IntoResponse {
 }
 
 /// Поддержка изображений
-async fn image_imge() -> impl IntoResponse {
-    let image = include_bytes!("../assets/image.jpg");
-    (
-        axum::http::StatusCode::OK,
-        [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
-        image.to_vec(),
-    )
-}
+// async fn image_imge() -> impl IntoResponse {
+//     let image = include_bytes!("../assets/image.jpg");
+//     (
+//         axum::http::StatusCode::OK,
+//         [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
+//         image.to_vec(),
+//     )
+// }
 
 #[tokio::main]
 async fn main() {
+    // Обработка аргументов
+    let mut args = std::env::args().skip(1);
+
+    // Значения по умолчанию
+    let mut port: u32 = 3000;
+    let mut config_path = PathBuf::new();
+
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "-p" | "--port" => {
+                if let Some(next_arg) = args.next() {
+                    port = match next_arg.parse() {
+                        Ok(p) => p,
+                        Err(e) => {
+                            println!("Can not parse {} as port: {}", next_arg, e);
+                            exit(1);
+                        }
+                    }
+                } else {
+                    println!("Can not find port value after {}.\nUse {} <port>", arg, arg);
+                    exit(1);
+                }
+            }
+            "-c" | "--config" => {
+                if let Some(next_arg) = args.next() {
+                    config_path = PathBuf::from(next_arg);
+                } else {
+                    println!(
+                        "Can not find config path after {}.\nUse {} </path/to/config>",
+                        arg, arg
+                    );
+                    exit(1);
+                }
+            }
+            unknown => {
+                println!("Unknown arg {} will be skipped", unknown);
+            }
+        }
+    }
+
+    let state = AppState {
+        config_path: Arc::new(RwLock::new(
+            (!config_path.as_os_str().is_empty()).then_some(config_path),
+        )),
+    };
+
     let app = Router::new()
         .route("/", get(show_index))
+        .route("/config-path", axum::routing::post(set_config_path))
         .route("/style.css", get(style_css))
-        .route("/image.jpg", get(image_imge))
-        .route("/save", axum::routing::post(save_config));
+        // .route("/image.jpg", get(image_imge))
+        .route("/save", axum::routing::post(save_config))
+        .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    println!("Server running on http://localhost:3000");
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
+        .await
+        .unwrap();
+    println!("Server running on http://localhost:{}", port);
     axum::serve(listener, app).await.unwrap();
 }

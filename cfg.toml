@@ -1,10 +1,7 @@
 [settings]
 chunk_processor_type = "Checkerboard"
 analytics_type = "ColorHistogram"
-filter_chain = [
-    "EmaFilter",
-    "GammaFilter",
-]
+filter_chain = ["EmaFilter", "GammaFilter"]
 hardware_output_type = "SerialDriver"
 log_level = "Info"
 

@@ -936,6 +936,8 @@ dependencies = [
  "core",
  "ffi",
  "hardware_output",
+ "logger",
+ "serde",
  "threads",
  "tokio",
  "ui-gen",

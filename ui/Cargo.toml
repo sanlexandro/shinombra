@@ -12,9 +12,11 @@ ffi = { path = "../ffi" }
 hardware_output = { path = "../hardware_output" }
 core = { path = "../core" }
 common = { path = "../common" }
+logger = { path = "../infra/logger" }
 
 tokio = { version = "1.0", features = ["full"] }
 axum = "0.7"
+serde = { version = "1", features = ["derive"] }
 
 [[bin]]
 name = "ambient-lighting-ui"
