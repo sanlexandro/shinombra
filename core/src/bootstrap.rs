@@ -115,7 +115,7 @@ impl ConfigLoader {
     /// Инициализация конфигурации
     ///
     /// Данная функция пытается:
-    /// 1) прочитать данные из манифеста
+    /// 1) прочитать данные из манифеста (пропускается в простом режиме)
     /// 2) прочитать данные из файла конфигурации
     /// 3) наложить на них данные из overlays
     /// 4) извлечь критически важные настройки
@@ -124,111 +124,149 @@ impl ConfigLoader {
     /// Далее она преобразует их в готовые для работы данные, которые необходимы
     /// для запуска дальнейшей инициализации
     pub fn load(cli_flags: CLIFlags) -> Self {
-        // Считываем данные из манифеста
-        let manifest_str = match std::fs::read_to_string(&cli_flags.manifest_path) {
-            Ok(cfg) => cfg,
-            Err(e) => {
-                error!(
-                    "Critical failure during loading manifest {} : {}",
-                    cli_flags.manifest_path.to_string_lossy(),
-                    e
-                );
-                exit(1);
+        // итоговые настройки демона
+        let mut daemon_settings = Option::<DaemonSettings>::None;
+
+        // Если был передан путь до конфигурации, запускаем простой режим, минуя
+        // манифесты и оверлеи
+        // Получаем финальную таблицу
+        let final_table = match cli_flags.config_path.as_ref() {
+            Some(config_path) => {
+                let config_text = match std::fs::read_to_string(config_path) {
+                    Ok(text) => text,
+                    Err(e) => {
+                        error!(
+                            "Critical failure during loading config {}: {}",
+                            config_path.to_string_lossy(),
+                            e
+                        );
+                        exit(1);
+                    }
+                };
+                let final_table = match toml::from_str(&config_text) {
+                    Ok(table) => table,
+                    Err(e) => {
+                        println!(
+                            "Critical failure during mapping result toml to shadow struct: {}",
+                            e
+                        );
+                        exit(1);
+                    }
+                };
+                final_table
             }
-        };
-
-        // Проводим десериализцию
-        let shadow_manifest: ManifestShadow = match toml::from_str(&manifest_str) {
-            Ok(root) => root,
-            Err(e) => {
-                error!(
-                    "Critical failure during reading manifest toml {} : {}",
-                    manifest_str, e
-                );
-                exit(1);
-            }
-        };
-        let manifest: Manifest = shadow_manifest.into();
-
-        // Получаем абсолютный путь к самому манифесту
-        let manifest_path = std::path::Path::new(&cli_flags.manifest_path)
-            .canonicalize()
-            .unwrap_or_else(|_| std::path::PathBuf::from(&cli_flags.manifest_path));
-        let manifest_dir = manifest_path.parent().unwrap_or(std::path::Path::new("."));
-
-        // Пробуем вытащить пути до конфигурации
-        let manifest_paths = match manifest.paths {
             None => {
-                error!("No [paths] table in manifest. Can not find any config.");
-                exit(1);
-            }
-            Some(paths) => paths,
-        };
+                // Считываем данные из манифеста
+                let manifest_str = match std::fs::read_to_string(&cli_flags.manifest_path) {
+                    Ok(cfg) => cfg,
+                    Err(e) => {
+                        error!(
+                            "Critical failure during loading manifest {} : {}",
+                            cli_flags.manifest_path.to_string_lossy(),
+                            e
+                        );
+                        exit(1);
+                    }
+                };
 
-        // Превращаем путь к базовому конфигу в абсолютный, если он относительный
-        let base_config_path = if manifest_paths.config.is_relative() {
-            manifest_dir.join(&manifest_paths.config)
-        } else {
-            manifest_paths.config.clone()
-        };
+                // Проводим десериализцию
+                let shadow_manifest: ManifestShadow = match toml::from_str(&manifest_str) {
+                    Ok(root) => root,
+                    Err(e) => {
+                        error!(
+                            "Critical failure during reading manifest toml {} : {}",
+                            manifest_str, e
+                        );
+                        exit(1);
+                    }
+                };
+                let manifest: Manifest = shadow_manifest.into();
 
-        // Считываем и парсим базовый конфиг как динамическую таблицу
-        let main_toml_str = match std::fs::read_to_string(&base_config_path) {
-            Ok(text) => text,
-            Err(e) => {
-                error!(
-                    "Critical failure during loading main config {} : {}",
-                    base_config_path.to_string_lossy(),
-                    e
-                );
-                exit(1);
-            }
-        };
+                // Получаем абсолютный путь к самому манифесту
+                let manifest_path = std::path::Path::new(&cli_flags.manifest_path)
+                    .canonicalize()
+                    .unwrap_or_else(|_| std::path::PathBuf::from(&cli_flags.manifest_path));
+                let manifest_dir = manifest_path.parent().unwrap_or(std::path::Path::new("."));
 
-        let mut final_table: toml::Table = match toml::from_str(&main_toml_str) {
-            Ok(table) => table,
-            Err(e) => {
-                error!("Critical failure during parsing main config: {}", e);
-                exit(1);
-            }
-        };
+                // Пробуем вытащить пути до конфигурации
+                let manifest_paths = match manifest.paths {
+                    None => {
+                        error!("No [paths] table in manifest. Can not find any config.");
+                        exit(1);
+                    }
+                    Some(paths) => paths,
+                };
 
-        // Накладываем оверлеи поверх
-        for overlay_path in manifest_paths.overlays {
-            // Если путь относительный - клеим его к папке манифеста
-            let resolved_overlay_path = if overlay_path.is_relative() {
-                manifest_dir.join(&overlay_path)
-            } else {
-                overlay_path
-            };
+                // Превращаем путь к базовому конфигу в абсолютный, если он относительный
+                let base_config_path = if manifest_paths.config.is_relative() {
+                    manifest_dir.join(&manifest_paths.config)
+                } else {
+                    manifest_paths.config.clone()
+                };
 
-            let overlay_str = match std::fs::read_to_string(&resolved_overlay_path) {
-                Ok(text) => text,
-                Err(err) => {
-                    error!(
-                        "Failed to read overlay {}: {}",
-                        resolved_overlay_path.to_string_lossy(),
-                        err
-                    );
-                    exit(1);
+                // Считываем и парсим базовый конфиг как динамическую таблицу
+                let main_toml_str = match std::fs::read_to_string(&base_config_path) {
+                    Ok(text) => text,
+                    Err(e) => {
+                        error!(
+                            "Critical failure during loading main config {} : {}",
+                            base_config_path.to_string_lossy(),
+                            e
+                        );
+                        exit(1);
+                    }
+                };
+
+                let mut final_table = match toml::from_str(&main_toml_str) {
+                    Ok(table) => table,
+                    Err(e) => {
+                        error!("Critical failure during parsing main config: {}", e);
+                        exit(1);
+                    }
+                };
+
+                // Накладываем оверлеи поверх
+                for overlay_path in manifest_paths.overlays {
+                    // Если путь относительный - клеим его к папке манифеста
+                    let resolved_overlay_path = if overlay_path.is_relative() {
+                        manifest_dir.join(&overlay_path)
+                    } else {
+                        overlay_path
+                    };
+
+                    let overlay_str = match std::fs::read_to_string(&resolved_overlay_path) {
+                        Ok(text) => text,
+                        Err(err) => {
+                            error!(
+                                "Failed to read overlay {}: {}",
+                                resolved_overlay_path.to_string_lossy(),
+                                err
+                            );
+                            exit(1);
+                        }
+                    };
+
+                    let overlay_table: toml::Table = match toml::from_str(&overlay_str) {
+                        Ok(table) => table,
+                        Err(e) => {
+                            error!(
+                                "Failed to parse overlay TOML {}: {}",
+                                resolved_overlay_path.to_string_lossy(),
+                                e
+                            );
+                            exit(1);
+                        }
+                    };
+
+                    // Мержим секции оверлея в финальную таблицу
+                    ConfigLoader::merge_toml_tables(&mut final_table, overlay_table);
                 }
-            };
 
-            let overlay_table: toml::Table = match toml::from_str(&overlay_str) {
-                Ok(table) => table,
-                Err(e) => {
-                    error!(
-                        "Failed to parse overlay TOML {}: {}",
-                        resolved_overlay_path.to_string_lossy(),
-                        e
-                    );
-                    exit(1);
-                }
-            };
+                daemon_settings = manifest.daemon_settings;
 
-            // Мержим секции оверлея в финальную таблицу
-            ConfigLoader::merge_toml_tables(&mut final_table, overlay_table);
-        }
+                final_table
+            }
+        };
 
         // Переводим готовую склеенную таблицу в типизированную структуру
         let shadow_root: FullConfigShadow = match final_table.try_into() {
@@ -285,11 +323,17 @@ impl ConfigLoader {
             reading: screen_reading_config,
         };
 
+        // Снова проверяем была ли выбрана проста конфигурация. Если да, то
+        // пробуем считать секцию настроек процесса из конфига
+        if let Some(daemon_settings_shadow) = shadow_root.daemon_settings.as_ref() {
+            daemon_settings = Some(daemon_settings_shadow.into());
+        }
+
         debug!("Config loaded successful");
 
         Self {
             settings,
-            daemon_settings: manifest.daemon_settings,
+            daemon_settings,
             shadow_root,
             geometry_config,
             screen_config,

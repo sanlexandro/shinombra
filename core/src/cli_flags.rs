@@ -10,13 +10,16 @@ const MODULE: &str = "CLIFlagsManager";
 /// Все возможные cli флаги
 ///
 /// **Поля:**
-/// `manifest_path`: [PathBuf]               - путь до манифеста
-/// `reset_pipewire_token`: [bool]           - сброс pipewire-токена
-/// `max_log_level`: [Option]<[LogLevel]>    - максимальный уровень логов
+/// `manifest_path`: [PathBuf]            - путь до манифеста
+/// `reset_pipewire_token`: [bool]        - сброс pipewire-токена
+/// `max_log_level`: [Option]<[LogLevel]> - максимальный уровень логов
+/// `config_path`: [Option]<[PathBuf]>    - прямой путь до конфига (для
+/// простого режима)
 pub struct CLIFlags {
     pub manifest_path: PathBuf,
     pub reset_pipewire_token: bool,
     pub max_log_level: Option<LogLevel>,
+    pub config_path: Option<PathBuf>,
 }
 
 pub struct CLIFlagsManager;
@@ -30,9 +33,18 @@ impl CLIFlagsManager {
         let mut manifest_path = PathBuf::from("config.toml");
         let mut reset_pipewire_token = false;
         let mut max_log_level = Option::<LogLevel>::None;
+        let mut config_path = Option::<PathBuf>::None;
 
         while let Some(arg) = args.next() {
             match arg.as_str() {
+                "--config" => {
+                    if let Some(next_arg) = args.next() {
+                        config_path = Some(PathBuf::from(next_arg));
+                    } else {
+                        error!("--config requires a valid path argument.");
+                        exit(1);
+                    }
+                }
                 "-p" | "--path" => {
                     if let Some(next_arg) = args.next() {
                         manifest_path = PathBuf::from(next_arg);
@@ -69,7 +81,8 @@ impl CLIFlagsManager {
         CLIFlags {
             manifest_path,
             reset_pipewire_token,
-            max_log_level
+            max_log_level,
+            config_path,
         }
     }
 

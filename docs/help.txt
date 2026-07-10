@@ -5,6 +5,7 @@ Usage:
   shinombra [FLAGS]
 
 Flags:
+  --config <path/to/file>   Path to toml config (used with simple mode)
   -p, --path <path/to/file> Path to the root manifest (default: ./config.toml)
   -r, --reset               Reset saved PipeWire session token
   -v, --verbose, --debug    Set max log level to debug

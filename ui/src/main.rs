@@ -303,7 +303,7 @@ async fn main() {
                     exit(1);
                 }
             }
-            "-c" | "--config" => {
+            "--config" => {
                 if let Some(next_arg) = args.next() {
                     config_path = PathBuf::from(next_arg);
                 } else {
@@ -313,6 +313,10 @@ async fn main() {
                     );
                     exit(1);
                 }
+            }
+            "--help" => {
+                println!(include_str!("../../docs/help_ui.txt"));
+                exit(0);
             }
             unknown => {
                 println!("Unknown arg {} will be skipped", unknown);

@@ -1,0 +1,9 @@
+Shinombra-ui v0.1.0
+Author: sanlexandro
+
+Usage:
+  shinombra-ui [FLAGS]
+
+Flags:
+  --config <path/to/file>  Path to toml config (used with simple mode)
+  -p, --port <port>        Port to start in localhost
