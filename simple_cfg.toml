@@ -7,12 +7,10 @@ hardware_output_type = "DebugDriver"
 [color_histogram_config]
 precision_level = 10
 
-[flags]
-pipewire_conversion = false
-save_token = true
-
 [daemon_settings]
 log_level = "Error"
+pipewire_conversion = false
+save_token = true
 
 [checkerboard_config]
 pixel_step = 1

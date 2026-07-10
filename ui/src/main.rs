@@ -50,13 +50,12 @@ generate_ui!(
             hardware_output_type: Registry {"./hardware_output/src/registry.rs" => HardwareOutputType },
             filter_chain: WrapperVec( Registry {"./algorithms/src/filters/registry.rs" => ColorFilterType} ),
         },
-        Flags => {
-            pipewire_conversion: BoolField {},
-            save_token: BoolField {},
-        },
+        Flags => {},
         Paths => {},
         DaemonSettings => {
             log_level: Registry {"./infra/logger/src/registry.rs" => LogLevel },
+            pipewire_conversion: BoolField {},
+            save_token: BoolField {},
         },
         Manifest => {},
     },

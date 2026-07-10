@@ -20,5 +20,5 @@ name = "ambient_core"
 path = "src/lib.rs"
 
 [[bin]]
-name = "ambient-lighting"
+name = "shinombra"
 path = "src/main.rs"

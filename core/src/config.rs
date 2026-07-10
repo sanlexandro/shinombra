@@ -22,19 +22,6 @@ pub struct Settings {
     pub hardware_output_type: HardwareOutputType,
 }
 
-/// Флаги, влияющие на поведение программы
-///
-/// **Поля:**
-/// - `pipewire_conversion`: [bool] - разрешить преобразование формата силами
-///   pipewire
-/// - `save_token`: [bool]          - разрешить сохранение токена pipewire
-///   сессии, чтобы не выбирать необходимый экран при следующих запусках
-#[derive(Default)]
-pub struct Flags {
-    pub pipewire_conversion: bool,
-    pub save_token: bool,
-}
-
 /// Пути до файлов для манифеста
 ///
 /// Данная структура должна быть описана в отдельном файле, который и будет
@@ -54,8 +41,14 @@ pub struct Paths {
 ///
 /// **Поля:**
 /// - `log_level`: [LogLevel] - уровень логирования
+/// - `pipewire_conversion`: [bool] - разрешить преобразование формата силами
+///   pipewire
+/// - `save_token`: [bool]          - разрешить сохранение токена pipewire
+///   сессии, чтобы не выбирать необходимый экран при следующих запусках
 pub struct DaemonSettings {
     pub log_level: LogLevel,
+    pub pipewire_conversion: bool,
+    pub save_token: bool,
 }
 
 /// Манифест

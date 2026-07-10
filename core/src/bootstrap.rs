@@ -341,18 +341,6 @@ impl ConfigLoader {
         }
     }
 
-    /// Получение специальных флагов
-    pub fn get_flags(&self) -> Flags {
-        if let Some(flags) = self.shadow_root.flags.clone() {
-            flags.into()
-        } else {
-            Flags {
-                pipewire_conversion: false,
-                save_token: false,
-            }
-        }
-    }
-
     /// Запуск подготовки и основного цикла
     ///
     /// Выполняет действия из флагов, если это возможно на данной ступени
@@ -526,14 +514,18 @@ impl ConfigLoader {
             std::ptr::null_mut()
         };
 
+        let apply_conversion = self
+            .daemon_settings
+            .as_ref()
+            .is_some_and(|settings| settings.pipewire_conversion);
         debug!("token_ptr is null: {}", token_ptr.is_null());
-        debug!("apply_conversion: {}", self.get_flags().pipewire_conversion);
+        debug!("pipewire conversion is: {}", apply_conversion);
 
         let mut capture_thread = match CaptureThread::new(
             &mut capture_config,
             controller.clone(),
             InitializingData {
-                apply_conversion: self.get_flags().pipewire_conversion,
+                apply_conversion,
                 token: token_ptr,
             },
         ) {
@@ -713,8 +705,11 @@ impl ConfigLoader {
             }
         }
 
-        let flags = self.get_flags();
-        if flags.save_token {
+        if self
+            .daemon_settings
+            .as_ref()
+            .is_some_and(|settings| settings.save_token)
+        {
             let token = match capture_thread.get_token() {
                 None => Vec::new(),
                 Some(s) => s.into_bytes(),

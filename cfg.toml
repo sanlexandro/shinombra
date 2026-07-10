@@ -5,10 +5,6 @@ filter_chain = ["EmaFilter", "GammaFilter"]
 hardware_output_type = "SerialDriver"
 log_level = "Info"
 
-[flags]
-pipewire_conversion = false
-save_token = true
-
 [frame_connection_config]
 start_from = "Left"
 direction = "Clockwise"
