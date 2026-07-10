@@ -8,7 +8,6 @@ Wants=pipewire.service
 ExecStart=/usr/bin/shinombra
 Restart=on-failure
 RestartSec=3
-SupplementaryGroups=dialout
 
 [Install]
 WantedBy=default.target

@@ -19,7 +19,7 @@ use algorithms::{
     },
 };
 use ambient_core::config::*;
-use common::{names::*, units::*};
+use common::{names::*, paths::expand_tilde, units::*};
 use config_gen::{__private::*, *};
 use hardware_output::{registry::*, serial::config::*};
 use logger::*;
@@ -247,7 +247,7 @@ async fn set_config_path(
     State(state): State<AppState>,
     Form(form): Form<ConfigPathForm>,
 ) -> impl IntoResponse {
-    let config_path = PathBuf::from(form.config_path);
+    let config_path = expand_tilde(PathBuf::from(form.config_path));
 
     {
         let mut stored_path = state.config_path.write().await;
@@ -304,7 +304,7 @@ async fn main() {
             }
             "--config" => {
                 if let Some(next_arg) = args.next() {
-                    config_path = PathBuf::from(next_arg);
+                    config_path = expand_tilde(PathBuf::from(next_arg));
                 } else {
                     println!(
                         "Can not find config path after {}.\nUse {} </path/to/config>",

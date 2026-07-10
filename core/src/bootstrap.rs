@@ -29,6 +29,7 @@ use algorithms::{
 };
 use common::crypto::xor_crypt;
 use common::names::*;
+use common::paths::resolve_path;
 use common::{configs::*, core::controller::CoreController, units::*};
 use config_gen::{__private::*, *};
 use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
@@ -198,11 +199,7 @@ impl ConfigLoader {
                 };
 
                 // Превращаем путь к базовому конфигу в абсолютный, если он относительный
-                let base_config_path = if manifest_paths.config.is_relative() {
-                    manifest_dir.join(&manifest_paths.config)
-                } else {
-                    manifest_paths.config.clone()
-                };
+                let base_config_path = resolve_path(manifest_dir, &manifest_paths.config);
 
                 // Считываем и парсим базовый конфиг как динамическую таблицу
                 let main_toml_str = match std::fs::read_to_string(&base_config_path) {
@@ -228,11 +225,7 @@ impl ConfigLoader {
                 // Накладываем оверлеи поверх
                 for overlay_path in manifest_paths.overlays {
                     // Если путь относительный - клеим его к папке манифеста
-                    let resolved_overlay_path = if overlay_path.is_relative() {
-                        manifest_dir.join(&overlay_path)
-                    } else {
-                        overlay_path
-                    };
+                    let resolved_overlay_path = resolve_path(manifest_dir, &overlay_path);
 
                     let overlay_str = match std::fs::read_to_string(&resolved_overlay_path) {
                         Ok(text) => text,

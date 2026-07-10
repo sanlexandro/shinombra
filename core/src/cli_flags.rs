@@ -3,6 +3,7 @@
 use std::{path::PathBuf, process::exit};
 
 use common::names::*;
+use common::paths::expand_tilde;
 use logger::*;
 
 const MODULE: &str = "CLIFlagsManager";
@@ -30,7 +31,7 @@ impl CLIFlagsManager {
         let mut args = std::env::args().skip(1);
 
         // Дефолтные значения
-        let mut manifest_path = PathBuf::from(format!("~/.config/{}/manifest.toml", APP_NAME));
+        let mut manifest_path = expand_tilde(PathBuf::from(format!("~/.config/{}/manifest.toml", APP_NAME)));
         let mut reset_pipewire_token = false;
         let mut max_log_level = Option::<LogLevel>::None;
         let mut config_path = Option::<PathBuf>::None;
@@ -39,7 +40,7 @@ impl CLIFlagsManager {
             match arg.as_str() {
                 "--config" => {
                     if let Some(next_arg) = args.next() {
-                        config_path = Some(PathBuf::from(next_arg));
+                        config_path = Some(expand_tilde(PathBuf::from(next_arg)));
                     } else {
                         error!("--config requires a valid path argument.");
                         exit(1);
@@ -47,7 +48,7 @@ impl CLIFlagsManager {
                 }
                 "--manifest" => {
                     if let Some(next_arg) = args.next() {
-                        manifest_path = PathBuf::from(next_arg);
+                        manifest_path = expand_tilde(PathBuf::from(next_arg));
                     } else {
                         error!("-p/--path requires a valid path argument.");
                         exit(1);
