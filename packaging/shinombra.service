@@ -1,0 +1,14 @@
+# ~/.config/systemd/user/shinombra.service
+[Unit]
+Description=Shinombra ambient lighting daemon by sanlexandro
+After=pipewire.service
+Wants=pipewire.service
+
+[Service]
+ExecStart=/usr/bin/shinombra
+Restart=on-failure
+RestartSec=3
+SupplementaryGroups=dialout
+
+[Install]
+WantedBy=default.target
