@@ -1,16 +1,19 @@
-# ~/.config/systemd/user/shinombra.service
 [Unit]
 Description=Shinombra ambient lighting daemon by sanlexandro
 After=pipewire.service wireplumber.service xdg-desktop-portal.service
 Wants=pipewire.service wireplumber.service
 
+After=dbus.service
+Requisite=graphical-session.target
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 ExecStart=/usr/bin/shinombra
 Restart=on-failure
-RestartSec=3
+RestartSec=5
+
+ExecStartPre=/usr/bin/gdbus wait --session org.freedesktop.portal.Desktop 10
 
 [Install]
 WantedBy=graphical-session.target
