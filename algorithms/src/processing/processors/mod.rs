@@ -9,7 +9,8 @@
 //!   [crate::analytics]
 
 use crate::{
-    analytics::ColorAnalyst, color::types::ColorBuffer, pixel_formatter::PixelFormatter, processing::processors::configs::ChunkTask,
+    analytics::ColorAnalyst, color::types::ColorBuffer, pixel_formatter::PixelFormatter,
+    processing::processors::configs::ChunkTask,
 };
 
 pub mod checkerboard;

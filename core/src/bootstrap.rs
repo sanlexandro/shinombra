@@ -395,7 +395,7 @@ impl ConfigLoader {
     /// Данная ступень реализует выбор трейта [ColorFilter]
     ///
     /// **Поддерживается обработка для:**
-    /// - [ColorFilterType::EmaFilter]
+    /// - [ColorFilterType::Ema]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_2_select_filter<Analyst>(self, controller: Arc<CoreController>, analyst: Analyst)
@@ -425,34 +425,47 @@ impl ConfigLoader {
                     continue;
                 }
 
-                ColorFilterType::EmaFilter => {
-                    let Some(shadow) = self.shadow_root.ema_filter_config.as_ref() else {
-                        error!("Check section [ema_filter_config]");
+                ColorFilterType::Ema => {
+                    let Some(shadow) = self.shadow_root.ema_config.as_ref() else {
+                        error!("Check section [ema_config]");
                         exit(2);
                     };
-                    let shadow_config: EmaFilterConfig = shadow.into();
-                    let config = EmaFilterConfig {
+                    let shadow_config: EmaConfig = shadow.into();
+                    let config = EmaConfig {
                         alpha: shadow_config.alpha,
                         amount: self.geometry_config.calculate_leds_amount(),
                     };
 
                     validate_config(&config, MODULE);
 
-                    let filter = EmaFilter::new(config);
+                    let filter = Ema::new(config);
                     FilterInstance::Ema(filter)
                 }
 
-                ColorFilterType::GammaFilter => {
-                    let Some(shadow) = self.shadow_root.gamma_filter_config.as_ref() else {
-                        error!("Check section [gamma_filter_config]");
+                ColorFilterType::Gamma => {
+                    let Some(shadow) = self.shadow_root.gamma_config.as_ref() else {
+                        error!("Check section [gamma_config]");
                         exit(2);
                     };
-                    let config: GammaFilterConfig = shadow.into();
+                    let config: GammaConfig = shadow.into();
 
                     validate_config(&config, MODULE);
 
-                    let filter = GammaFilter::new(config);
+                    let filter = Gamma::new(config);
                     FilterInstance::Gamma(filter)
+                }
+
+                ColorFilterType::BlackThreshold => {
+                    let Some(shadow) = self.shadow_root.black_threshold_config.as_ref() else {
+                        error!("Check section [black_threshold_config]");
+                        exit(2);
+                    };
+                    let config: BlackThresholdConfig = shadow.into();
+
+                    validate_config(&config, MODULE);
+
+                    let filter = BlackThreshold::new(config);
+                    FilterInstance::BlackThreshold(filter)
                 }
             };
 

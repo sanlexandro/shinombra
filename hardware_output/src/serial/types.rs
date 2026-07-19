@@ -3,7 +3,7 @@
 use serialport::SerialPort;
 
 /// Информация о serial-порте
-/// 
+///
 /// **Поля:**
 /// - `port`: [Box]<dyn [SerialPort]> - порт устройства (из [serialport])
 pub struct SerialDriver {

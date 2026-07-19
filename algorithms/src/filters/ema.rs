@@ -1,21 +1,22 @@
 //! Алгоритм фильтрации значения с помощью экспоненциального скользящего среднего
 //!
-//! Данный алгоритм смешивает предыдущее значение с вычисленным в пропорции 3:1,
-//! в результате чего достигается плавность изменения цвета между кадрами
+//! Данный алгоритм смешивает предыдущее значение с вычисленным в заданной
+//! пропорции, в результате чего достигается плавность изменения цвета между
+//! кадрами
 
 use crate::{
     color::{
         types::{ColorBuffer, RGBPixel},
         Color,
     },
-    filters::{configs::EmaFilterConfig, types::EmaFilter, ColorFilter},
+    filters::{configs::EmaConfig, types::Ema, ColorFilter},
 };
 
-impl EmaFilter {
+impl Ema {
     /// Конструктор
     ///
     /// Создаёт хранилище с чёрным цветом
-    pub fn new(config: EmaFilterConfig) -> Self {
+    pub fn new(config: EmaConfig) -> Self {
         let alpha = (config.alpha * 256.0) as i32;
         let inverted_alpha = 256 - alpha;
 
@@ -27,7 +28,7 @@ impl EmaFilter {
     }
 }
 
-impl ColorFilter for EmaFilter {
+impl ColorFilter for Ema {
     /// Пересчёт нового среднего
     fn apply(&mut self, raw_colors: &mut ColorBuffer) {
         for (state, raw) in self

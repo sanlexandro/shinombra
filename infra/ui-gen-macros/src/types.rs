@@ -1,9 +1,9 @@
 //! Вспомогательные AST-структуры
-//! 
-//! Эти структуры описывают синтаксис макроса ui-генерации. 
+//!
+//! Эти структуры описывают синтаксис макроса ui-генерации.
 //! Они используются для удобного парсинга входных данных.
 
-use syn::{Expr, Ident, LitStr, Token, punctuated::Punctuated};
+use syn::{punctuated::Punctuated, Expr, Ident, LitStr, Token};
 
 /// Настройки конфигурации для поля-реестра (выбор из enum).
 pub(crate) struct RegistrySettings {

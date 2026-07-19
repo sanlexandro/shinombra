@@ -23,7 +23,7 @@ use common::{names::*, paths::expand_tilde, units::*};
 use config_gen::{__private::*, *};
 use hardware_output::{registry::*, serial::config::*};
 use logger::*;
-use ui_gen::{add_js, generate_ui, Renderable, __private::serde_json};
+use ui_gen::{__private::serde_json, add_js, generate_ui, Renderable};
 
 // Подключаем все тени
 include_shadow_all!(
@@ -106,14 +106,20 @@ generate_ui!(
         }
     },
     "./algorithms/src/filters/configs/configs.rs" => {
-        @show_if(Settings.filter_chain.includes("GammaFilter"))
-        GammaFilterConfig => {
+        @show_if(Settings.filter_chain.includes("Gamma"))
+        GammaConfig => {
             gamma: SliderField { 0.01, 4.0, 0.01}
         },
-        @show_if(Settings.filter_chain.includes("EmaFilter"))
-        EmaFilterConfig => {
+        @show_if(Settings.filter_chain.includes("Ema"))
+        EmaConfig => {
             alpha: SliderField { 0.01, 1.0, 0.01 }
         },
+        @show_if(Settings.filter_chain.includes("BlackThreshold"))
+        BlackThresholdConfig => {
+            threshold: SliderField {0.0, 100.0, 0.1 },
+            fade_range: SliderField {0.0, 100.0, 0.1 },
+            falloff_exponent: SliderField {0.0, 4.0, 0.1 }
+        }
     },
     "./hardware_output/src/serial/config/config.rs" => {
         @show_if(Settings.hardware_output_type == "SerialDriver")

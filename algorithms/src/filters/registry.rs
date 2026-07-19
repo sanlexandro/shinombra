@@ -3,6 +3,7 @@
 #[derive(Debug, Clone)]
 pub enum ColorFilterType {
     NoFilter,
-    EmaFilter,
-    GammaFilter,
+    Ema,
+    Gamma,
+    BlackThreshold,
 }

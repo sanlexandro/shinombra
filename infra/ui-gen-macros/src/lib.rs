@@ -1,5 +1,5 @@
 //! Макрос генерации методов, необходимых для отрисовки UI
-//! 
+//!
 //! Данный макрос зависит от макроса генерации теневых структур. Для них он
 //! реализует методы трейта [Renderable], в зависимости от настроек, переданных
 //! для отображения данной структуры. Также собираются методы для парсинга и
@@ -29,12 +29,12 @@ fn name_to_snake_case(name_ident: &String) -> String {
 }
 
 /// Генерация методов для отображения UI
-/// 
+///
 /// Данный макрос принимает настройки в виде `"path/to/file.rs" => {...}`
 /// Для каждого файла должны быть описаны структуры в виде `Struct => {...}`.
 /// Для полей структуры можно описывать отображение в виде `field: WidgetType
 /// {...}`, если для поля не указать ничего (`{}`), то оно не будет отображено
-/// 
+///
 /// **Существующие типы полей [WidgetType]:**
 /// - [WidgetType::Registry] - поле, отображающее варианты enum-а. Принимает
 ///   настройки в виде `{"paht/to/registry.rs" => RegType}`, где `RegType` - это
@@ -59,7 +59,7 @@ fn name_to_snake_case(name_ident: &String) -> String {
 ///   Не имеет собственных настроек и является просто обёрткой. Синтаксис вида
 ///   `WrapperVec( WidgetType )`, где в качестве `WidgetType` может быть любой
 ///   виджет
-/// 
+///
 /// **Реализуемые методы функции:**
 /// - `render_full_html(shadow_root: &FullShadowConfig) -> String` - функция для
 ///   генерации полного html-текста всех структур
@@ -73,7 +73,7 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
 
     let mut generated_functions = Vec::new(); // Место, для сохранения сгенерированных функций
     let mut struct_types = Vec::new();
-    let mut generated_json_parsers = Vec::new();  // Хранилище для сгенерированных Json парсеров
+    let mut generated_json_parsers = Vec::new(); // Хранилище для сгенерированных Json парсеров
 
     // Генерация методов по всем файлам
     for input in inputs.inputs {
@@ -124,16 +124,18 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
 
                     // Имя теневой структуры
                     let shadow_struct_name = quote::format_ident!("{}Shadow", struct_name);
-                    let name_snake_ident = quote::format_ident!("{}", name_to_snake_case(&struct_name.to_string()));
+                    let name_snake_ident =
+                        quote::format_ident!("{}", name_to_snake_case(&struct_name.to_string()));
 
                     let mut field_parsers = Vec::new();
                     for field in config.fields.iter() {
                         let field_ident = &field.field_name;
                         let field_name_str = field_ident.to_string();
-                        
+
                         match &field.widget_type {
                             WidgetType::Wrapper(wrapper_ident, _) => {
-                                let wrapper_shadow_ident = quote::format_ident!("{}Shadow", wrapper_ident);
+                                let wrapper_shadow_ident =
+                                    quote::format_ident!("{}Shadow", wrapper_ident);
                                 field_parsers.push(quote! {
                                     if let Some(val) = struct_obj.get(#field_name_str) {
                                         if let Ok(parsed_val) = ::ui_gen::__private::serde_json::from_value::<_>(val.clone()) {

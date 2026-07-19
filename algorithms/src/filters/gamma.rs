@@ -5,17 +5,18 @@
 //! необходимо в силу того, что человек различает яркость логорифмически
 
 use crate::{
-    color::types::{ColorBuffer, RGBPixel}, filters::{ColorFilter, configs::GammaFilterConfig, types::GammaFilter},
+    color::types::{ColorBuffer, RGBPixel},
+    filters::{configs::GammaConfig, types::Gamma, ColorFilter},
 };
 
-impl GammaFilter {
+impl Gamma {
     /// Конструктор
     ///
     /// Предварительно рассчитывает гамма-таблицу по переданному коэффициенту
     ///
     /// **Поля:**
-    /// - `config`: [GammaFilterConfig] - конфигурация для gamma-фильтра
-    pub fn new(config: GammaFilterConfig) -> Self {
+    /// - `config`: [GammaConfig] - конфигурация для gamma-фильтра
+    pub fn new(config: GammaConfig) -> Self {
         let mut gamma_table = [0u8; 256];
 
         for i in 0..256 {
@@ -29,7 +30,7 @@ impl GammaFilter {
     }
 }
 
-impl ColorFilter for GammaFilter {
+impl ColorFilter for Gamma {
     /// Наложение гамма фильтра
     fn apply(&mut self, raw_colors: &mut ColorBuffer) {
         // Применяем фильтр по таблице

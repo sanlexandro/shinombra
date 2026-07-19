@@ -1,20 +1,20 @@
 //! Процесс генерации теневых структур для типа `struct`
-//! 
+//!
 //! Весь процесс генерации завязан на уникальном синтаксисе одного из видов структур:
 //! - Именованные ([syn::Fields::Named])
 //! - Кортежные / безымянные ([syn::Fields::Unnamed])
 //! - Пустые ([syn::Fields::Unit])
-//! 
+//!
 //! В зависимости от типа макрос самостоятельно выбирает синтаксис
-//! 
+//!
 
-use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::collections::HashSet;
 use syn::{FieldsNamed, FieldsUnnamed, ItemStruct};
 
 /// Преобразование типа
-/// 
+///
 /// Рекурсивно ищет типы для замены на теневые копии
 fn walk_type(type_: &mut syn::Type, names: &HashSet<String>) {
     match type_ {

@@ -79,10 +79,10 @@ impl Parse for SliderFieldSettings {
 
         // Считываем min (обязательно)
         let min = parse_f32(&content)?;
-        
+
         // Ожидаем запятую
         content.parse::<Token![,]>()?;
-        
+
         // Считываем max (обязательно)
         let max = parse_f32(&content)?;
 

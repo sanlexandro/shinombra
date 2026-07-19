@@ -89,7 +89,7 @@ impl From<Vec<HSVPixel>> for ColorBuffer {
 }
 
 /// Преобразование [ColorBuffer] в [Vec<RGBPixel>]
-/// 
+///
 /// Поддерживает ленивое преобразование типов
 impl From<ColorBuffer> for Vec<RGBPixel> {
     fn from(value: ColorBuffer) -> Self {
@@ -101,7 +101,7 @@ impl From<ColorBuffer> for Vec<RGBPixel> {
 }
 
 /// Преобразование [ColorBuffer] в [Vec<HSVPixel>]
-/// 
+///
 /// Поддерживает ленивое преобразование типов
 impl From<ColorBuffer> for Vec<HSVPixel> {
     fn from(value: ColorBuffer) -> Self {
@@ -113,9 +113,9 @@ impl From<ColorBuffer> for Vec<HSVPixel> {
 }
 
 /// Вынимание среза [[RGBPixel]] из [ColorBuffer]
-/// 
+///
 /// Поддерживает ленивое преобразование типов
-/// 
+///
 /// При добавлении нового формата ОБЯЗАТЕЛЬНО добавить ленивое преобразование
 impl AsMut<[RGBPixel]> for ColorBuffer {
     fn as_mut(&mut self) -> &mut [RGBPixel] {
@@ -131,9 +131,9 @@ impl AsMut<[RGBPixel]> for ColorBuffer {
 }
 
 /// Вынимание среза [[HSVPixel]] из [ColorBuffer]
-/// 
+///
 /// Поддерживает ленивое преобразование типов
-/// 
+///
 /// При добавлении нового формата ОБЯЗАТЕЛЬНО добавить ленивое преобразование
 impl AsMut<[HSVPixel]> for ColorBuffer {
     fn as_mut(&mut self) -> &mut [HSVPixel] {

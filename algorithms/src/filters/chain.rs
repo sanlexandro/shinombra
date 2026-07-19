@@ -53,6 +53,7 @@ impl ColorFilter for FilterInstance {
         match self {
             Self::Ema(f) => f.apply(raw_colors),
             Self::Gamma(f) => f.apply(raw_colors),
+            Self::BlackThreshold(f) => f.apply(raw_colors),
         }
     }
 }

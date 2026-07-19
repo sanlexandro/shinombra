@@ -31,7 +31,10 @@ impl CLIFlagsManager {
         let mut args = std::env::args().skip(1);
 
         // Дефолтные значения
-        let mut manifest_path = expand_tilde(PathBuf::from(format!("~/.config/{}/manifest.toml", APP_NAME)));
+        let mut manifest_path = expand_tilde(PathBuf::from(format!(
+            "~/.config/{}/manifest.toml",
+            APP_NAME
+        )));
         let mut reset_pipewire_token = false;
         let mut max_log_level = Option::<LogLevel>::None;
         let mut config_path = Option::<PathBuf>::None;

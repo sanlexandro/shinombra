@@ -6,7 +6,7 @@ const SESSION_XOR_KEY: &[u8] = b"Robotics is the art of making dreams come true 
 ///
 /// **Аргументы:**
 /// - `data`: &[[u8]] - данные в байтовом виде
-/// 
+///
 /// **Выходные данные:**
 /// [Vec]<[u8]> - зашифрованные данные
 pub fn xor_crypt(data: &[u8]) -> Vec<u8> {

@@ -5,9 +5,15 @@
 //! захватывать для анализа мелкие детали изображения
 
 use crate::{
-    analytics::ColorAnalyst, color::types::ColorBuffer, pixel_formatter::{PixelFormatter, PixelIter}, processing::{
-        configs::ScreenConfig, processors::{
-            ChunkProcessor, Orientation, configs::{ChunkTask, DynamicCheckerboardConfig}, types::{DynamicCheckerboardScanner, DynamicCheckerboardState},
+    analytics::ColorAnalyst,
+    color::types::ColorBuffer,
+    pixel_formatter::{PixelFormatter, PixelIter},
+    processing::{
+        configs::ScreenConfig,
+        processors::{
+            configs::{ChunkTask, DynamicCheckerboardConfig},
+            types::{DynamicCheckerboardScanner, DynamicCheckerboardState},
+            ChunkProcessor, Orientation,
         },
     },
 };

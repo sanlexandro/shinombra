@@ -2,10 +2,10 @@
 
 use common::core::controller::CoreController;
 use ffi::bindings::*;
+use logger::*;
 use std::ffi::{c_void, CStr};
 use std::sync::Arc;
 use std::thread::JoinHandle;
-use logger::*;
 
 use super::handler::callback;
 
