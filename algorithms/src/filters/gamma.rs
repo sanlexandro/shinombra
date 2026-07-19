@@ -4,9 +4,10 @@
 //! коэффициенту. Во время работы он преобразует значения согласно таблице. Это
 //! необходимо в силу того, что человек различает яркость логорифмически
 
-use crate::{color::types::RGBPixel, filters::{configs::GammaFilterConfig, types::GammaFilter}};
+use crate::{
+    color::types::{ColorBuffer, RGBPixel}, filters::{ColorFilter, configs::GammaFilterConfig, types::GammaFilter},
+};
 
-/// Реализация методов [GammaFilter]
 impl GammaFilter {
     /// Конструктор
     ///
@@ -26,14 +27,13 @@ impl GammaFilter {
         }
         return Self { gamma_table };
     }
+}
 
+impl ColorFilter for GammaFilter {
     /// Наложение гамма фильтра
-    /// 
-    /// **Поля:**
-    /// - `raw_colors`: & mut [[RGBPixel]] - массив новых цветов для подсчёта
-    pub fn apply_gamma(& mut self, raw_colors: & mut [RGBPixel]) {
+    fn apply(&mut self, raw_colors: &mut ColorBuffer) {
         // Применяем фильтр по таблице
-        for color in raw_colors.iter_mut() {
+        for color in AsMut::<[RGBPixel]>::as_mut(raw_colors).iter_mut() {
             color.red = self.gamma_table[color.red as usize];
             color.blue = self.gamma_table[color.blue as usize];
             color.green = self.gamma_table[color.green as usize];

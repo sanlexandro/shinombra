@@ -20,6 +20,9 @@ impl ColorAverage {
 }
 
 impl ColorAnalyst for ColorAverage {
+    /// Выходной формат в [RGBPixel]
+    type OutputFormat = RGBPixel;
+
     /// Сброс (очистка) анализа
     ///
     /// Не очищает, а создаёт новую пустую реализацию, т.к. это производительнее

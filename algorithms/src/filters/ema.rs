@@ -4,8 +4,11 @@
 //! в результате чего достигается плавность изменения цвета между кадрами
 
 use crate::{
-    color::types::RGBPixel,
-    filters::{configs::EmaFilterConfig, types::EmaFilter},
+    color::{
+        types::{ColorBuffer, RGBPixel},
+        Color,
+    },
+    filters::{configs::EmaFilterConfig, types::EmaFilter, ColorFilter},
 };
 
 impl EmaFilter {
@@ -22,13 +25,16 @@ impl EmaFilter {
             inverted_alpha,
         };
     }
+}
 
+impl ColorFilter for EmaFilter {
     /// Пересчёт нового среднего
-    ///
-    /// **Поля:**
-    /// - `raw_colors`: & mut [[RGBPixel]] - массив новых цветов для подсчёта
-    pub fn process_ema(&mut self, raw_colors: &mut [RGBPixel]) {
-        for (state, raw) in self.states.iter_mut().zip(raw_colors.iter_mut()) {
+    fn apply(&mut self, raw_colors: &mut ColorBuffer) {
+        for (state, raw) in self
+            .states
+            .iter_mut()
+            .zip(AsMut::<[RGBPixel]>::as_mut(raw_colors).iter_mut())
+        {
             // Формула: NewState = (Alpha * Raw + (1 - Alpha) * OldState) / 256
             // Используем i32, чтобы избежать переполнения при умножении
 

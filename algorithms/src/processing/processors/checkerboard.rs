@@ -8,6 +8,7 @@
 
 use super::types::CheckerboardScanner;
 use crate::analytics::ColorAnalyst;
+use crate::color::types::ColorBuffer;
 use crate::pixel_formatter::{PixelFormatter, PixelIter};
 use crate::processing::processors::types::EmptyState;
 use crate::processing::processors::ChunkProcessor;
@@ -60,6 +61,11 @@ impl CheckerboardScanner {
 /// Реализация трейта для CheckerboardScanner
 impl<Formatter: PixelFormatter, Analyst: ColorAnalyst> ChunkProcessor<Formatter, Analyst>
     for CheckerboardScanner
+where
+    // Waiting for RFC 2089
+    ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+    Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+    ColorBuffer: AsMut<[Analyst::OutputFormat]>,
 {
     type State = EmptyState;
 

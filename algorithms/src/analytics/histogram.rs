@@ -4,8 +4,8 @@ use super::types::{ColorBin, ColorHistogram};
 use crate::{
     analytics::{configs::ColorHistogramConfig, types::MAX_BINS, ColorAnalyst},
     color::{
-        conversion::{convert_hsv_to_rgb, convert_rgb_to_hsv},
         types::{HSVPixel, RGBPixel},
+        Color,
     },
 };
 
@@ -51,6 +51,9 @@ impl ColorHistogram {
 
 // Реализация трейта для ColorHistogram
 impl ColorAnalyst for ColorHistogram {
+    /// Выходной формат в [HSVPixel]
+    type OutputFormat = HSVPixel;
+
     /// Сброс (очистка) анализа
     fn clear(&mut self) {
         // Сбрасываем голоса о каждом сегменте
@@ -67,7 +70,7 @@ impl ColorAnalyst for ColorHistogram {
     /// - `hsv_pixel`:[RGBPixel]   - голосующий HSV-пиксель
     fn add_data(&mut self, rgb_pixel: RGBPixel) {
         // Преобразуем
-        let hsv_pixel = convert_rgb_to_hsv(rgb_pixel);
+        let hsv_pixel: HSVPixel = rgb_pixel.into();
 
         // Вычисляем вес как произведение яркости и насыщенности
         let color_weight = (hsv_pixel.value * hsv_pixel.saturation * 100.0) as u64;
@@ -111,7 +114,7 @@ impl ColorAnalyst for ColorHistogram {
     ///
     /// **Выходные данные:**
     /// - `HSVPixel` - пиксель-победитель в HSV формате
-    fn get_winner(&mut self) -> RGBPixel {
+    fn get_winner(&mut self) -> HSVPixel {
         // Ищем сектор с максимальным весом
         let (winner_idx, winner_bin) = self.bins[..self.active_amount] // Итерируемся только по активным!
             .iter()
@@ -121,7 +124,7 @@ impl ColorAnalyst for ColorHistogram {
 
         // Если веса вообще нет — выключаем ленту
         if winner_bin.weight == 0 {
-            return RGBPixel::black();
+            return HSVPixel::black();
         }
 
         // Вычисляем среднее значение
@@ -134,21 +137,21 @@ impl ColorAnalyst for ColorHistogram {
         if winner_idx == self.active_amount - 1 {
             // Если яркость совсем низкая — возвращаем черный
             if avg_val < 0.05 {
-                return RGBPixel::black();
+                return HSVPixel::black();
             }
             // Если яркость есть — это белый/серый (saturation 0)
-            return convert_hsv_to_rgb(HSVPixel {
+            return HSVPixel {
                 hue: 0.0,
                 saturation: 0.0,
                 value: avg_val,
-            });
+            };
         }
 
         // Для обычных секторов возвращаем честное усредненное значение
-        convert_hsv_to_rgb(HSVPixel {
+        HSVPixel {
             hue: avg_hue,
             saturation: avg_sat,
             value: avg_val,
-        })
+        }
     }
 }

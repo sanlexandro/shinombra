@@ -5,14 +5,9 @@
 //! захватывать для анализа мелкие детали изображения
 
 use crate::{
-    analytics::ColorAnalyst,
-    pixel_formatter::{PixelFormatter, PixelIter},
-    processing::{
-        configs::ScreenConfig,
-        processors::{
-            configs::{ChunkTask, DynamicCheckerboardConfig},
-            types::{DynamicCheckerboardScanner, DynamicCheckerboardState},
-            ChunkProcessor, Orientation,
+    analytics::ColorAnalyst, color::types::ColorBuffer, pixel_formatter::{PixelFormatter, PixelIter}, processing::{
+        configs::ScreenConfig, processors::{
+            ChunkProcessor, Orientation, configs::{ChunkTask, DynamicCheckerboardConfig}, types::{DynamicCheckerboardScanner, DynamicCheckerboardState},
         },
     },
 };
@@ -66,6 +61,11 @@ impl DynamicCheckerboardScanner {
 /// Реализация трейта для DynamicCheckerboardScanner
 impl<Formatter: PixelFormatter, Analyst: ColorAnalyst> ChunkProcessor<Formatter, Analyst>
     for DynamicCheckerboardScanner
+where
+    // Waiting for RFC 2089
+    ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+    Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+    ColorBuffer: AsMut<[Analyst::OutputFormat]>,
 {
     type State = DynamicCheckerboardState;
 

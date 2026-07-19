@@ -4,6 +4,7 @@ const MODULE: &str = "Core";
 
 use algorithms::{
     analytics::ColorAnalyst,
+    color::types::ColorBuffer,
     filters::ColorFilter,
     pixel_formatter::PixelFormatter,
     processing::{processors::ChunkProcessor, types::ColorEngine},
@@ -75,6 +76,11 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
     Analyst: ColorAnalyst,
     Filter: ColorFilter,
     Output: HardwareOutput + Send + 'static,
+
+    // Waiting for RFC 2089
+    ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+    Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+    ColorBuffer: AsMut<[Analyst::OutputFormat]>,
 {
     capture_thread.calculate_data(Formatter::SIZE);
 

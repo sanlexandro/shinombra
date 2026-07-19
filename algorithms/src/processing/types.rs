@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use crate::{
     analytics::ColorAnalyst,
-    color::types::RGBPixel,
+    color::types::ColorBuffer,
     filters::ColorFilter,
     pixel_formatter::PixelFormatter,
     processing::processors::{configs::ChunkTask, ChunkProcessor},
@@ -17,20 +17,26 @@ use crate::{
 /// цвета
 ///
 /// **Поля:**
-/// - `_formatter`: [PixelFormatter]    - метод преобразования байт в цвета
-/// - `processor`: [ChunkProcessor]     - метод обхода фрагмента
-/// - `analyst`: [ColorAnalyst]         - метод анализа цвета в фрагменте
-/// - `filter`: [ColorFilter]           - метод фильтрации результатов анализа
-/// - `chunk_map`: [ChunkTask]          - карта фрагментов (рассчитывается при
+/// - `_formatter`: [PixelFormatter]        - метод преобразования байт в цвета
+/// - `processor`: [ChunkProcessor]         - метод обхода фрагмента
+/// - `analyst`: [ColorAnalyst]             - метод анализа цвета в фрагменте
+/// - `filter`: [ColorFilter]               - метод фильтрации результатов анализа
+/// - `chunk_map`: [ChunkTask]              - карта фрагментов (рассчитывается при
 ///   инициализации)
-/// - `chunk_states`: [ChunkState]      - состояние фрагмента
-/// - `output_buffer`: [Vec<RGBPixel>]  - вектор с вычисленными результатами
+/// - `chunk_states`: [ChunkState]          - состояние фрагмента
+/// - `output_buffer`: [Vec<OutputFormat>]  - вектор с вычисленными результатами
+///   в выходном формате анализатора
 pub struct ColorEngine<Formatter, Processor, Analyst, Filter>
 where
     Formatter: PixelFormatter,
     Processor: ChunkProcessor<Formatter, Analyst>,
     Analyst: ColorAnalyst,
     Filter: ColorFilter,
+
+    // Waiting for RFC 2089
+    ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+    Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+    ColorBuffer: AsMut<[Analyst::OutputFormat]>,
 {
     pub(crate) _formatter: PhantomData<Formatter>,
     pub(crate) processor: Processor,
@@ -38,5 +44,5 @@ where
     pub(crate) filter: Filter,
     pub(crate) chunk_map: Vec<ChunkTask>,
     pub(crate) chunk_states: Vec<Processor::State>,
-    pub(crate) output_buffer: Vec<RGBPixel>,
+    pub(crate) output_buffer: Vec<Analyst::OutputFormat>,
 }

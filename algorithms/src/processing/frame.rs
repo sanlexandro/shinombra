@@ -3,7 +3,8 @@
 use super::configs::*;
 use super::types::*;
 use crate::analytics::ColorAnalyst;
-use crate::color::types::RGBPixel;
+use crate::color::types::ColorBuffer;
+use crate::color::Color;
 use crate::filters::ColorFilter;
 use crate::pixel_formatter::PixelFormatter;
 use crate::processing::processors::ChunkState;
@@ -19,6 +20,11 @@ where
     Processor: ChunkProcessor<Formatter, Analyst>,
     Analyst: ColorAnalyst,
     Filter: ColorFilter,
+
+    // Waiting for RFC 2089
+    ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+    Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+    ColorBuffer: AsMut<[Analyst::OutputFormat]>,
 {
     /// Конструктор
     ///
@@ -35,7 +41,7 @@ where
         screen_config: ScreenConfig,
     ) -> Self {
         let chunk_map = Self::init_chunk_map(geometry, screen_config);
-        let output_buffer = vec![RGBPixel::black(); chunk_map.len()];
+        let output_buffer = vec![Analyst::OutputFormat::black(); chunk_map.len()];
         let chunk_states = vec![Processor::State::new(); chunk_map.len()];
 
         return Self {
@@ -332,9 +338,15 @@ where
     ///
     /// **Выходные поля:**
     /// - &[[RGBPixel]] - указатель на вычисленный массив цветов
-    pub fn apply_filters(&mut self) -> &[RGBPixel] {
+    pub fn apply_filters(&mut self) -> &[Analyst::OutputFormat] {
+        // Временно заимстувем владение буфером
+        let mut engine_buffer = ColorBuffer::from(std::mem::take(&mut self.output_buffer));
+
         // Применяем фильтр
-        self.filter.apply(self.output_buffer.as_mut_slice());
+        self.filter.apply(&mut engine_buffer);
+
+        // Возвращаем буфер в структуру
+        self.output_buffer = Vec::<Analyst::OutputFormat>::from(engine_buffer);
 
         // Возвращаем значение
         return &self.output_buffer;

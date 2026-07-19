@@ -19,14 +19,27 @@ pub mod histogram;
 pub mod registry;
 pub mod types;
 
-use crate::color::types::RGBPixel;
+use crate::color::{
+    types::{ColorBuffer, RGBPixel},
+    Color,
+};
 
 /// Трейт анализа цвета
 ///
 /// **Методы:**
 /// - `add_data`   - добавление данных для анализа
 /// - `get_winner` - вычисление результата анализа
-pub trait ColorAnalyst: Clone {
+pub trait ColorAnalyst: Clone
+where
+    // Гарантируем компилятору, что вектор выходного формата
+    // этого аналитика на 100% совместим с нашей обёрткой
+    ColorBuffer: From<Vec<Self::OutputFormat>>,
+    Vec<Self::OutputFormat>: From<ColorBuffer>,
+    ColorBuffer: AsMut<[Self::OutputFormat]>,
+{
+    /// Выходной формат
+    type OutputFormat: Color;
+
     /// Сброс (очистка) анализа
     fn clear(&mut self);
 
@@ -42,5 +55,5 @@ pub trait ColorAnalyst: Clone {
     ///
     /// **Выходные данные:**
     ///  - [RGBPixel] - победивший цвет в RGB формате
-    fn get_winner(&mut self) -> RGBPixel;
+    fn get_winner(&mut self) -> Self::OutputFormat;
 }

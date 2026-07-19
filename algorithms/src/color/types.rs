@@ -20,3 +20,11 @@ pub struct RGBPixel {
     pub green: u8,
     pub blue: u8,
 }
+
+/// Обёртка над буфером
+///
+/// Необходима для избежания лишних трансформаций между форматами
+pub enum ColorBuffer {
+    RGB(Vec<RGBPixel>),
+    HSV(Vec<HSVPixel>),
+}

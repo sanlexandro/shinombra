@@ -11,13 +11,20 @@ pub mod types;
 
 use crate::color::types::*;
 
-/// Реализация стандартных методов для RGBPixel
-impl RGBPixel {
+/// Цвет
+///
+/// Любой цвет должен уметь завернуть [Vec] из себя в [ColorBuffer], а также наоборот
+pub trait Color: Copy + Clone + 'static + Into<RGBPixel>
+where
+    ColorBuffer: From<Vec<Self>> + AsMut<[Self]>,
+    Vec<Self>: From<ColorBuffer>,
+{
     /// Чёрный цвет
-    /// 
-    /// **Выходные данные:**
-    /// - чёрный пиксель в [RGBPixel]
-    pub fn black() -> Self {
+    fn black() -> Self;
+}
+
+impl Color for RGBPixel {
+    fn black() -> Self {
         return RGBPixel {
             red: 0,
             green: 0,
@@ -26,13 +33,8 @@ impl RGBPixel {
     }
 }
 
-/// Реализация стандартных методов для HSVPixel
-impl HSVPixel {
-    /// Чёрный цвет
-    /// 
-    /// **Выходные данные:**
-    /// - чёрный пиксель в [HSVPixel]
-    pub fn black() -> Self {
+impl Color for HSVPixel {
+    fn black() -> Self {
         return HSVPixel {
             hue: 0.0,
             saturation: 0.0,

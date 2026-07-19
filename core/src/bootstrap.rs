@@ -16,6 +16,7 @@ const MODULE: &str = "ConfigLoader";
 use crate::cli_flags::CLIFlags;
 use crate::config::*;
 use crate::run_ambient_loop;
+use algorithms::color::types::ColorBuffer;
 use algorithms::{
     analytics::{configs::*, registry::*, types::*, ColorAnalyst},
     filters::{configs::*, registry::*, types::*, ColorFilter},
@@ -400,6 +401,11 @@ impl ConfigLoader {
     fn stage_2_select_filter<Analyst>(self, controller: Arc<CoreController>, analyst: Analyst)
     where
         Analyst: ColorAnalyst,
+
+        // Waiting for RFC 2089
+        ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+        Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+        ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
         debug!("Running stage 2");
 
@@ -469,6 +475,11 @@ impl ConfigLoader {
     ) where
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
+
+        // Waiting for RFC 2089
+        ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+        Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+        ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
         debug!("Running stage 3");
 
@@ -571,6 +582,11 @@ impl ConfigLoader {
     ) where
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
+
+        // Waiting for RFC 2089
+        ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+        Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+        ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
         debug!("Running stage 4");
 
@@ -681,6 +697,11 @@ impl ConfigLoader {
         Formatter: PixelFormatter,
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
+
+        // Waiting for RFC 2089
+        ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+        Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+        ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
         debug!("Running stage 5");
 
@@ -804,6 +825,11 @@ impl ConfigLoader {
         Processor: ChunkProcessor<Formatter, Analyst>,
         Analyst: ColorAnalyst,
         Filter: ColorFilter,
+
+        // Waiting for RFC 2089
+        ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+        Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+        ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
         debug!("Running stage 6");
 

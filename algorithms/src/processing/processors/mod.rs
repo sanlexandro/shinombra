@@ -9,8 +9,7 @@
 //!   [crate::analytics]
 
 use crate::{
-    analytics::ColorAnalyst, pixel_formatter::PixelFormatter,
-    processing::processors::configs::ChunkTask,
+    analytics::ColorAnalyst, color::types::ColorBuffer, pixel_formatter::PixelFormatter, processing::processors::configs::ChunkTask,
 };
 
 pub mod checkerboard;
@@ -26,7 +25,13 @@ pub use configs::Orientation;
 ///
 /// **Методы:**
 /// - `process_chunk` - метод обработки фрагмента
-pub trait ChunkProcessor<Formatter: PixelFormatter, Analyst: ColorAnalyst> {
+pub trait ChunkProcessor<Formatter: PixelFormatter, Analyst: ColorAnalyst>
+where
+    // Waiting for RFC 2089
+    ColorBuffer: From<Vec<Analyst::OutputFormat>>,
+    Vec<Analyst::OutputFormat>: From<ColorBuffer>,
+    ColorBuffer: AsMut<[Analyst::OutputFormat]>,
+{
     /// Соответствующая структура хранения состояния
     type State: ChunkState;
 
