@@ -98,11 +98,10 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
             color_engine.process_frame(data);
         });
 
-        // Применяем фильтры
-        let colors = color_engine.apply_filters();
-
-        // Отправляем на устройство
-        hardware_output_ctx.update_colors(colors);
+        // Применяем фильтры и замыканием отправили на устройство
+        color_engine.apply_filters(|colors| {
+            hardware_output_ctx.update_colors(colors);
+        });
     }
 
     hardware_output_ctx.stop();

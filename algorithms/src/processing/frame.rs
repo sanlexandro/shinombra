@@ -338,17 +338,23 @@ where
     ///
     /// **Выходные поля:**
     /// - &[[RGBPixel]] - указатель на вычисленный массив цветов
-    pub fn apply_filters(&mut self) -> &[Analyst::OutputFormat] {
+    pub fn apply_filters<F>(&mut self, dispatch: F)
+    where
+        F: FnOnce(&ColorBuffer),
+    {
         // Временно заимстувем владение буфером
         let mut engine_buffer = ColorBuffer::from(std::mem::take(&mut self.output_buffer));
 
         // Применяем фильтр
         self.filter.apply(&mut engine_buffer);
 
+        // Пробрасываем буфер в замыкание
+        dispatch(&engine_buffer);
+
+        // TODO: пока не придумал, как безопасно и дёшево убрать теоретически
+        // лишнюю конвертацию цветов.
+
         // Возвращаем буфер в структуру
         self.output_buffer = Vec::<Analyst::OutputFormat>::from(engine_buffer);
-
-        // Возвращаем значение
-        return &self.output_buffer;
     }
 }

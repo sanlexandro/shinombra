@@ -4,7 +4,10 @@
 //! Копирует предоставленный массив в локальный буфер через atomic операцию, а
 //! затем отправляет буфер на устройство
 
-use algorithms::color::{types::RGBPixel, Color};
+use algorithms::color::{
+    types::{ColorBuffer, RGBPixel},
+    Color,
+};
 use common::core::{controller::CoreController, event_handlers::EventHandler};
 use hardware_output::HardwareOutput;
 use std::sync::{
@@ -84,17 +87,17 @@ impl HardwareOutputThread {
     ///
     /// Данный метод пробует перехватить `lock`, чтобы записать данные в
     /// локальный буфер работника. При неудаче отпускает, а при успехе "будит" поток-работник.
-    /// 
+    ///
     /// Автоматически преобразует принятый тип в [RGBPixel] за счёт ограничений
     /// трейта [Color]
     ///
     /// **Поля:**
-    /// -  `colors`: &[Color] - указатель на массив цветов для отправки в любом формате
-    pub fn update_colors<C: Copy + Into<RGBPixel>>(&self, colors: &[C]) {
+    /// -  `colors`: &[ColorBuffer] - указатель на массив цветов для отправки в любом формате
+    pub fn update_colors(&self, colors: &ColorBuffer) {
         let (lock, cvar) = &*self.mailbox;
         if let Ok(mut state) = lock.try_lock() {
-            for (dest, &src) in state.0.iter_mut().zip(colors.iter()) {
-                *dest = src.into();
+            for (dest, &src) in state.0.iter_mut().zip(Vec::<RGBPixel>::from(colors).iter()) {
+                *dest = src;
             }
 
             state.1 = true; // Указываем, что появились новые данные

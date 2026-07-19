@@ -147,3 +147,12 @@ impl AsMut<[HSVPixel]> for ColorBuffer {
         }
     }
 }
+
+impl From<&ColorBuffer> for Vec<RGBPixel> {
+    fn from(value: &ColorBuffer) -> Self {
+        match value {
+            ColorBuffer::RGB(vec) => vec.clone(),
+            ColorBuffer::HSV(vec) => vec.iter().map(|&pixel| pixel.into()).collect(),
+        }
+    }
+}
