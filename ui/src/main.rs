@@ -137,9 +137,14 @@ generate_ui!(
         },
         @show_if(Settings.filter_chain.includes("ChannelGain"))
         ChannelGainConfig => {
-            k_red: SliderField {0.0, 1.0, 0.05},
-            k_green: SliderField {0.0, 1.0, 0.05},
-            k_blue: SliderField {0.0, 1.0, 0.05},
+            k_red: SliderField {0.0, 1.0, 0.01},
+            k_green: SliderField {0.0, 1.0, 0.01},
+            k_blue: SliderField {0.0, 1.0, 0.01},
+        },
+        @show_if(Settings.filter_chain.includes("FlashGuard"))
+        FlashGuardConfig => {
+            alpha: SliderField { 0.01, 1.0, 0.01 },
+            sensitivity: SliderField {0.0, 100.0, 0.1 },
         }
     },
     "./hardware_output/src/serial/config/config.rs" => {

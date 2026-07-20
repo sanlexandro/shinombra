@@ -57,6 +57,7 @@ impl ColorFilter for FilterInstance {
             Self::SaturationBoost(f) => f.apply(raw_colors),
             Self::WhiteBalance(f) => f.apply(raw_colors),
             Self::ChannelGain(f) => f.apply(raw_colors),
+            Self::FlashGuard(f) => f.apply(raw_colors),
         }
     }
 }

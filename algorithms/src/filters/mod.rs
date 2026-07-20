@@ -16,6 +16,7 @@ pub mod chain;
 pub mod channel_gain;
 pub mod configs;
 pub mod ema;
+pub mod flash_guard;
 pub mod gamma;
 pub mod no_filter;
 pub mod registry;

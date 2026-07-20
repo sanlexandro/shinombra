@@ -9,4 +9,5 @@ pub enum ColorFilterType {
     SaturationBoost,
     WhiteBalance,
     ChannelGain,
+    FlashGuard,
 }

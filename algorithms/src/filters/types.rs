@@ -35,9 +35,9 @@ pub struct Gamma {
 /// **Поля:**
 /// `threshold`: [f32]                                     - нижний порог отсечки
 /// `knee_upper_limit`: [f32]                              - верхний порог
-/// `precalculated_values`: [[f32]; SAMPLES_AMOUNT]        - предрасчитанные
+/// `precalculated_values`: [[f32]; SAMPLES_AMOUNT]        - предрассчитанные
 /// значения яркости
-/// `precalculated_saturations_k`: [[f32]; SAMPLES_AMOUNT] - предрасчитанные
+/// `precalculated_saturations_k`: [[f32]; SAMPLES_AMOUNT] - предрассчитанные
 /// коэффициенты для насыщенности
 #[derive(Clone)]
 pub struct BlackThreshold {
@@ -82,6 +82,18 @@ pub struct ChannelGain {
     pub k_blue: f32,
 }
 
+/// Защита от вспышек
+///
+/// **Поля:**
+/// - `terms`: [f32]                  - LUT для добавочных значений по разнице в
+///   яркости
+/// - `previous_values`: [Vec]<[f32]> - предыдущие значения яркости
+#[derive(Clone)]
+pub struct FlashGuard {
+    pub terms: [f32; Self::SAMPLES_AMOUNT],
+    pub previous_values: Vec<f32>,
+}
+
 /// Хранилище фильтров
 ///
 /// Данная структура необходимо для статической реализации цепи фильтров
@@ -95,6 +107,7 @@ pub enum FilterInstance {
     SaturationBoost(SaturationBoost),
     WhiteBalance(WhiteBalance),
     ChannelGain(ChannelGain),
+    FlashGuard(FlashGuard),
 }
 
 /// Цепь фильтров

@@ -296,3 +296,63 @@ impl ConfigValidate for ChannelGainConfig {
        Ok(vec![]) 
     }
 }
+
+impl ConfigValidate for FlashGuardConfig {
+    /// Проверка [FlashGuardConfig]
+    /// 
+    /// **Проверки:**
+    /// - `0.0 < alpha <= 1.0` - коэффициент сглаживания должен находиться в этом пределе.
+    ///   При `alpha = 0` алгоритм перестает учитывать новые кадры (свет "замерзает"),
+    ///   а при `alpha < 0` система становится нестабильной и значения улетают в бесконечность.
+    ///   Значение `1.0` означает полное отсутствие сглаживания.
+    /// - `0 <= sensitivity <= 100` - проценты должны быть в диапазоне 0-100
+    /// - `sensitivity < 30` - предупреждение о слишком частой сработке
+    fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
+        if self.alpha <= 0.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "flash_guard_config",
+                field: "alpha",
+                message:
+                    format!(
+                        "Alpha must be greater than 0. Current value {} leads to frozen or unstable light.", 
+                        self.alpha
+                ),                        
+            });
+        }
+
+        if self.alpha > 1.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "flash_guard_config",
+                field: "alpha",
+                message: format!(
+                    "Alpha cannot exceed 1.0 (1.0 means no smoothing). Current alpha is {}",
+                    self.alpha,
+                ),
+            });
+        }
+
+        if self.sensitivity < 0.0 || self.sensitivity > 100.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "flash_guard_config",
+                field: "sensitivity",
+                message: format!(
+                    "Sensitivity must be in [0%; 100%]!. But it is {}%",
+                    self.sensitivity
+                ),
+            });
+        }
+
+        if self.sensitivity < 30.0 {
+            return Ok(vec![ValidationWarning::InvalidValue { 
+                section: "flash_guard_config", 
+                field: "sensitivity", 
+                message: format!(
+                    "Sensitivity {}% is too low. EMA will trigger too often",
+                    self.sensitivity
+                ), 
+            }]);
+        }
+
+        Ok(vec![])
+    }
+}

@@ -60,3 +60,13 @@ pub struct ChannelGainConfig {
     pub k_green: f32,
     pub k_blue: f32,
 }
+
+/// Настройки защиты от вспышек
+///
+/// **Поля:**
+/// - `alpha`: [f32]       - коэффициент сглаживания встроенного EMA
+/// - `sensitivity`: [f32] - порог чувствительности к вспышкам
+pub struct FlashGuardConfig {
+    pub alpha: f32,
+    pub sensitivity: f32,
+}

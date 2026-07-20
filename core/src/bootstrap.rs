@@ -522,6 +522,20 @@ impl ConfigLoader {
                     let filter = ChannelGain::new(config);
                     FilterInstance::ChannelGain(filter)
                 }
+
+                ColorFilterType::FlashGuard => {
+                    let Some(shadow) = self.shadow_root.flash_guard_config.as_ref() else {
+                        error!("Check section [flash_guard_config]");
+                        exit(2);
+                    };
+                    let config: FlashGuardConfig = shadow.into();
+
+                    validate_config(&config, MODULE);
+
+                    let filter =
+                        FlashGuard::new(config, self.geometry_config.calculate_leds_amount());
+                    FilterInstance::FlashGuard(filter)
+                }
             };
 
             filter_chain.add_filter(instance);

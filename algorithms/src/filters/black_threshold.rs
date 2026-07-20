@@ -16,7 +16,7 @@ impl BlackThreshold {
 
     /// Конструктор
     ///
-    /// Предрасчитывает значения для яркости, а также коэффициент для
+    /// предрассчитывает значения для яркости, а также коэффициент для
     /// насыщенности, чтобы убрать вычисления из горячего цикла
     pub fn new(config: BlackThresholdConfig) -> Self {
         // Создаём буферы
@@ -79,7 +79,7 @@ impl ColorFilter for BlackThreshold {
                 raw.saturation = 0.0;
             }
             // Если значение входит в плавный диапазон, изменяем значения по
-            // предрасчитанному диапазону
+            // предрассчитанному диапазону
             else if raw.value < self.knee_upper_limit {
                 let idx = Self::calculate_position(raw.value);
                 raw.value = self.precalculated_values[idx];

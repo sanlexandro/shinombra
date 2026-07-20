@@ -19,7 +19,7 @@ impl SaturationBoost {
 
     /// Конструктор
     ///
-    /// Предрасчитывает значения насыщенности в LUT с заданной частотой дискретизации
+    /// предрассчитывает значения насыщенности в LUT с заданной частотой дискретизации
     pub fn new(config: SaturationBoostConfig) -> Self {
         // Выделяем место под LUT
         let mut saturation_table = [0.0 as f32; Self::SAMPLES_AMOUNT];
