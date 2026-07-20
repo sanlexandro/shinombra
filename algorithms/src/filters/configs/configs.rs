@@ -48,3 +48,15 @@ pub struct SaturationBoostConfig {
 pub struct WhiteBalanceConfig {
     pub kelvins: u32,
 }
+
+/// Настройка каналов
+///
+/// **Поля:**
+/// - `k_red`: [f32]   - коэффициент для красного
+/// - `k_green`: [f32] - зелёного
+/// - `k_blue`: [f32]  - синего
+pub struct ChannelGainConfig {
+    pub k_red: f32,
+    pub k_green: f32,
+    pub k_blue: f32,
+}

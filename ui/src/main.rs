@@ -134,6 +134,12 @@ generate_ui!(
         @show_if(Settings.filter_chain.includes("WhiteBalance"))
         WhiteBalanceConfig => {
             kelvins: SliderField {0, 20000, 100}
+        },
+        @show_if(Settings.filter_chain.includes("ChannelGain"))
+        ChannelGainConfig => {
+            k_red: SliderField {0.0, 1.0, 0.05},
+            k_green: SliderField {0.0, 1.0, 0.05},
+            k_blue: SliderField {0.0, 1.0, 0.05},
         }
     },
     "./hardware_output/src/serial/config/config.rs" => {

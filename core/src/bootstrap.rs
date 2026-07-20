@@ -411,6 +411,7 @@ impl ConfigLoader {
     /// - [ColorFilterType::BlackThreshold]
     /// - [ColorFilterType::SaturationBoost]
     /// - [ColorFilterType::WhiteBalance]
+    /// - [ColorFilterType::ChannelGain]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_2_select_filter<Analyst>(self, controller: Arc<CoreController>, analyst: Analyst)
@@ -507,6 +508,19 @@ impl ConfigLoader {
 
                     let filter = WhiteBalance::new(config);
                     FilterInstance::WhiteBalance(filter)
+                }
+
+                ColorFilterType::ChannelGain => {
+                    let Some(shadow) = self.shadow_root.channel_gain_config.as_ref() else {
+                        error!("Check section [channel_gain_config]");
+                        exit(2);
+                    };
+                    let config: ChannelGainConfig = shadow.into();
+
+                    validate_config(&config, MODULE);
+
+                    let filter = ChannelGain::new(config);
+                    FilterInstance::ChannelGain(filter)
                 }
             };
 

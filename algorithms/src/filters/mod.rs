@@ -13,6 +13,7 @@
 
 pub mod black_threshold;
 pub mod chain;
+pub mod channel_gain;
 pub mod configs;
 pub mod ema;
 pub mod gamma;

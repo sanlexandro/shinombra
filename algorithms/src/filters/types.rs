@@ -69,6 +69,19 @@ pub struct WhiteBalance {
     pub k_blue: f32,
 }
 
+/// Ручная подстройка каналов
+///
+/// **Поля:**
+/// - `k_red`: [f32]   - коэффициент для красного
+/// - `k_green`: [f32] - зелёного
+/// - `k_blue`: [f32]  - синего
+#[derive(Clone)]
+pub struct ChannelGain {
+    pub k_red: f32,
+    pub k_green: f32,
+    pub k_blue: f32,
+}
+
 /// Хранилище фильтров
 ///
 /// Данная структура необходимо для статической реализации цепи фильтров
@@ -81,6 +94,7 @@ pub enum FilterInstance {
     BlackThreshold(BlackThreshold),
     SaturationBoost(SaturationBoost),
     WhiteBalance(WhiteBalance),
+    ChannelGain(ChannelGain),
 }
 
 /// Цепь фильтров

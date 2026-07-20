@@ -238,3 +238,61 @@ impl ConfigValidate for WhiteBalanceConfig {
         Ok(vec![])
     }
 }
+
+impl ConfigValidate for ChannelGainConfig {
+    /// Проверка [ChannelGainConfig]
+    /// 
+    /// **Проверки:**
+    /// - все коэффициенты должны быть [0; 1]
+    /// - если коэффициент меньше 0.7 - предупреждение
+    fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
+        if self.k_red < 0.0 || self.k_red > 1.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "channel_gain_config",
+                field: "k_red",
+                message: format!(
+                    "Coefficient must be in [0; 1]!. But it is {}",
+                    self.k_red
+                ),
+            });
+        }
+
+        if self.k_green < 0.0 || self.k_green > 1.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "channel_gain_config",
+                field: "k_green",
+                message: format!(
+                    "Coefficient must be in [0; 1]!. But it is {}",
+                    self.k_green
+                ),
+            });
+        }
+
+        if self.k_blue < 0.0 || self.k_blue > 1.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "channel_gain_config",
+                field: "k_blue",
+                message: format!(
+                    "Coefficient must be in [0; 1]!. But it is {}",
+                    self.k_blue
+                ),
+            });
+        }
+
+        if self.k_red < 0.7 || self.k_green < 0.7 || self.k_blue < 0.7 {
+            return Ok(vec![
+                ValidationWarning::StructValue { 
+                    section: "channel_gain_config", 
+                    message: format!(
+                        "Coefficients should be greater then 0.7, but you set r:{}, g:{}, b{}. Colors can be kind of strange", 
+                        self.k_red, 
+                        self.k_green, 
+                        self.k_blue
+                    ) 
+            }]);
+        }
+
+
+       Ok(vec![]) 
+    }
+}

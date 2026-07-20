@@ -8,4 +8,5 @@ pub enum ColorFilterType {
     BlackThreshold,
     SaturationBoost,
     WhiteBalance,
+    ChannelGain,
 }
