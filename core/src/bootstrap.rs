@@ -396,6 +396,9 @@ impl ConfigLoader {
     ///
     /// **Поддерживается обработка для:**
     /// - [ColorFilterType::Ema]
+    /// - [ColorFilterType::Gamma]
+    /// - [ColorFilterType::BlackThreshold]
+    /// - [ColorFilterType::SaturationBoost]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_2_select_filter<Analyst>(self, controller: Arc<CoreController>, analyst: Analyst)
@@ -466,6 +469,19 @@ impl ConfigLoader {
 
                     let filter = BlackThreshold::new(config);
                     FilterInstance::BlackThreshold(filter)
+                }
+
+                ColorFilterType::SaturationBoost => {
+                    let Some(shadow) = self.shadow_root.saturation_boost_config.as_ref() else {
+                        error!("Check section [saturation_boost_config]");
+                        exit(2);
+                    };
+                    let config: SaturationBoostConfig = shadow.into();
+
+                    validate_config(&config, MODULE);
+
+                    let filter = SaturationBoost::new(config);
+                    FilterInstance::SaturationBoost(filter)
                 }
             };
 

@@ -25,9 +25,18 @@ pub struct EmaConfig {
 /// - `threshold`: [f32]        - минимальная полностью отсекаемая яркость %
 /// - `fade_range`: [f32]       - ширина зоны плавного отсечения %
 /// - `falloff_exponent`: [f32] - крутизна кривой
-#[derive(Clone)]
 pub struct BlackThresholdConfig {
     pub threshold: f32,
-    pub fade_range: f32,    
+    pub fade_range: f32,
     pub falloff_exponent: f32,
+}
+
+/// Настройки усилителя насыщенности
+/// 
+/// **Поля:**
+/// - `floor`: [f32]          - нижний порог, до которого цвета не изменяются %
+/// - `boost_exponent`: [f32] - сила "выгибания" кривой (>1 - вверх)
+pub struct SaturationBoostConfig {
+    pub floor: f32,
+    pub boost_exponent: f32,
 }

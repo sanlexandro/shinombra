@@ -18,6 +18,7 @@ pub mod ema;
 pub mod gamma;
 pub mod no_filter;
 pub mod registry;
+pub mod saturation_boost;
 pub mod types;
 
 use crate::color::types::ColorBuffer;

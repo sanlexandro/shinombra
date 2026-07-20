@@ -1,6 +1,6 @@
 //! Структуры для фильтрации цвета на основе предоставленной выборки
 
-use crate::{color::types::RGBPixel, filters::black_threshold::SAMPLES_AMOUNT};
+use crate::color::types::RGBPixel;
 
 /// EMA-фильтр
 ///
@@ -43,11 +43,17 @@ pub struct Gamma {
 pub struct BlackThreshold {
     pub threshold: f32,
     pub knee_upper_limit: f32,
-    pub precalculated_values: [f32; SAMPLES_AMOUNT],
-    pub precalculated_saturations_k: [f32; SAMPLES_AMOUNT],
+    pub precalculated_values: [f32; Self::SAMPLES_AMOUNT],
+    pub precalculated_saturations_k: [f32; Self::SAMPLES_AMOUNT],
 }
 
-/// Структура для хранения фильтров
+/// Усилитель насыщения
+#[derive(Clone)]
+pub struct SaturationBoost {
+    pub saturation_table: [f32; Self::SAMPLES_AMOUNT],
+}
+
+/// Хранилище фильтров
 ///
 /// Данная структура необходимо для статической реализации цепи фильтров
 ///
@@ -57,9 +63,10 @@ pub enum FilterInstance {
     Ema(Ema),
     Gamma(Gamma),
     BlackThreshold(BlackThreshold),
+    SaturationBoost(SaturationBoost),
 }
 
-/// Структура для хранения цепи фильтров
+/// Цепь фильтров
 ///
 /// **Поля:**
 /// - `filters`: [Vec]<[FilterInstance]> - вектор хранилищ фильтров

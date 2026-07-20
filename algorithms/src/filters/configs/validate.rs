@@ -144,3 +144,64 @@ impl ConfigValidate for BlackThresholdConfig {
         Ok(vec![])
     }
 }
+
+impl ConfigValidate for SaturationBoostConfig {
+    /// Проверка [SaturationBoostConfig]
+    /// 
+    /// **Проверки:**
+    /// - `0 <= floor < 100` - порог должен быть строго в диапазоне (при =100% не
+    ///   имеет смысла)
+    /// - `boost_exponent >= 1` - обязательно для математики, иначе значения
+    ///   пробьют диапазон
+    /// - `boost_exponent > 3` - могут быть странные значение
+    /// - `floor > 15%` - очень высокий порог
+    fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
+        if self.floor < 0.0 || self.floor >= 100.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "saturation_boost_config",
+                field: "floor",
+                message: format!(
+                    "Floor must be in [0%; 100%]! But it is {}%",
+                    self.floor
+                ),
+            });
+        }
+
+        if self.boost_exponent < 1.0 {
+            return Err(ValidationError::InvalidValue {
+                section: "saturation_boost_config",
+                field: "boost_exponent",
+                message: format!(
+                    "Boost exponent must be >= 1! But it is {}",
+                    self.boost_exponent
+                ),
+            });
+        }
+
+        let mut vec: Vec<ValidationWarning> = Vec::new();
+
+        if self.boost_exponent > 3.0 {
+            vec.push(ValidationWarning::InvalidValue { 
+                section: "saturation_boost_config", 
+                field: "boost_exponent", 
+                message: format!(
+                    "Boost exponent should be in [1; 3], but you set {}. Colors can be kind of strange", 
+                    self.boost_exponent
+                ) 
+            });
+        } 
+
+        if self.floor > 15.0 {
+            vec.push(ValidationWarning::InvalidValue { 
+                section: "saturation_boost_config", 
+                field: "floor", 
+                message: format!(
+                    "Floor should be in [0%; 7%], but you set {}%. Colors can be kind of strange", 
+                    self.floor
+                ) 
+            });
+        }
+
+        Ok(vec)
+    }
+}

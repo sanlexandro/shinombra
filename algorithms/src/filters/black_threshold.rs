@@ -7,29 +7,29 @@ use crate::{
     filters::{configs::BlackThresholdConfig, types::BlackThreshold, ColorFilter},
 };
 
-/// Количество просчитанных отрезков на отрезке 0-255
-/// При таком разбиении человеческий глаз практически не видит разницы в
-/// изменении яркости (считается, то изменения на 1-3 пункта не являются
-/// заметными при Saturation [20%; 80%])
-pub const SAMPLES_AMOUNT: usize = 255 * 2;
-
 impl BlackThreshold {
+    /// Количество просчитанных отрезков на отрезке 0-255
+    /// При таком разбиении человеческий глаз практически не видит разницы в
+    /// изменении яркости (считается, то изменения на 1-3 пункта не являются
+    /// заметными при Saturation [20%; 80%])
+    pub const SAMPLES_AMOUNT: usize = 255 * 2;
+
     /// Конструктор
     ///
     /// Предрасчитывает значения для яркости, а также коэффициент для
     /// насыщенности, чтобы убрать вычисления из горячего цикла
     pub fn new(config: BlackThresholdConfig) -> Self {
         // Создаём буферы
-        let mut precalculated_values = [0.0 as f32; SAMPLES_AMOUNT];
-        let mut precalculated_saturations_k = [0.0 as f32; SAMPLES_AMOUNT];
+        let mut precalculated_values = [0.0 as f32; Self::SAMPLES_AMOUNT];
+        let mut precalculated_saturations_k = [0.0 as f32; Self::SAMPLES_AMOUNT];
 
         // Переводим из процентов
         let threshold = config.threshold * 255.0 / 100.0;
         let fade_range = config.fade_range * 255.0 / 100.0;
 
         // Просчитываем значения с указанной частотой
-        for i in 0..SAMPLES_AMOUNT {
-            let value: f32 = i as f32 * 255.0 / (SAMPLES_AMOUNT - 1) as f32;
+        for i in 0..Self::SAMPLES_AMOUNT {
+            let value: f32 = i as f32 * 255.0 / (Self::SAMPLES_AMOUNT - 1) as f32;
 
             precalculated_values[i] =
                 Self::calculate_value(value as f32, threshold, fade_range, config.falloff_exponent);
@@ -65,7 +65,7 @@ impl BlackThreshold {
 
     /// Расчёт позиции в прерасчитанных значениях
     pub(self) fn calculate_position(value: f32) -> usize {
-        let scale = (SAMPLES_AMOUNT - 1) as f32 / 255.0;
+        let scale = (Self::SAMPLES_AMOUNT - 1) as f32 / 255.0;
         (value * scale) as usize
     }
 }

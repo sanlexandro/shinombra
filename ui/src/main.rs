@@ -119,6 +119,11 @@ generate_ui!(
             threshold: SliderField {0.0, 100.0, 0.1 },
             fade_range: SliderField {0.0, 100.0, 0.1 },
             falloff_exponent: SliderField {0.0, 4.0, 0.1 }
+        },
+        @show_if(Settings.filter_chain.includes("SaturationBoost"))
+        SaturationBoostConfig => {
+            floor: SliderField {0.0, 100.0, 0.1 },
+            boost_exponent: SliderField {0.0, 4.0, 0.1 },
         }
     },
     "./hardware_output/src/serial/config/config.rs" => {
