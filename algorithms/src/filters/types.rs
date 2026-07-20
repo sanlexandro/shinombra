@@ -48,9 +48,25 @@ pub struct BlackThreshold {
 }
 
 /// Усилитель насыщения
+///
+/// **Поля:**
+/// - `saturation_table`: [[f32]; Self::SAMPLES_AMOUNT] - LUT для насыщенности
 #[derive(Clone)]
 pub struct SaturationBoost {
     pub saturation_table: [f32; Self::SAMPLES_AMOUNT],
+}
+
+/// Баланс белого
+///
+/// **Поля:**
+/// - `k_red`: [f32]   - коэффициент для красного
+/// - `k_green`: [f32] - зелёного
+/// - `k_blue`: [f32]  - синего
+#[derive(Clone)]
+pub struct WhiteBalance {
+    pub k_red: f32,
+    pub k_green: f32,
+    pub k_blue: f32,
 }
 
 /// Хранилище фильтров
@@ -64,6 +80,7 @@ pub enum FilterInstance {
     Gamma(Gamma),
     BlackThreshold(BlackThreshold),
     SaturationBoost(SaturationBoost),
+    WhiteBalance(WhiteBalance),
 }
 
 /// Цепь фильтров

@@ -55,6 +55,7 @@ impl ColorFilter for FilterInstance {
             Self::Gamma(f) => f.apply(raw_colors),
             Self::BlackThreshold(f) => f.apply(raw_colors),
             Self::SaturationBoost(f) => f.apply(raw_colors),
+            Self::WhiteBalance(f) => f.apply(raw_colors),
         }
     }
 }

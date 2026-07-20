@@ -20,6 +20,7 @@ pub mod no_filter;
 pub mod registry;
 pub mod saturation_boost;
 pub mod types;
+pub mod white_balance;
 
 use crate::color::types::ColorBuffer;
 

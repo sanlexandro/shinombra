@@ -399,6 +399,7 @@ impl ConfigLoader {
     /// - [ColorFilterType::Gamma]
     /// - [ColorFilterType::BlackThreshold]
     /// - [ColorFilterType::SaturationBoost]
+    /// - [ColorFilterType::WhiteBalance]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_2_select_filter<Analyst>(self, controller: Arc<CoreController>, analyst: Analyst)
@@ -482,6 +483,19 @@ impl ConfigLoader {
 
                     let filter = SaturationBoost::new(config);
                     FilterInstance::SaturationBoost(filter)
+                }
+
+                ColorFilterType::WhiteBalance => {
+                    let Some(shadow) = self.shadow_root.white_balance_config.as_ref() else {
+                        error!("Check section [white_balance_config]");
+                        exit(2);
+                    };
+                    let config: WhiteBalanceConfig = shadow.into();
+
+                    validate_config(&config, MODULE);
+
+                    let filter = WhiteBalance::new(config);
+                    FilterInstance::WhiteBalance(filter)
                 }
             };
 

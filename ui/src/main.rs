@@ -124,6 +124,10 @@ generate_ui!(
         SaturationBoostConfig => {
             floor: SliderField {0.0, 100.0, 0.1 },
             boost_exponent: SliderField {0.0, 4.0, 0.1 },
+        },
+        @show_if(Settings.filter_chain.includes("WhiteBalance"))
+        WhiteBalanceConfig => {
+            kelvins: SliderField {0, 20000, 100}
         }
     },
     "./hardware_output/src/serial/config/config.rs" => {

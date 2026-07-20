@@ -7,4 +7,5 @@ pub enum ColorFilterType {
     Gamma,
     BlackThreshold,
     SaturationBoost,
+    WhiteBalance,
 }

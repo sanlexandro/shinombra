@@ -205,3 +205,36 @@ impl ConfigValidate for SaturationBoostConfig {
         Ok(vec)
     }
 }
+
+impl ConfigValidate for WhiteBalanceConfig {
+    /// Проверка [WhiteBalanceConfig]
+    /// 
+    /// **Проверки:**
+    /// - `kelvins > 1000` - это ограничение алгоритма Таннера Хеллэнда
+    /// - `kelvins > 20000` - могут быть очень странные цвета
+    fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
+        if self.kelvins < 1000 {
+            return Err(ValidationError::InvalidValue {
+                section: "white_balance_config",
+                field: "kelvins",
+                message: format!(
+                    "Kelvins must be >= 1000! This is a limitation of the Tanner Helland algorithm. But it is {}K",
+                    self.kelvins
+                ),
+            });
+        }
+
+        if self.kelvins > 20000 {
+            return Ok(vec![ValidationWarning::InvalidValue { 
+                section: "white_balance_config", 
+                field: "kelvins", 
+                message: format!(
+                    "Kelvins should be in [1000; 20000], but you set {}K. Colors can be kind of strange", 
+                    self.kelvins
+                ) 
+            }]);
+        }
+
+        Ok(vec![])
+    }
+}

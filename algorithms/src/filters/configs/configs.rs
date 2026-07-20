@@ -32,11 +32,19 @@ pub struct BlackThresholdConfig {
 }
 
 /// Настройки усилителя насыщенности
-/// 
+///
 /// **Поля:**
 /// - `floor`: [f32]          - нижний порог, до которого цвета не изменяются %
 /// - `boost_exponent`: [f32] - сила "выгибания" кривой (>1 - вверх)
 pub struct SaturationBoostConfig {
     pub floor: f32,
     pub boost_exponent: f32,
+}
+
+/// Настройка баланса белого
+///
+/// **Поля:**
+/// - `kelvins`: [u32] - температура в кельвинах
+pub struct WhiteBalanceConfig {
+    pub kelvins: u32,
 }
