@@ -364,27 +364,38 @@ impl ConfigLoader {
     /// Данная ступень выбирает реализацию трейта [ColorAnalyst]
     ///
     /// **Поддерживается обработка для:**
-    /// - [ColorAnalystType::ColorHistogram]
-    /// - [ColorAnalystType::ColorAverage]
+    /// - [ColorAnalystType::Histogram]
+    /// - [ColorAnalystType::Average]
+    /// - [ColorAnalystType::DebugRGB]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_1_select_color_analyst(self, controller: Arc<CoreController>) {
         debug!("Running stage 1");
         match self.settings.analytics_type {
-            ColorAnalystType::ColorHistogram => {
-                let Some(shadow) = self.shadow_root.color_histogram_config.as_ref() else {
-                    error!("Check section [color_histogram_config]");
+            ColorAnalystType::Histogram => {
+                let Some(shadow) = self.shadow_root.histogram_config.as_ref() else {
+                    error!("Check section [histogram_config]");
                     exit(1);
                 };
-                let config: ColorHistogramConfig = shadow.into();
+                let config: HistogramConfig = shadow.into();
 
                 validate_config(&config, MODULE);
 
-                let analyst = ColorHistogram::new(config);
+                let analyst = Histogram::new(config);
                 self.stage_2_select_filter(controller, analyst);
             }
-            ColorAnalystType::ColorAverage => {
-                let analyst = ColorAverage::new();
+            ColorAnalystType::Average => {
+                let analyst = Average::new();
+                self.stage_2_select_filter(controller, analyst);
+            }
+            ColorAnalystType::DebugRGB => {
+                let Some(shadow) = self.shadow_root.debug_r_g_b_config.as_ref() else {
+                    error!("Check section [debug_r_g_b_config]");
+                    exit(1);
+                };
+                let config: DebugRGBConfig = shadow.into();
+
+                let analyst = DebugRGB::new(config);
                 self.stage_2_select_filter(controller, analyst);
             }
         }

@@ -100,9 +100,15 @@ generate_ui!(
         ChunkTask => {},
     },
     "./algorithms/src/analytics/configs/configs.rs" => {
-        @show_if(Settings.analytics_type == "ColorHistogram")
-        ColorHistogramConfig => {
+        @show_if(Settings.analytics_type == "Histogram")
+        HistogramConfig => {
             precision_level: SliderField { 0.0, 20.0, 1 }
+        },
+        @show_if(Settings.analytics_type == "DebugRGB")
+        DebugRGBConfig => {
+            red: SliderField { 0, 255, 1 },
+            green: SliderField { 0, 255, 1 },
+            blue: SliderField { 0, 255, 1 }
         }
     },
     "./algorithms/src/filters/configs/configs.rs" => {

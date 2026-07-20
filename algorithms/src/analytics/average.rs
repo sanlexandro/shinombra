@@ -1,15 +1,15 @@
 //! Алгоритм анализа цвета через простое среднее арифметическое
 
 use crate::{
-    analytics::{types::ColorAverage, ColorAnalyst},
+    analytics::{types::Average, ColorAnalyst},
     color::types::RGBPixel,
 };
 
-impl ColorAverage {
+impl Average {
     /// Конструктор
     ///
     /// Создаёт хранилище среднего арифметического с нулевыми значениями
-    pub fn new() -> ColorAverage {
+    pub fn new() -> Average {
         Self {
             sum_red: 0,
             sum_green: 0,
@@ -19,7 +19,7 @@ impl ColorAverage {
     }
 }
 
-impl ColorAnalyst for ColorAverage {
+impl ColorAnalyst for Average {
     /// Выходной формат в [RGBPixel]
     type OutputFormat = RGBPixel;
 

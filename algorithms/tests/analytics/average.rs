@@ -1,7 +1,7 @@
 //! Тестирование среднего арифметического
 
 use algorithms::{
-    analytics::{types::ColorAverage, ColorAnalyst},
+    analytics::{types::Average, ColorAnalyst},
     color::types::RGBPixel,
 };
 
@@ -45,7 +45,7 @@ fn test_average_with_one_color() {
     ];
 
     for color in colors {
-        let mut analytics = ColorAverage::new();
+        let mut analytics = Average::new();
 
         analytics.add_data(color);
 
@@ -53,7 +53,7 @@ fn test_average_with_one_color() {
 
         assert!(
             color.red == result.red,
-            "In ColorAverage after pushing one color ({}, {}, {}): red is {}, waiting {}",
+            "In Average after pushing one color ({}, {}, {}): red is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -62,7 +62,7 @@ fn test_average_with_one_color() {
         );
         assert!(
             color.green == result.green,
-            "In ColorAverage after pushing one color ({}, {}, {}): green is {}, waiting {}",
+            "In Average after pushing one color ({}, {}, {}): green is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -71,7 +71,7 @@ fn test_average_with_one_color() {
         );
         assert!(
             color.blue == result.blue,
-            "In ColorAverage after pushing one color ({}, {}, {}): blue is {}, waiting {}",
+            "In Average after pushing one color ({}, {}, {}): blue is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -117,7 +117,7 @@ fn test_average_with_one_color_after_clearing() {
     ];
 
     for color in colors {
-        let mut analytics = ColorAverage::new();
+        let mut analytics = Average::new();
 
         analytics.add_data(RGBPixel::black());
 
@@ -129,7 +129,7 @@ fn test_average_with_one_color_after_clearing() {
 
         assert!(
             color.red == result.red,
-            "In ColorAverage after clearing and pushing one color ({}, {}, {}): red is {}, waiting {}",
+            "In Average after clearing and pushing one color ({}, {}, {}): red is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -138,7 +138,7 @@ fn test_average_with_one_color_after_clearing() {
         );
         assert!(
             color.green == result.green,
-            "In ColorAverage after clearing and pushing one color ({}, {}, {}): green is {}, waiting {}",
+            "In Average after clearing and pushing one color ({}, {}, {}): green is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -147,7 +147,7 @@ fn test_average_with_one_color_after_clearing() {
         );
         assert!(
             color.blue == result.blue,
-            "In ColorAverage after clearing and pushing one color ({}, {}, {}): blue is {}, waiting {}",
+            "In Average after clearing and pushing one color ({}, {}, {}): blue is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -169,7 +169,7 @@ fn test_average_overflow() {
         blue: 255,
     };
 
-    let mut analytic = ColorAverage::new();
+    let mut analytic = Average::new();
 
     for _ in 0..1000 {
         analytic.add_data(wight);
@@ -179,7 +179,7 @@ fn test_average_overflow() {
 
     assert!(
         wight == result,
-        "In ColorAverage overflow test: result is ({}, {}, {}), waiting ({}, {}, {})",
+        "In Average overflow test: result is ({}, {}, {}), waiting ({}, {}, {})",
         result.red,
         result.green,
         result.blue,
@@ -221,7 +221,7 @@ fn test_average_with_mixing_color_and_wight() {
     ];
 
     for color in colors {
-        let mut analytics = ColorAverage::new();
+        let mut analytics = Average::new();
 
         analytics.add_data(color);
         analytics.add_data(RGBPixel {
@@ -240,7 +240,7 @@ fn test_average_with_mixing_color_and_wight() {
 
         assert!(
             avr_color.red == result.red,
-            "In ColorAverage after pushing color ({}, {}, {}) with wight: red is {}, waiting {}",
+            "In Average after pushing color ({}, {}, {}) with wight: red is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -249,7 +249,7 @@ fn test_average_with_mixing_color_and_wight() {
         );
         assert!(
             avr_color.green == result.green,
-            "In ColorAverage after pushing color ({}, {}, {}) with wight: green is {}, waiting {}",
+            "In Average after pushing color ({}, {}, {}) with wight: green is {}, waiting {}",
             color.red,
             color.green,
             color.blue,
@@ -258,7 +258,7 @@ fn test_average_with_mixing_color_and_wight() {
         );
         assert!(
             avr_color.blue == result.blue,
-            "In ColorAverage after pushing color ({}, {}, {}) with wight: blue is {}, waiting {}",
+            "In Average after pushing color ({}, {}, {}) with wight: blue is {}, waiting {}",
             color.red,
             color.green,
             color.blue,

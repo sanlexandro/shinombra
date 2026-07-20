@@ -1,8 +1,8 @@
 //! Алгоритм построения гистограмм и обработки голосований
 
-use super::types::{ColorBin, ColorHistogram};
+use super::types::{ColorBin, Histogram};
 use crate::{
-    analytics::{configs::ColorHistogramConfig, types::MAX_BINS, ColorAnalyst},
+    analytics::{configs::HistogramConfig, types::MAX_BINS, ColorAnalyst},
     color::{
         types::{HSVPixel, RGBPixel},
         Color,
@@ -30,14 +30,14 @@ impl ColorBin {
     }
 }
 
-/// Методы структуры ColorHistogram
-impl ColorHistogram {
+/// Методы структуры Histogram
+impl Histogram {
     /// Конструктор
     ///
     /// Создаёт массив сегментов со стандартными настройками, также рассчитывает
     /// количество рабочих ячеек и коэффициент для быстрых вычислений корзины
     /// для текущего цвета
-    pub fn new(config: ColorHistogramConfig) -> Self {
+    pub fn new(config: HistogramConfig) -> Self {
         let active_amount = config.precision_level * 6 + 1;
         let hue_to_bin_scale = (active_amount - 1) as f32 / 360.0;
 
@@ -49,8 +49,8 @@ impl ColorHistogram {
     }
 }
 
-// Реализация трейта для ColorHistogram
-impl ColorAnalyst for ColorHistogram {
+// Реализация трейта для Histogram
+impl ColorAnalyst for Histogram {
     /// Выходной формат в [HSVPixel]
     type OutputFormat = HSVPixel;
 

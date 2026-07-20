@@ -1,10 +1,10 @@
 //! Проверка конфигов
 
-use super::ColorHistogramConfig;
+use super::HistogramConfig;
 use common::configs::*;
 
-impl ConfigValidate for ColorHistogramConfig {
-    /// Проверка [ColorHistogramConfig]
+impl ConfigValidate for HistogramConfig {
+    /// Проверка [HistogramConfig]
     ///
     /// **Проверки:**
     /// - `0 < precision_level <= 20` - уровень точности не может быть =0 или

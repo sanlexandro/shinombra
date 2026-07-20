@@ -1,6 +1,6 @@
 //! Тестирование проверки конфигурации для анализаторов
 
-use algorithms::analytics::configs::ColorHistogramConfig;
+use algorithms::analytics::configs::HistogramConfig;
 use common::configs::ConfigValidate;
 
 /// Тест валидации конфига для гистограмм
@@ -12,16 +12,16 @@ use common::configs::ConfigValidate;
 #[test]
 fn test_color_histogram_validation_config() {
     let tests = [
-        (ColorHistogramConfig { precision_level: 0 }, false),
-        (ColorHistogramConfig { precision_level: 2 }, true),
+        (HistogramConfig { precision_level: 0 }, false),
+        (HistogramConfig { precision_level: 2 }, true),
         (
-            ColorHistogramConfig {
+            HistogramConfig {
                 precision_level: 20,
             },
             true,
         ),
         (
-            ColorHistogramConfig {
+            HistogramConfig {
                 precision_level: 25,
             },
             false,
@@ -33,7 +33,7 @@ fn test_color_histogram_validation_config() {
 
         assert!(
             val.is_ok() == test.1,
-            "In analytics configs ColorHistogramConfig for precision_level: {} validation is {}, waiting {}", test.0.precision_level, val.is_ok(), test.1
+            "In analytics configs HistogramConfig for precision_level: {} validation is {}, waiting {}", test.0.precision_level, val.is_ok(), test.1
         );
     }
 }

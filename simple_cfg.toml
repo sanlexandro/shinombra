@@ -1,6 +1,6 @@
 [settings]
 chunk_processor_type = "Checkerboard"
-analytics_type = "ColorHistogram"
+analytics_type = "Histogram"
 filter_chain = []
 hardware_output_type = "DebugDriver"
 
