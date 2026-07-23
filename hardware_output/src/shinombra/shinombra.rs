@@ -60,27 +60,7 @@ impl HardwareOutput for Shinombra {
         // Отправляем всё одним махом
         match self.port.write_all(&payload) {
             Ok(_) => Ok(()),
-            Err(error) => {
-                let event = match error.kind() {
-                    // Устройство физически отключено или порт закрыт системой
-                    std::io::ErrorKind::BrokenPipe
-                    | std::io::ErrorKind::AddrNotAvailable
-                    | std::io::ErrorKind::NotFound => HardwareEvents::Disconnected,
-
-                    // Ошибки прав доступа
-                    std::io::ErrorKind::PermissionDenied => HardwareEvents::NoAccess,
-
-                    // Временные сбои: прерывание системным вызовом или таймаут
-                    // Тут имеет смысл попробовать отправить еще раз
-                    std::io::ErrorKind::Interrupted | std::io::ErrorKind::TimedOut => {
-                        HardwareEvents::RetryNeeded
-                    }
-
-                    // Всё остальное, что мы не ожидали
-                    _ => HardwareEvents::InternalError(error.to_string()),
-                };
-                Err(event)
-            }
+            Err(error) => Err(error.into()),
         }
     }
 

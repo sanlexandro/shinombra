@@ -1,6 +1,8 @@
 //! Общий интерфейс для отправки данных на устройства
 
 pub mod debug;
+pub mod drgb;
+pub mod events;
 pub mod registry;
 pub mod shinombra;
 
