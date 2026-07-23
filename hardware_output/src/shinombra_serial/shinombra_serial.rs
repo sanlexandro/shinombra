@@ -36,6 +36,32 @@ impl ShinombraSerial {
             payload: Vec::with_capacity(2 + led_amount * 3),
         });
     }
+
+    /// Блокирующее ожидание синхронизации
+    pub fn wait_for_ready(&mut self) -> Result<(), HardwareEvents> {
+        let mut buf = [0u8; 6]; // "READY\n"
+
+        // Пытаемся прочитать 6 байт из Serial порта
+        match self.port.read_exact(&mut buf) {
+            Ok(_) => {
+                if &buf == b"READY\n" || &buf[..5] == b"READY" {
+                    Ok(())
+                } else {
+                    // Если прилетел какой-то другой мусор вместо READY -
+                    // просим движок переотправить/подождать
+                    Err(HardwareEvents::RetryNeeded)
+                }
+            }
+            Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                // Вышли по таймауту - плата еще занята
+                Err(HardwareEvents::RetryNeeded)
+            }
+            Err(e) => {
+                // Какая-то критическая ошибка порта (кабель выдернули)
+                Err(e.into())
+            }
+        }
+    }
 }
 
 impl HardwareOutput for ShinombraSerial {
@@ -49,19 +75,25 @@ impl HardwareOutput for ShinombraSerial {
     /// **Поля:**
     /// - `colors`: &[[RGBPixel]] - массив из RGBPixel
     fn send_colors(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
-        // Формируем пакет: [Префикс] + [RGB данные]
+        // Ждём, пока контроллер сообщит о готовности
+        self.wait_for_ready()?;
+
+        // Формируем пакет
         self.payload.clear();
         self.payload.extend_from_slice(b"AD"); // Magic Word (AmbiData)
 
-        // Сохраняем для отправки
         for color in colors {
             self.payload
                 .extend_from_slice(&[color.red, color.green, color.blue]);
         }
 
-        // Отправляем всё одним махом
+        // Отправляем всё в порт
         match self.port.write_all(&self.payload) {
-            Ok(_) => Ok(()),
+            Ok(_) => {
+                // Сбрасываем буфер записи, чтобы байты ушли в кабель моментально
+                let _ = self.port.flush();
+                Ok(())
+            }
             Err(error) => Err(error.into()),
         }
     }
