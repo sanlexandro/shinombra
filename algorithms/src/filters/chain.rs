@@ -58,6 +58,7 @@ impl ColorFilter for FilterInstance {
             Self::WhiteBalance(f) => f.apply(raw_colors),
             Self::ChannelGain(f) => f.apply(raw_colors),
             Self::FlashGuard(f) => f.apply(raw_colors),
+            Self::Median(f) => f.apply(raw_colors),
         }
     }
 }

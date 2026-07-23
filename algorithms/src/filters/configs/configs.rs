@@ -13,10 +13,8 @@ pub struct GammaConfig {
 /// **Поля:**
 /// - `alpha`: [f32] - коэффициент "сглаживания" (чем меньше, тем резче меняется
 ///   цвет)
-/// - `amount`: [usize] - количество светодиодов
 pub struct EmaConfig {
     pub alpha: f32,
-    pub amount: usize,
 }
 
 /// Настройки отсекателя тёмного

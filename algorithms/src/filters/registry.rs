@@ -10,4 +10,5 @@ pub enum ColorFilterType {
     WhiteBalance,
     ChannelGain,
     FlashGuard,
+    Median
 }

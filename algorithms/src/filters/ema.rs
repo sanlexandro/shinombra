@@ -16,12 +16,12 @@ impl Ema {
     /// Конструктор
     ///
     /// Создаёт хранилище с чёрным цветом
-    pub fn new(config: EmaConfig) -> Self {
+    pub fn new(config: EmaConfig, led_amount: usize) -> Self {
         let alpha = (config.alpha * 256.0) as i32;
         let inverted_alpha = 256 - alpha;
 
         return Self {
-            states: vec![RGBPixel::black(); config.amount],
+            states: vec![RGBPixel::black(); led_amount],
             alpha,
             inverted_alpha,
         };

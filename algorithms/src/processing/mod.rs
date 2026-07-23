@@ -5,7 +5,6 @@
 
 pub mod configs;
 pub mod frame;
-pub mod measures;
 pub mod processors;
 pub mod registry;
 pub mod types;

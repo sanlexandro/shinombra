@@ -431,6 +431,9 @@ impl ConfigLoader {
             return;
         }
 
+        // Количество светодиодов
+        let led_amount = self.geometry_config.calculate_leds_amount();
+
         // Иначе генерируем цепь
         let mut filter_chain = FilterChain::new();
 
@@ -446,15 +449,11 @@ impl ConfigLoader {
                         error!("Check section [ema_config]");
                         exit(2);
                     };
-                    let shadow_config: EmaConfig = shadow.into();
-                    let config = EmaConfig {
-                        alpha: shadow_config.alpha,
-                        amount: self.geometry_config.calculate_leds_amount(),
-                    };
+                    let config: EmaConfig = shadow.into();
 
                     validate_config(&config, MODULE);
 
-                    let filter = Ema::new(config);
+                    let filter = Ema::new(config, led_amount);
                     FilterInstance::Ema(filter)
                 }
 
@@ -532,10 +531,11 @@ impl ConfigLoader {
 
                     validate_config(&config, MODULE);
 
-                    let filter =
-                        FlashGuard::new(config, self.geometry_config.calculate_leds_amount());
+                    let filter = FlashGuard::new(config, led_amount);
                     FilterInstance::FlashGuard(filter)
                 }
+
+                ColorFilterType::Median => FilterInstance::Median(Median::new(led_amount)),
             };
 
             filter_chain.add_filter(instance);

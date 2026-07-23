@@ -94,6 +94,15 @@ pub struct FlashGuard {
     pub previous_values: Vec<f32>,
 }
 
+/// Медианный фильтр
+///
+/// **Поля:**
+/// - `previous`: [[Vec]<[RGBPixel]>; 2] - буфер для предыдущих значений
+#[derive(Clone)]
+pub struct Median {
+    pub previous: [Vec<RGBPixel>; 2],
+}
+
 /// Хранилище фильтров
 ///
 /// Данная структура необходимо для статической реализации цепи фильтров
@@ -108,6 +117,7 @@ pub enum FilterInstance {
     WhiteBalance(WhiteBalance),
     ChannelGain(ChannelGain),
     FlashGuard(FlashGuard),
+    Median(Median),
 }
 
 /// Цепь фильтров
