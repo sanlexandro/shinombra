@@ -35,9 +35,9 @@ use common::{configs::*, core::controller::CoreController, units::*};
 use config_gen::{__private::*, *};
 use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
 use hardware_output::{
-    debug::types::DebugDriver,
+    debug::types::Debug,
     registry::*,
-    serial::{config::SerialDriverConfig, types::SerialDriver},
+    shinombra::{config::ShinombraConfig, types::Shinombra},
 };
 use logger::*;
 use std::{ffi::CString, path::PathBuf, process::exit, sync::Arc};
@@ -55,7 +55,7 @@ include_shadow_all!(
     "./algorithms/src/filters/configs/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
-    "./hardware_output/src/serial/config/config.rs",
+    "./hardware_output/src/shinombra/config/config.rs",
     "./infra/logger/src/registry.rs",
 );
 
@@ -892,8 +892,8 @@ impl ConfigLoader {
     /// Данная ступень выбирает реализацию трейта [hardware_output::HardwareOutput]
     ///
     /// **Поддерживается реализация для:**
-    /// - [HardwareOutputType::DebugDriver]
-    /// - [HardwareOutputType::SerialDriver]
+    /// - [HardwareOutputType::Debug]
+    /// - [HardwareOutputType::Shinombra]
     ///
     /// После обработки запускается основной цикл, содержащийся в `main`
     fn stage_6_select_hardware_driver<Formatter, Processor, Analyst, Filter>(
@@ -932,20 +932,20 @@ impl ConfigLoader {
         );
 
         match hardware_output_type {
-            HardwareOutputType::DebugDriver => {
-                let hardware_output = DebugDriver::new(hor_amount, ver_amount);
+            HardwareOutputType::Debug => {
+                let hardware_output = Debug::new(hor_amount, ver_amount);
 
                 // Оставшиеся лишние данные будут уничтожены при выходе из этой функции
                 run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
             }
 
-            HardwareOutputType::SerialDriver => {
-                let Some(shadow) = self.shadow_root.serial_driver_config else {
+            HardwareOutputType::Shinombra => {
+                let Some(shadow) = self.shadow_root.shinombra_config else {
                     error!("Check section [serial_driver_config]");
                     capture_thread.stop();
                     exit(6);
                 };
-                let serial_driver_config: SerialDriverConfig = shadow.into();
+                let serial_driver_config: ShinombraConfig = shadow.into();
 
                 match serial_driver_config.validate() {
                     Ok(warnings) => warn_validate(warnings, MODULE),
@@ -956,7 +956,7 @@ impl ConfigLoader {
                     }
                 }
 
-                let hardware_output = match SerialDriver::new(serial_driver_config) {
+                let hardware_output = match Shinombra::new(serial_driver_config) {
                     Ok(h) => h,
                     Err(error) => {
                         error!("{}", error);

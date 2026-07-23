@@ -2,7 +2,7 @@
 
 pub mod debug;
 pub mod registry;
-pub mod serial;
+pub mod shinombra;
 
 use algorithms::color::types::RGBPixel;
 

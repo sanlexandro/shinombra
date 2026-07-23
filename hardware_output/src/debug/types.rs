@@ -7,7 +7,7 @@
 ///   экране в ширину
 /// - `led_height`: [usize] - количество блоков светодиодов, помещающиеся на
 ///   экране в высоту
-pub struct DebugDriver {
+pub struct Debug {
     pub(super) led_width: usize,
     pub(super) led_height: usize,
 }

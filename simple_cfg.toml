@@ -2,7 +2,7 @@
 chunk_processor_type = "Checkerboard"
 analytics_type = "Histogram"
 filter_chain = []
-hardware_output_type = "DebugDriver"
+hardware_output_type = "Debug"
 
 [color_histogram_config]
 precision_level = 10

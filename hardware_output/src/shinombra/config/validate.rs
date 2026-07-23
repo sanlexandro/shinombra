@@ -3,8 +3,8 @@
 use super::*;
 use common::configs::*;
 
-impl ConfigValidate for SerialDriverConfig {
-    /// Проверка [SerialDriverConfig]
+impl ConfigValidate for ShinombraConfig {
+    /// Проверка [ShinombraConfig]
     ///
     /// **Проверки:**
     /// - `port_path` не пустой. Путь необходим для инициализации системного вызова открытия порта.

@@ -6,6 +6,6 @@ use serialport::SerialPort;
 ///
 /// **Поля:**
 /// - `port`: [Box]<dyn [SerialPort]> - порт устройства (из [serialport])
-pub struct SerialDriver {
+pub struct Shinombra {
     pub(crate) port: Box<dyn SerialPort>,
 }

@@ -2,6 +2,6 @@
 
 #[derive(Debug)]
 pub enum HardwareOutputType {
-    DebugDriver,
-    SerialDriver,
+    Debug,
+    Shinombra,
 }

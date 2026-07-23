@@ -6,7 +6,7 @@
 /// - `port_path`: [String] - путь к устройству
 /// - `baud_rate`: [u32]    - скорость обмена данными
 #[derive(Default)]
-pub struct SerialDriverConfig {
+pub struct ShinombraConfig {
     pub port_path: String,
     pub baud_rate: u32,
 }

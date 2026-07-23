@@ -4,7 +4,7 @@ use algorithms::color::types::RGBPixel;
 
 use crate::{HardwareEvents, HardwareOutput};
 
-use super::types::DebugDriver;
+use super::types::Debug;
 
 /// Ф-я вывода цвета в консоль для отладки
 fn print_debug_color(rgb: RGBPixel) {
@@ -16,8 +16,8 @@ fn print_debug_color(rgb: RGBPixel) {
     );
 }
 
-/// Реализация методов DebugDriver
-impl DebugDriver {
+/// Реализация методов Debug
+impl Debug {
     /// Конструктор отладочного вывода
     ///
     /// **Аргументы:**
@@ -33,7 +33,7 @@ impl DebugDriver {
     }
 }
 
-impl HardwareOutput for DebugDriver {
+impl HardwareOutput for Debug {
     /// Отладочный вывод на экран
     ///
     /// Выводит рамку из цветов так, как эти цвета выводились бы на экран с

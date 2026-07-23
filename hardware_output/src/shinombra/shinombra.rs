@@ -1,21 +1,22 @@
 //! Реализация связи с железом по Serial
+//! Простейший нативный протокол
 
 use crate::{
-    serial::{config::SerialDriverConfig, types::SerialDriver},
+    shinombra::{config::ShinombraConfig, types::Shinombra},
     HardwareEvents, HardwareOutput,
 };
 use algorithms::color::types::RGBPixel;
 use serialport;
 use std::time::Duration;
 
-/// Реализация методов SerialDriver
-impl SerialDriver {
+/// Реализация методов Shinombra
+impl Shinombra {
     /// Конструктор
     ///
     /// **Аргументы:**
     /// - `port_path`: &[str] - путь к устройству (например, "/dev/ttyUSB0")
     /// - `baud_rate`: [u32]  - скорость обмена данными
-    pub fn new(config: SerialDriverConfig) -> Result<Self, String> {
+    pub fn new(config: ShinombraConfig) -> Result<Self, String> {
         // Настройка порта
         let port = match serialport::new(config.port_path, config.baud_rate)
             .timeout(Duration::from_millis(10))
@@ -34,7 +35,7 @@ impl SerialDriver {
     }
 }
 
-impl HardwareOutput for SerialDriver {
+impl HardwareOutput for Shinombra {
     /// Отправка массива цвета на устройство
     ///
     /// Отправляет массив в формате `[Префикс ] + [R_1, G_1, B_1, R_2, G_2, B_2,
@@ -94,7 +95,7 @@ impl HardwareOutput for SerialDriver {
     }
 }
 
-impl Drop for SerialDriver {
+impl Drop for Shinombra {
     fn drop(&mut self) {
         // Порт закроется автоматически
     }
