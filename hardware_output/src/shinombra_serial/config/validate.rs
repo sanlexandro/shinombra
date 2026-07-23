@@ -3,8 +3,8 @@
 use super::*;
 use common::configs::*;
 
-impl ConfigValidate for ShinombraConfig {
-    /// Проверка [ShinombraConfig]
+impl ConfigValidate for ShinombraSerialConfig {
+    /// Проверка [ShinombraSerialConfig]
     ///
     /// **Проверки:**
     /// - `port_path` не пустой. Путь необходим для инициализации системного вызова открытия порта.

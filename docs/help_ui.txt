@@ -1,4 +1,4 @@
-Shinombra-ui v0.1.0
+ShinombraSerial-ui v0.1.0
 Author: sanlexandro
 
 Usage:

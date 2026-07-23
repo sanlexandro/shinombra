@@ -1,4 +1,4 @@
-Shinombra v0.1.0
+ShinombraSerial v0.1.0
 Author: sanlexandro
 
 Usage:

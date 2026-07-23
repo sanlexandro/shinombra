@@ -3,5 +3,6 @@
 #[derive(Debug)]
 pub enum HardwareOutputType {
     Debug,
-    Shinombra,
+    ShinombraSerial,
+    WledDrgb,
 }

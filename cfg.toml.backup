@@ -2,7 +2,7 @@
 chunk_processor_type = "Checkerboard"
 analytics_type = "Histogram"
 filter_chain = ["Ema", "Gamma"]
-hardware_output_type = "Shinombra"
+hardware_output_type = "ShinombraSerial"
 
 [screen_reading_config]
 deep_in = 20

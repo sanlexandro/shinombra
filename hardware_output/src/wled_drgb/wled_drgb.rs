@@ -1,4 +1,4 @@
-//! Реализация связи по DRGB
+//! Реализация связи по WledDrgb
 
 use std::{
     format,
@@ -9,12 +9,12 @@ use std::{
 use algorithms::color::types::RGBPixel;
 
 use crate::{
-    drgb::{config::config::DRGBConfig, types::*},
+    wled_drgb::{config::config::WledDrgbConfig, types::*},
     HardwareEvents, HardwareOutput,
 };
 
-impl DRGB {
-    pub fn new(config: DRGBConfig) -> Result<Self, String> {
+impl WledDrgb {
+    pub fn new(config: WledDrgbConfig, led_amount: usize) -> Result<Self, String> {
         // Пробуем открыть сокет на любом порту
         let socket = match UdpSocket::bind("0.0.0.0:0") {
             Ok(s) => s,
@@ -22,6 +22,7 @@ impl DRGB {
                 return Err(err.to_string());
             }
         };
+        
         // Собираем адрес
         // Можно развернуть без проверки, т.к. при валидации конфига проверка
         // уже прошла, но как фолбек оставлен вариант с данными из конфига
@@ -41,11 +42,12 @@ impl DRGB {
             address,
             wait_duration,
             last_frame: Instant::now(),
+            payload: Vec::with_capacity(2 + led_amount * 3),
         })
     }
 }
 
-impl HardwareOutput for DRGB {
+impl HardwareOutput for WledDrgb {
     /// Отправка на устройство по wifi
     ///
     /// Отправляет пакет вида: [0x02 + rgb_1 + rgb_2]
@@ -58,19 +60,19 @@ impl HardwareOutput for DRGB {
         self.last_frame = Instant::now();
 
         // Формируем пакет
-        let mut packet = Vec::<u8>::with_capacity(2 + colors.len() * 3);
-        packet.push(0x02); // ID протокола
-        packet.push(self.timeout); // Установленный таймаут
+        self.payload.clear();
+        self.payload = Vec::<u8>::with_capacity(2 + colors.len() * 3);
+        self.payload.push(0x02); // ID протокола
+        self.payload.push(self.timeout); // Установленный таймаут
 
         // Собираем всё в пакет
         for color in colors.iter() {
-            packet.push(color.red);
-            packet.push(color.green);
-            packet.push(color.blue);
+            self.payload
+                .extend_from_slice(&[color.red, color.green, color.blue]);
         }
 
         // И отправляем
-        match self.socket.send_to(&packet, &self.address) {
+        match self.socket.send_to(&self.payload, &self.address) {
             Ok(_) => Ok(()),
             Err(error) => Err(error.into()),
         }

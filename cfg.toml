@@ -2,7 +2,7 @@
 chunk_processor_type = "DynamicCheckerboard"
 analytics_type = "Histogram"
 filter_chain = ["Ema", "Gamma"]
-hardware_output_type = "Shinombra"
+hardware_output_type = "ShinombraSerial"
 log_level = "Info"
 
 [frame_connection_config]

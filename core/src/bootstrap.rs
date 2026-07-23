@@ -36,8 +36,9 @@ use config_gen::{__private::*, *};
 use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
 use hardware_output::{
     debug::types::Debug,
+    wled_drgb::{config::WledDrgbConfig, types::WledDrgb},
     registry::*,
-    shinombra::{config::ShinombraConfig, types::Shinombra},
+    shinombra_serial::{config::ShinombraSerialConfig, types::ShinombraSerial},
 };
 use logger::*;
 use std::{ffi::CString, path::PathBuf, process::exit, sync::Arc};
@@ -55,7 +56,8 @@ include_shadow_all!(
     "./algorithms/src/filters/configs/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
-    "./hardware_output/src/shinombra/config/config.rs",
+    "./hardware_output/src/shinombra_serial/config/config.rs",
+    "./hardware_output/src/wled_drgb/config/config.rs",
     "./infra/logger/src/registry.rs",
 );
 
@@ -893,7 +895,7 @@ impl ConfigLoader {
     ///
     /// **Поддерживается реализация для:**
     /// - [HardwareOutputType::Debug]
-    /// - [HardwareOutputType::Shinombra]
+    /// - [HardwareOutputType::ShinombraSerial]
     ///
     /// После обработки запускается основной цикл, содержащийся в `main`
     fn stage_6_select_hardware_driver<Formatter, Processor, Analyst, Filter>(
@@ -939,15 +941,15 @@ impl ConfigLoader {
                 run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
             }
 
-            HardwareOutputType::Shinombra => {
-                let Some(shadow) = self.shadow_root.shinombra_config else {
-                    error!("Check section [serial_driver_config]");
+            HardwareOutputType::ShinombraSerial => {
+                let Some(shadow) = self.shadow_root.shinombra_serial_config else {
+                    error!("Check section [shinombra_config]");
                     capture_thread.stop();
                     exit(6);
                 };
-                let serial_driver_config: ShinombraConfig = shadow.into();
+                let config: ShinombraSerialConfig = shadow.into();
 
-                match serial_driver_config.validate() {
+                match config.validate() {
                     Ok(warnings) => warn_validate(warnings, MODULE),
                     Err(error) => {
                         error!("{}", error);
@@ -956,7 +958,37 @@ impl ConfigLoader {
                     }
                 }
 
-                let hardware_output = match Shinombra::new(serial_driver_config) {
+                let hardware_output = match ShinombraSerial::new(config, led_amount) {
+                    Ok(h) => h,
+                    Err(error) => {
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(6);
+                    }
+                };
+
+                // В этот момент всё лишнее уничтожается
+                run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
+            }
+
+            HardwareOutputType::WledDrgb => {
+                let Some(shadow) = self.shadow_root.wled_drgb_config else {
+                    error!("Check section [shinombra_config]");
+                    capture_thread.stop();
+                    exit(6);
+                };
+                let config: WledDrgbConfig = shadow.into();
+
+                match config.validate() {
+                    Ok(warnings) => warn_validate(warnings, MODULE),
+                    Err(error) => {
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(6);
+                    }
+                }
+
+                let hardware_output = match WledDrgb::new(config, led_amount) {
                     Ok(h) => h,
                     Err(error) => {
                         error!("{}", error);

@@ -21,7 +21,7 @@ use algorithms::{
 use ambient_core::config::*;
 use common::{names::*, paths::expand_tilde, units::*};
 use config_gen::{__private::*, *};
-use hardware_output::{registry::*, shinombra::config::*};
+use hardware_output::{wled_drgb::config::*, registry::*, shinombra_serial::config::*};
 use logger::*;
 use ui_gen::{__private::serde_json, add_js, generate_ui, Renderable};
 
@@ -38,7 +38,8 @@ include_shadow_all!(
     "./algorithms/src/filters/configs/configs.rs",
     "./hardware_output/src/registry.rs",
     "./core/src/config.rs",
-    "./hardware_output/src/shinombra/config/config.rs",
+    "./hardware_output/src/shinombra_serial/config/config.rs",
+    "./hardware_output/src/wled_drgb/config/config.rs",
     "./infra/logger/src/registry.rs",
 );
 // Генерируем ui
@@ -147,11 +148,17 @@ generate_ui!(
             sensitivity: SliderField {0.0, 100.0, 0.1 },
         }
     },
-    "./hardware_output/src/shinombra/config/config.rs" => {
-        @show_if(Settings.hardware_output_type == "Shinombra")
-        ShinombraConfig => {
+    "./hardware_output/src/shinombra_serial/config/config.rs" => {
+        @show_if(Settings.hardware_output_type == "ShinombraSerial")
+        ShinombraSerialConfig => {
             port_path: TextField {"port path"},
             baud_rate: NumericField {9600}
+        }
+    },
+    "./hardware_output/src/wled_drgb/config/config.rs" => {
+        @show_if(Settings.hardware_output_type == "WledDrgb")
+        WledDrgbConfig => {
+            ip: TextField {"ip or DNS-name"},
         }
     },
 );

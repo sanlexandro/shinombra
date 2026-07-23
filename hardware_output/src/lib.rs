@@ -1,10 +1,10 @@
 //! Общий интерфейс для отправки данных на устройства
 
 pub mod debug;
-pub mod drgb;
+pub mod wled_drgb;
 pub mod events;
 pub mod registry;
-pub mod shinombra;
+pub mod shinombra_serial;
 
 use algorithms::color::types::RGBPixel;
 
@@ -34,5 +34,8 @@ pub trait HardwareOutput {
     fn send_colors(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents>;
 
     /// Отправить сигнал завершения на устройство
+    /// 
+    /// **Выходные поля:**
+    /// - [Result]<(), [HardwareEvents]> - ничего или сообщение об ошибке
     fn send_shutdown_signal(&mut self) -> Result<(), String>;
 }

@@ -4,10 +4,10 @@ use std::{format, net::ToSocketAddrs};
 
 use common::configs::{ConfigValidate, ValidationError, ValidationWarning};
 
-use crate::drgb::{config::config::DRGBConfig, types::DEFAULT_PORT};
+use crate::wled_drgb::{config::config::WledDrgbConfig, types::DEFAULT_PORT};
 
-impl ConfigValidate for DRGBConfig {
-    /// Проверка [DRGBConfig]
+impl ConfigValidate for WledDrgbConfig {
+    /// Проверка [WledDrgbConfig]
     ///
     /// **Проверки:**
     /// - ip правильно десериализуется

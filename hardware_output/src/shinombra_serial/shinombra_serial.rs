@@ -2,21 +2,21 @@
 //! Простейший нативный протокол
 
 use crate::{
-    shinombra::{config::ShinombraConfig, types::Shinombra},
+    shinombra_serial::{config::ShinombraSerialConfig, types::ShinombraSerial},
     HardwareEvents, HardwareOutput,
 };
 use algorithms::color::types::RGBPixel;
 use serialport;
 use std::time::Duration;
 
-/// Реализация методов Shinombra
-impl Shinombra {
+/// Реализация методов ShinombraSerial
+impl ShinombraSerial {
     /// Конструктор
     ///
     /// **Аргументы:**
     /// - `port_path`: &[str] - путь к устройству (например, "/dev/ttyUSB0")
     /// - `baud_rate`: [u32]  - скорость обмена данными
-    pub fn new(config: ShinombraConfig) -> Result<Self, String> {
+    pub fn new(config: ShinombraSerialConfig, led_amount: usize) -> Result<Self, String> {
         // Настройка порта
         let port = match serialport::new(config.port_path, config.baud_rate)
             .timeout(Duration::from_millis(10))
@@ -31,11 +31,14 @@ impl Shinombra {
         // Даем время на перезагрузку после открытия порта
         std::thread::sleep(std::time::Duration::from_secs(2));
 
-        return Ok(Self { port });
+        return Ok(Self {
+            port,
+            payload: Vec::with_capacity(2 + led_amount * 3),
+        });
     }
 }
 
-impl HardwareOutput for Shinombra {
+impl HardwareOutput for ShinombraSerial {
     /// Отправка массива цвета на устройство
     ///
     /// Отправляет массив в формате `[Префикс ] + [R_1, G_1, B_1, R_2, G_2, B_2,
@@ -47,18 +50,17 @@ impl HardwareOutput for Shinombra {
     /// - `colors`: &[[RGBPixel]] - массив из RGBPixel
     fn send_colors(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
         // Формируем пакет: [Префикс] + [RGB данные]
-        let mut payload = Vec::with_capacity(2 + colors.len() * 3);
-        payload.extend_from_slice(b"AD"); // Magic Word (AmbiData)
+        self.payload.clear();
+        self.payload.extend_from_slice(b"AD"); // Magic Word (AmbiData)
 
         // Сохраняем для отправки
         for color in colors {
-            payload.push(color.red);
-            payload.push(color.green);
-            payload.push(color.blue);
+            self.payload
+                .extend_from_slice(&[color.red, color.green, color.blue]);
         }
 
         // Отправляем всё одним махом
-        match self.port.write_all(&payload) {
+        match self.port.write_all(&self.payload) {
             Ok(_) => Ok(()),
             Err(error) => Err(error.into()),
         }
@@ -75,7 +77,7 @@ impl HardwareOutput for Shinombra {
     }
 }
 
-impl Drop for Shinombra {
+impl Drop for ShinombraSerial {
     fn drop(&mut self) {
         // Порт закроется автоматически
     }
