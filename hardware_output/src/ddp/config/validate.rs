@@ -4,22 +4,23 @@ use std::{format, net::ToSocketAddrs};
 
 use common::configs::{ConfigValidate, ValidationError, ValidationWarning};
 
-use crate::wled_drgb::{config::config::WledDrgbConfig, types::DEFAULT_PORT};
+use crate::{ddp::config::config::DdpConfig, wled_drgb::types::DEFAULT_PORT};
 
-impl ConfigValidate for WledDrgbConfig {
-    /// Проверка [WledDrgbConfig]
+impl ConfigValidate for DdpConfig {
+    /// Проверка [DdpConfig]
     ///
     /// **Проверки:**
     /// - ip правильно десериализуется
     /// - `timeout == 0` - предупреждение о возможной некорректной работе
     /// - `max_fps <= 10` - предупреждение о некорректной работе ленты
     /// - `max_fps > 120` - предупреждение о возможной некорректной работе
+    /// - если установили mtu, просто предупреждение о возможной некорректной работе
     fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
         if let Err(err) =
             format!("{}:{}", self.ip, self.port.unwrap_or(DEFAULT_PORT)).to_socket_addrs()
         {
             return Err(ValidationError::InvalidValue {
-                section: "wled_drgb_config",
+                section: "ddp_config",
                 field: "ip",
                 message: format!("Ip can not be reached: {}.", err.to_string()),
             });
@@ -29,7 +30,7 @@ impl ConfigValidate for WledDrgbConfig {
 
         if self.timeout.unwrap_or(100) == 0 {
             result.push(ValidationWarning::InvalidValue {
-                section: "wled_drgb_config",
+                section: "ddp_config",
                 field: "timeout",
                 message: "With zero timeout led can work with errors.".to_string(),
             });
@@ -37,7 +38,7 @@ impl ConfigValidate for WledDrgbConfig {
 
         if self.max_fps.unwrap_or(60) <= 10 {
             result.push(ValidationWarning::InvalidValue {
-                section: "wled_drgb_config",
+                section: "ddp_config",
                 field: "max_fps",
                 message: "With small FPS led can work kind of strange.".to_string(),
             });
@@ -45,9 +46,17 @@ impl ConfigValidate for WledDrgbConfig {
 
         if self.max_fps.unwrap_or(60) > 120 {
             result.push(ValidationWarning::InvalidValue {
-                section: "wled_drgb_config",
+                section: "ddp_config",
                 field: "max_fps",
                 message: "With such hight FPS led can work with errors.".to_string(),
+            });
+        }
+
+        if self.mtu.is_some() {
+            result.push(ValidationWarning::InvalidValue {
+                section: "ddp_config",
+                field: "mtu",
+                message: "Setting another MTU can break protocol work. Be careful with it.".to_string(),
             });
         }
 

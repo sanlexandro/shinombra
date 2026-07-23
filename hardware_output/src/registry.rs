@@ -5,4 +5,5 @@ pub enum HardwareOutputType {
     Debug,
     ShinombraSerial,
     WledDrgb,
+    Ddp
 }

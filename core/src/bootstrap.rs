@@ -35,10 +35,11 @@ use common::{configs::*, core::controller::CoreController, units::*};
 use config_gen::{__private::*, *};
 use ffi::bindings::{CaptureConfig, InitializingData, SpaVideoFormat};
 use hardware_output::{
+    ddp::{config::DdpConfig, types::Ddp},
     debug::types::Debug,
-    wled_drgb::{config::WledDrgbConfig, types::WledDrgb},
     registry::*,
     shinombra_serial::{config::ShinombraSerialConfig, types::ShinombraSerial},
+    wled_drgb::{config::WledDrgbConfig, types::WledDrgb},
 };
 use logger::*;
 use std::{ffi::CString, path::PathBuf, process::exit, sync::Arc};
@@ -58,6 +59,7 @@ include_shadow_all!(
     "./core/src/config.rs",
     "./hardware_output/src/shinombra_serial/config/config.rs",
     "./hardware_output/src/wled_drgb/config/config.rs",
+    "./hardware_output/src/ddp/config/config.rs",
     "./infra/logger/src/registry.rs",
 );
 
@@ -943,7 +945,7 @@ impl ConfigLoader {
 
             HardwareOutputType::ShinombraSerial => {
                 let Some(shadow) = self.shadow_root.shinombra_serial_config else {
-                    error!("Check section [shinombra_config]");
+                    error!("Check section [shinombra_serial_config]");
                     capture_thread.stop();
                     exit(6);
                 };
@@ -973,7 +975,7 @@ impl ConfigLoader {
 
             HardwareOutputType::WledDrgb => {
                 let Some(shadow) = self.shadow_root.wled_drgb_config else {
-                    error!("Check section [shinombra_config]");
+                    error!("Check section [wled_drgb_config]");
                     capture_thread.stop();
                     exit(6);
                 };
@@ -989,6 +991,36 @@ impl ConfigLoader {
                 }
 
                 let hardware_output = match WledDrgb::new(config, led_amount) {
+                    Ok(h) => h,
+                    Err(error) => {
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(6);
+                    }
+                };
+
+                // В этот момент всё лишнее уничтожается
+                run_ambient_loop(color_engine, hardware_output, led_amount, capture_thread);
+            }
+
+            HardwareOutputType::Ddp => {
+                let Some(shadow) = self.shadow_root.ddp_config else {
+                    error!("Check section [ddp_config]");
+                    capture_thread.stop();
+                    exit(6);
+                };
+                let config: DdpConfig = shadow.into();
+
+                match config.validate() {
+                    Ok(warnings) => warn_validate(warnings, MODULE),
+                    Err(error) => {
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(6);
+                    }
+                }
+
+                let hardware_output = match Ddp::new(config, led_amount) {
                     Ok(h) => h,
                     Err(error) => {
                         error!("{}", error);

@@ -22,7 +22,7 @@ impl WledDrgb {
                 return Err(err.to_string());
             }
         };
-        
+
         // Собираем адрес
         // Можно развернуть без проверки, т.к. при валидации конфига проверка
         // уже прошла, но как фолбек оставлен вариант с данными из конфига
@@ -42,7 +42,7 @@ impl WledDrgb {
             address,
             wait_duration,
             last_frame: Instant::now(),
-            payload: Vec::with_capacity(2 + led_amount * 3),
+            payload: Vec::with_capacity(2 + led_amount * size_of::<RGBPixel>()),
         })
     }
 }
@@ -61,7 +61,7 @@ impl HardwareOutput for WledDrgb {
 
         // Формируем пакет
         self.payload.clear();
-        self.payload = Vec::<u8>::with_capacity(2 + colors.len() * 3);
+        self.payload = Vec::<u8>::with_capacity(2 + colors.len() * size_of::<RGBPixel>());
         self.payload.push(0x02); // ID протокола
         self.payload.push(self.timeout); // Установленный таймаут
 

@@ -21,7 +21,9 @@ use algorithms::{
 use ambient_core::config::*;
 use common::{names::*, paths::expand_tilde, units::*};
 use config_gen::{__private::*, *};
-use hardware_output::{wled_drgb::config::*, registry::*, shinombra_serial::config::*};
+use hardware_output::{
+    ddp::config::*, registry::*, shinombra_serial::config::*, wled_drgb::config::*,
+};
 use logger::*;
 use ui_gen::{__private::serde_json, add_js, generate_ui, Renderable};
 
@@ -40,6 +42,7 @@ include_shadow_all!(
     "./core/src/config.rs",
     "./hardware_output/src/shinombra_serial/config/config.rs",
     "./hardware_output/src/wled_drgb/config/config.rs",
+    "./hardware_output/src/ddp/config/config.rs",
     "./infra/logger/src/registry.rs",
 );
 // Генерируем ui
@@ -158,6 +161,12 @@ generate_ui!(
     "./hardware_output/src/wled_drgb/config/config.rs" => {
         @show_if(Settings.hardware_output_type == "WledDrgb")
         WledDrgbConfig => {
+            ip: TextField {"ip or DNS-name"},
+        }
+    },
+    "./hardware_output/src/ddp/config/config.rs" => {
+        @show_if(Settings.hardware_output_type == "Ddp")
+        DdpConfig => {
             ip: TextField {"ip or DNS-name"},
         }
     },
