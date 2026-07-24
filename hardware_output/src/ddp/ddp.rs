@@ -7,14 +7,13 @@
 use std::{
     format,
     net::{ToSocketAddrs, UdpSocket},
-    time::{Duration, Instant},
 };
 
 use algorithms::color::types::RGBPixel;
 
 use crate::{
-    ddp::{config::config::DdpConfig, types::*},
     ddp::types::DEFAULT_PORT,
+    ddp::{config::config::DdpConfig, types::*},
     HardwareOutput,
 };
 
@@ -80,10 +79,6 @@ impl Ddp {
             .and_then(|mut addrs| addrs.next())
             .unwrap();
 
-        // Вычисляем время ожидания
-        let max_fps = config.max_fps.unwrap_or(DEFAULT_MAX_FPS) as u64;
-        let wait_duration = Duration::from_nanos(1_000_000_000 / max_fps.max(1));
-
         // Вычисляем максимальный размер пакета такой, чтобы в него помещалось
         // целое количество пикселей
         let max_pixels_per_package: usize = (config.mtu.unwrap_or(DEFAULT_MTU)
@@ -99,8 +94,6 @@ impl Ddp {
             socket,
             max_pixels_per_package,
             address,
-            wait_duration,
-            last_frame: Instant::now(),
             header: PackageHeader::new(),
             payload: Vec::with_capacity(size_of::<PackageHeader>() + payload_size),
         })
@@ -109,13 +102,6 @@ impl Ddp {
 
 impl HardwareOutput for Ddp {
     fn send_colors(&mut self, colors: &[RGBPixel]) -> Result<(), crate::HardwareEvents> {
-        // Проверка для соблюдения fps
-        if self.last_frame.elapsed() < self.wait_duration {
-            return Ok(());
-        }
-        // Обновляем время отправки последнего кадра
-        self.last_frame = Instant::now();
-
         // Ставим флаг отправки в 0
         self.header.set_push_flag(false);
         // Сбрасываем сдвиг

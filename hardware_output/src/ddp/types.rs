@@ -1,9 +1,6 @@
 //! Структуры, необходимые для работы с DDP
 
-use std::{
-    net::{SocketAddr, UdpSocket},
-    time::{Duration, Instant},
-};
+use std::net::{SocketAddr, UdpSocket};
 
 /// Тип передаваемых данных в пакете
 #[repr(u8)]
@@ -36,9 +33,6 @@ pub const DEFAULT_MAX_FPS: u16 = 30;
 ///   данные
 /// - `max_pixels_per_package`: [usize] - максимальное число пикселей в пакете
 /// - `address`: [SocketAddr]           - адрес ленты
-/// - `wait_duration`: [Duration]       - задержка, для соблюдения fps (чтобы не
-///   положить сетевой стек)
-/// - `last_frame`: [Instant]           - время последней отправки кадра
 /// - `header`: [PackageHeader]         - заголовок пакета
 /// - `payload`: [Vec]<[u8]>            - буфер для отправки (необходим во
 ///   избежание аллокаций памяти в runtime)
@@ -46,8 +40,6 @@ pub struct Ddp {
     pub(crate) socket: UdpSocket,
     pub(crate) max_pixels_per_package: usize,
     pub(crate) address: SocketAddr,
-    pub(crate) wait_duration: Duration,
-    pub(crate) last_frame: Instant,
     pub(crate) header: PackageHeader,
     pub(crate) payload: Vec<u8>,
 }

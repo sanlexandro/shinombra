@@ -63,12 +63,14 @@ pub enum CaptureEvent {
 ///
 /// **Поля:**
 /// - `apply_conversion`: [bool] - разрешение применения конвертации форматов
-/// - `save_token`: [bool] - разрешение на сохранение токена
-/// - `token`: *const [c_char] - сам токен
+/// - `token`: *const [c_char]   - сам токен
+/// - `min_wait_ns`: [u64]       - минимальное время ожидания кадра (ограничение
+///   fps)
 #[repr(C)]
 pub struct InitializingData {
     pub apply_conversion: bool,
     pub token: *const c_char,
+    pub min_wait_ns: u64,
 }
 
 /// Тип ф-ии обратного вызова

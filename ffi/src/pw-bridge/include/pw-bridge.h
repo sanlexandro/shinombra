@@ -20,15 +20,23 @@ typedef struct {
 
 // Флаги инициализации
 typedef struct {
-    bool apply_conversion; // Разрешение применения конвертации форматов
-    char *token;      // Сам токен
+    bool apply_conversion;  // Разрешение применения конвертации форматов
+    char *token;            // Сам токен
+    uint64_t min_wait_ns; // Минимальное время ожидания для ограничения fps
 } initializing_data_t;
 
 // Данные портала и состояния захвата
 typedef struct capture_context capture_context_t;
 
 // Состояния потока
-typedef enum { Init, Connecting, Ready, Error, Paused, Stopped } capture_event_t;
+typedef enum {
+    Init,
+    Connecting,
+    Ready,
+    Error,
+    Paused,
+    Stopped
+} capture_event_t;
 
 // Тип обратного вызова
 typedef void (*event_callback_t)(void *user_data, int event, const char *msg);

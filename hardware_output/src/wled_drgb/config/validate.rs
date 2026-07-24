@@ -12,8 +12,6 @@ impl ConfigValidate for WledDrgbConfig {
     /// **Проверки:**
     /// - ip правильно десериализуется
     /// - `timeout == 0` - предупреждение о возможной некорректной работе
-    /// - `max_fps <= 10` - предупреждение о некорректной работе ленты
-    /// - `max_fps > 120` - предупреждение о возможной некорректной работе
     fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
         if let Err(err) =
             format!("{}:{}", self.ip, self.port.unwrap_or(DEFAULT_PORT)).to_socket_addrs()
@@ -32,22 +30,6 @@ impl ConfigValidate for WledDrgbConfig {
                 section: "wled_drgb_config",
                 field: "timeout",
                 message: "With zero timeout led can work with errors.".to_string(),
-            });
-        }
-
-        if self.max_fps.unwrap_or(60) <= 10 {
-            result.push(ValidationWarning::InvalidValue {
-                section: "wled_drgb_config",
-                field: "max_fps",
-                message: "With small FPS led can work kind of strange.".to_string(),
-            });
-        }
-
-        if self.max_fps.unwrap_or(60) > 120 {
-            result.push(ValidationWarning::InvalidValue {
-                section: "wled_drgb_config",
-                field: "max_fps",
-                message: "With such hight FPS led can work with errors.".to_string(),
             });
         }
 

@@ -63,11 +63,34 @@ struct capture_context {
     void (*event_callback)(
         void *, int, const char *); // указатель на функцию обратного возврата
     capture_event_t current_state;  // текущее состояние потока
+
+    uint64_t min_wait_ns; // минимальное время ожидания кадра (контроль fps)
+    struct timespec last_frame; // время захвата последнего кадра
 };
 
 /**
+ * @brief Прошедшее время
+ *
+ * @param start начало
+ * @param end конец
+ *
+ * @return время в нс
+ */
+uint64_t get_elapsed_nanoseconds(struct timespec start, struct timespec end) {
+    uint64_t seconds = end.tv_sec - start.tv_sec;
+
+    if (end.tv_nsec >= start.tv_nsec) {
+        return (seconds * 1000000000ULL) + (end.tv_nsec - start.tv_nsec);
+    } else {
+        // Если наносекунды у end меньше, "занимаем" 1 секунду
+        return ((seconds - 1) * 1000000000ULL) +
+               (1000000000ULL + end.tv_nsec - start.tv_nsec);
+    }
+}
+
+/**
  * @brief Разблокировка ожидания и установка состояния
- * 
+ *
  * @param user_ctx указатель на контекст
  * @param state состояние
  */
@@ -145,10 +168,11 @@ static void on_state_changed(void *user_ctx, enum pw_stream_state old,
  * @param userdata указатель на структуру stream_data с данными приложения
  */
 static void on_process(void *user_ctx) {
-    capture_context_t *ctx = user_ctx; // получили контекст
-    struct pw_buffer *pipewire_buffer; // буфер из PipeWire
-
     LOG_FFI("on_process called\n");
+
+    capture_context_t *ctx = user_ctx; // получили контекст
+
+    struct pw_buffer *pipewire_buffer; // буфер из PipeWire
 
     // Получаем буфер из видеопотока
     if ((pipewire_buffer = pw_stream_dequeue_buffer(ctx->video_stream)) ==
@@ -176,6 +200,20 @@ static void on_process(void *user_ctx) {
         LOG_FFI("buffer is ok\n");
         // Лочим и проверяем, свободен ли consumer
         pthread_mutex_lock(&ctx->frame_data.lock);
+
+        // Проверяем, не слишком ли рано пришёл вызов
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        if (get_elapsed_nanoseconds(ctx->last_frame, now) < ctx->min_wait_ns) {
+            // Если меньше, просто пропускаем вызов без захвата буфера
+            LOG_FFI("on_process frame skiped");
+            LOG_FFI("frying buffer\n");
+            pthread_mutex_unlock(&ctx->frame_data.lock);
+            pw_stream_queue_buffer(ctx->video_stream, pipewire_buffer);
+            return;
+        }
+        // Обновляем время последнего успешного вызова
+        ctx->last_frame = now;
 
         // Если процесс занят, просто отпускаем буфер
         if (ctx->frame_data.on_process != Waiting) {
@@ -474,6 +512,10 @@ capture_context_t *screen_capture_init(capture_config_t *config,
     ctx->event_callback = callback;
     // Сохраняем данные
     ctx->user_data = user_data;
+    // Сохраняем время ожидания
+    ctx->min_wait_ns = init_data.min_wait_ns;
+    // Инициализируем последнее время захвата
+    clock_gettime(CLOCK_MONOTONIC, &ctx->last_frame);
 
     // --- ИНИЦИАЛИЗИРУЕМ PIPEWIRE --- //
     const char *token = init_data.token ? strdup(init_data.token) : NULL;

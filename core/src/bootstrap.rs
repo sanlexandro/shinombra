@@ -617,6 +617,7 @@ impl ConfigLoader {
             InitializingData {
                 apply_conversion,
                 token: token_ptr,
+                min_wait_ns: CaptureThread::calculate_min_wait_time_ns(self.settings.max_fps),
             },
         ) {
             Ok(thread) => thread,

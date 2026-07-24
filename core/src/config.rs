@@ -15,11 +15,13 @@ use logger::LogLevel;
 /// - `analytics_type`: [ColorAnalystType]         - тип анализатора цвета
 /// - `filter_chain`: [Vec]<[ColorFilterType]>     - цепь фильтров
 /// - `hardware_output_type`: [HardwareOutputType] - тип вывода
+/// - `max_fps`: [Option]<[u16]>                   - FPS (опционально)
 pub struct Settings {
     pub chunk_processor_type: ChunkProcessorType,
     pub analytics_type: ColorAnalystType,
     pub filter_chain: Vec<ColorFilterType>,
     pub hardware_output_type: HardwareOutputType,
+    pub max_fps: Option<u16>,
 }
 
 /// Пути до файлов для манифеста

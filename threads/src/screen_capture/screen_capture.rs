@@ -26,6 +26,20 @@ pub struct CaptureThread {
 }
 
 impl CaptureThread {
+    /// Расчёт минимального времени ожидания
+    ///
+    /// **Аргументы:**
+    /// - `fps`: [Option]<[u16]>
+    ///
+    /// **Выходные поля:**
+    /// [u32] - время в нс
+    pub fn calculate_min_wait_time_ns(fps: Option<u16>) -> u64 {
+        match fps {
+            Some(s) => 1_000_000_000_u64 / (s as u64),
+            None => 0,
+        }
+    }
+
     /// Запуск потока
     ///
     /// **Аргументы:**
