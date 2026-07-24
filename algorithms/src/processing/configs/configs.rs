@@ -27,10 +27,6 @@ pub struct ScreenConfig {
 /// **Поля:**
 /// - `gap`: [Millimeters]               - расстояние от центра ленты (т.е.
 ///   приблизительно от центра самого диода) до края экрана
-/// - `vertical_offset`: [Millimeters]   - расстояние от края вертикальной ленты
-///   до края экрана
-/// - `horizontal_offset`: [Millimeters] - расстояние от края горизонтальной
-///   ленты до края экрана
 /// - `led_length`: [Millimeters]        - длина одного блока светодиодов
 /// - `vertical_led_amount`: [u8]        - количество блоков светодиодов на
 ///   вертикальной ленте
@@ -82,4 +78,18 @@ pub struct GeometryConfig {
     pub led_pos: LedPositionConfig,
     pub frame_connection: FrameConnectionConfig,
     pub reading: ScreenReadingConfig,
+}
+
+/// Все настройки, связанные с зонированием и расчётом положения ленты
+///
+/// Склеены в одну структуру для удобства валидации данных и более сложных
+/// сценариев проверки
+///
+/// **Поля:**
+/// - `geometry_config`: [GeometryConfig] - информация о физическом положении
+///   ленты
+/// - `screen_config`: [ScreenConfig]     - информация о дисплее
+pub struct GeometryPlusScreenConfig {
+    pub geometry_config: GeometryConfig,
+    pub screen_config: ScreenConfig,
 }

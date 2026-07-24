@@ -321,6 +321,15 @@ impl ConfigLoader {
             reading: screen_reading_config,
         };
 
+        // Дополнительная совместная проверка
+        validate_config(
+            &GeometryPlusScreenConfig {
+                geometry_config: geometry_config,
+                screen_config: screen_config,
+            },
+            MODULE,
+        );
+
         // Снова проверяем была ли выбрана проста конфигурация. Если да, то
         // пробуем считать секцию настроек процесса из конфига
         if let Some(daemon_settings_shadow) = shadow_root.daemon_settings.as_ref() {

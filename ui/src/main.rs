@@ -83,6 +83,7 @@ generate_ui!(
             direction: Registry {"./algorithms/src/processing/registry.rs" => ClockDirection},
         },
         GeometryConfig => {},
+        GeometryPlusScreenConfig => {},
     },
     "./algorithms/src/processing/processors/configs/configs.rs" => {
         ChunkConfig => {},
