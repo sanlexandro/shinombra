@@ -42,8 +42,6 @@ pub struct ScreenConfig {
 #[derive(Default, Debug, Clone, Copy)]
 pub struct LedPositionConfig {
     pub gap: Millimeters,
-    pub vertical_offset: Millimeters,
-    pub horizontal_offset: Millimeters,
     pub led_length: Millimeters,
 
     pub vertical_led_amount: usize,

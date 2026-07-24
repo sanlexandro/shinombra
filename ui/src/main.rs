@@ -70,8 +70,6 @@ generate_ui!(
         },
         LedPositionConfig => {
             gap: Wrapper(Millimeters, NumericField {0}),
-            vertical_offset: Wrapper(Millimeters, NumericField {0}),
-            horizontal_offset: Wrapper(Millimeters, NumericField {0}),
             led_length: Wrapper(Millimeters, NumericField {0}),
             vertical_led_amount: NumericField{1},
             horizontal_led_amount: NumericField{1}

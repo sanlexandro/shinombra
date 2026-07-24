@@ -141,10 +141,22 @@ where
                 //======================================//
                 // ============= В Е Р Х ============== //
                 //======================================//
-                // Расчёт положения верхней ленты, начиная с верхнего левого угла
+                // Расчёт положения верхней ленты, начиная с верхнего левого
+                // угла
+
+                // Вычисляем горизонтальную длину ленты
+                // `число блоков` * `длина блока`
+                let horizontal_length_mm =
+                    Millimeters(geometry.led_pos.horizontal_led_amount as u32)
+                        * geometry.led_pos.led_length.0;
+                // Вычисляем отступ ленты от края экрана слева в пикселях
+                // Считаем, что лента ровно посередине
+                // (`ширина экрана` - `горизонтальная длина ленты`) / 2
+                let horizontal_offset_mm =
+                    (screen_config.frame_width_mm - horizontal_length_mm) / 2;
 
                 // x = просто `отступ от ленты до края экрана слева`
-                let start_up_x_px = geometry.led_pos.horizontal_offset.as_pixels(k_x);
+                let start_up_x_px = horizontal_offset_mm.as_pixels(k_x);
                 // y = `отступ от грани экрана` - `глубина чтения к краям`
                 let start_up_y_px = Pixels::new(
                     ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_y).round()
@@ -175,6 +187,15 @@ where
                 // Расчёт положения правой ленты (если смотреть на экран монитора),
                 // начиная с левого верхнего угла
 
+                // Рассчитываем вертикальную длину ленты
+                // `количество блоков` * `длина блока`
+                let vertical_length_mm = Millimeters(geometry.led_pos.vertical_led_amount as u32)
+                    * geometry.led_pos.led_length;
+                // Рассчитываем вертикальный отступ
+                // Считаем, что лента наклеена посередине
+                // (`высота экрана` - `длина ленты`) / 2
+                let vertical_offset_mm = (screen_config.frame_height_mm - vertical_length_mm) / 2;
+
                 // x = `длина экрана` - `отступ от грани экрана` - `глубина чтения к центру`
                 let start_right_x_px = Pixels::new(
                     ((screen_config.frame_width_mm.0
@@ -185,7 +206,7 @@ where
                 );
 
                 // y = просто `отступ от края экрана`
-                let start_right_y_px = geometry.led_pos.vertical_offset.as_pixels(k_y);
+                let start_right_y_px = vertical_offset_mm.as_pixels(k_y);
 
                 for idx in 0..geometry.led_pos.vertical_led_amount {
                     // Изменяем `y`, добавляя к `стартовому значению` произведение
@@ -213,11 +234,22 @@ where
                 // **самого правого блока**
                 // Здесь инвертируем порядок чтения. Читаем справа налево
 
+                // Вычисляем горизонтальную длину ленты
+                // `число блоков` * `длина блока`
+                let horizontal_length_mm =
+                    Millimeters(geometry.led_pos.horizontal_led_amount as u32)
+                        * geometry.led_pos.led_length.0;
+                // Вычисляем отступ ленты от края экрана слева в пикселях
+                // Считаем, что лента ровно посередине
+                // (`ширина экрана` - `горизонтальная длина ленты`) / 2
+                let horizontal_offset_mm =
+                    (screen_config.frame_width_mm - horizontal_length_mm) / 2;
+
                 // x = `ширина экрана` - `отступ от края экрана` - `ширина блока
                 // светодиодов`
                 let start_down_x_px = Pixels::new(
                     ((screen_config.frame_width_mm.0
-                        - geometry.led_pos.horizontal_offset.0
+                        - horizontal_offset_mm.0
                         - geometry.led_pos.led_length.0) as f64
                         * k_x)
                         .round() as usize,
@@ -259,6 +291,15 @@ where
                 // начиная с левого верхнего угла **самого нижнего блока**
                 // Здесь инвертируем порядок чтения. Читаем снизу вверх
 
+                // Рассчитываем вертикальную длину ленты
+                // `количество блоков` * `длина блока`
+                let vertical_length_mm = Millimeters(geometry.led_pos.vertical_led_amount as u32)
+                    * geometry.led_pos.led_length;
+                // Рассчитываем вертикальный отступ
+                // Считаем, что лента наклеена посередине
+                // (`высота экрана` - `длина ленты`) / 2
+                let vertical_offset_mm = (screen_config.frame_height_mm - vertical_length_mm) / 2;
+
                 // x = `отступ от грани экрана` - `глубина чтения к краям`
                 let start_left_x_px = Pixels::new(
                     ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_x).round()
@@ -269,7 +310,7 @@ where
                 // светодиодов`
                 let start_left_y_px = Pixels::new(
                     ((screen_config.frame_height_mm.0
-                        - geometry.led_pos.vertical_offset.0
+                        - vertical_offset_mm.0
                         - geometry.led_pos.led_length.0) as f64
                         * k_y)
                         .round() as usize,
