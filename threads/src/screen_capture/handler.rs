@@ -20,7 +20,8 @@ impl EventHandler<CaptureEventWrapper> for CaptureHandler {
         match wrapper.event {
             CaptureEvent::Initializing => {}
             CaptureEvent::Ready => {
-                info!("Streaming started ({})", wrapper.message);
+                info!("Streaming started");
+                debug!("Message: {}", wrapper.message);
                 controller.start();
             }
             CaptureEvent::Error => {
@@ -28,14 +29,17 @@ impl EventHandler<CaptureEventWrapper> for CaptureHandler {
                 controller.shutdown();
             }
             CaptureEvent::Stopped => {
-                info!("Streaming stopped: {}", wrapper.message);
+                info!("Streaming stopped");
+                debug!("Message: {}", wrapper.message);
                 controller.shutdown();
             }
             CaptureEvent::Paused => {
-                info!("Streaming paused: {}", wrapper.message);
+                info!("Streaming paused");
+                debug!("Message: {}", wrapper.message);
             }
             CaptureEvent::Connecting => {
-                info!("Streaming connecting: {}", wrapper.message);
+                info!("Streaming connecting");
+                debug!("Message: {}", wrapper.message);
             }
         }
     }

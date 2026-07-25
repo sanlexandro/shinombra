@@ -54,6 +54,7 @@ impl CaptureThread {
         core_controller: Arc<CoreController>,
         init_data: InitializingData,
     ) -> Result<Self, String> {
+        info!("Thread started!");
         if init_data.apply_conversion {
             warn!("PipeWire conversion applied")
         }
@@ -141,6 +142,7 @@ impl CaptureThread {
             self.ctx_ptr = std::ptr::null_mut(); // Обнуляем после завершения
             info!("Capture thread stopped");
         }
+        info!("Thread shut down");
     }
 
     /// Получение токена для сохранения

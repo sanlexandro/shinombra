@@ -130,6 +130,7 @@ impl ConfigLoader {
     /// Далее она преобразует их в готовые для работы данные, которые необходимы
     /// для запуска дальнейшей инициализации
     pub fn load(cli_flags: CLIFlags) -> Self {
+        debug!(" -- Loading config -- ");
         // итоговые настройки демона
         let mut daemon_settings = Option::<DaemonSettings>::None;
 
@@ -138,6 +139,10 @@ impl ConfigLoader {
         // Получаем финальную таблицу
         let final_table = match cli_flags.config_path.as_ref() {
             Some(config_path) => {
+                debug!(
+                    "Reading simple config from {}",
+                    config_path.to_string_lossy()
+                );
                 let config_text = match std::fs::read_to_string(config_path) {
                     Ok(text) => text,
                     Err(e) => {
@@ -152,7 +157,7 @@ impl ConfigLoader {
                 let final_table = match toml::from_str(&config_text) {
                     Ok(table) => table,
                     Err(e) => {
-                        println!(
+                        error!(
                             "Critical failure during mapping result toml to shadow struct: {}",
                             e
                         );
@@ -163,6 +168,10 @@ impl ConfigLoader {
             }
             None => {
                 // Считываем данные из манифеста
+                debug!(
+                    "Reading manifest from {}",
+                    cli_flags.manifest_path.to_string_lossy()
+                );
                 let manifest_str = match std::fs::read_to_string(&cli_flags.manifest_path) {
                     Ok(cfg) => cfg,
                     Err(e) => {
@@ -194,6 +203,8 @@ impl ConfigLoader {
                     .unwrap_or_else(|_| std::path::PathBuf::from(&cli_flags.manifest_path));
                 let manifest_dir = manifest_path.parent().unwrap_or(std::path::Path::new("."));
 
+                debug!("manifest_dir = {}", manifest_dir.to_string_lossy());
+
                 // Пробуем вытащить пути до конфигурации
                 let manifest_paths = match manifest.paths {
                     None => {
@@ -207,6 +218,10 @@ impl ConfigLoader {
                 let base_config_path = resolve_path(manifest_dir, &manifest_paths.config);
 
                 // Считываем и парсим базовый конфиг как динамическую таблицу
+                debug!(
+                    "Reading base config from {}",
+                    base_config_path.to_string_lossy()
+                );
                 let main_toml_str = match std::fs::read_to_string(&base_config_path) {
                     Ok(text) => text,
                     Err(e) => {
@@ -232,6 +247,10 @@ impl ConfigLoader {
                     // Если путь относительный - клеим его к папке манифеста
                     let resolved_overlay_path = resolve_path(manifest_dir, &overlay_path);
 
+                    debug!(
+                        "Reading overlay from {}",
+                        resolved_overlay_path.to_string_lossy()
+                    );
                     let overlay_str = match std::fs::read_to_string(&resolved_overlay_path) {
                         Ok(text) => text,
                         Err(err) => {
@@ -330,13 +349,12 @@ impl ConfigLoader {
             MODULE,
         );
 
-        // Снова проверяем была ли выбрана проста конфигурация. Если да, то
-        // пробуем считать секцию настроек процесса из конфига
+        // Пробуем считать секцию настроек процесса из конфига
         if let Some(daemon_settings_shadow) = shadow_root.daemon_settings.as_ref() {
             daemon_settings = Some(daemon_settings_shadow.into());
         }
 
-        debug!("Config loaded successful");
+        debug!(" -- Config loaded successful -- ");
 
         Self {
             settings,
@@ -383,7 +401,8 @@ impl ConfigLoader {
     ///
     /// После подготовки запускается следующая ступень
     fn stage_1_select_color_analyst(self, controller: Arc<CoreController>) {
-        debug!("Running stage 1");
+        debug!(" -- Running stage 1 -- ");
+        info!("Loading {:?} as analytics", self.settings.analytics_type);
         match self.settings.analytics_type {
             ColorAnalystType::Histogram => {
                 let Some(shadow) = self.shadow_root.histogram_config.as_ref() else {
@@ -436,7 +455,7 @@ impl ConfigLoader {
         Vec<Analyst::OutputFormat>: From<ColorBuffer>,
         ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
-        debug!("Running stage 2");
+        debug!(" -- Running stage 2 -- ");
 
         // Если массив пуст
         if self.settings.filter_chain.len() == 0 {
@@ -451,6 +470,7 @@ impl ConfigLoader {
         let mut filter_chain = FilterChain::new();
 
         for filter_type in self.settings.filter_chain.iter() {
+            info!("Loading {:?} in filters", filter_type);
             let instance = match filter_type {
                 ColorFilterType::NoFilter => {
                     warn!("NoFilter missed in the chain.");
@@ -576,11 +596,16 @@ impl ConfigLoader {
         Vec<Analyst::OutputFormat>: From<ColorBuffer>,
         ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
-        debug!("Running stage 3");
+        debug!(" -- Running stage 3 -- ");
+        info!("Connecting to pipewire");
 
         let mut capture_config = CaptureConfig::new();
 
         // Берем указатель
+        debug!(
+            "Reading session token from {}",
+            Self::get_session_path().to_string_lossy()
+        );
         let token = if let Ok(encrypted_bytes) = std::fs::read(Self::get_session_path()) {
             let decrypted_bytes = xor_crypt(&encrypted_bytes);
 
@@ -684,7 +709,7 @@ impl ConfigLoader {
         Vec<Analyst::OutputFormat>: From<ColorBuffer>,
         ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
-        debug!("Running stage 4");
+        debug!(" -- Running stage 4 -- ");
 
         let format = match SpaVideoFormat::try_from(capture_config.format()) {
             Ok(f) => f,
@@ -694,6 +719,8 @@ impl ConfigLoader {
                 exit(4);
             }
         };
+
+        info!("Loading {:?} ad bytes formatter", format);
 
         match format {
             SpaVideoFormat::RGBx => {
@@ -799,7 +826,7 @@ impl ConfigLoader {
         Vec<Analyst::OutputFormat>: From<ColorBuffer>,
         ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
-        debug!("Running stage 5");
+        debug!(" -- Running stage 5 -- ");
 
         // Подтягиваем конфигурацию экрана из потока захвата
         self.screen_config
@@ -835,6 +862,11 @@ impl ConfigLoader {
                 );
             }
         }
+
+        info!(
+            "Loading {:?} as chunk processor",
+            self.settings.chunk_processor_type
+        );
 
         // Выбираем тип обработчика фрагмента из конфига
         match self.settings.chunk_processor_type {
@@ -927,7 +959,7 @@ impl ConfigLoader {
         Vec<Analyst::OutputFormat>: From<ColorBuffer>,
         ColorBuffer: AsMut<[Analyst::OutputFormat]>,
     {
-        debug!("Running stage 6");
+        debug!(" -- Running stage 6 -- ");
 
         let led_amount = self.geometry_config.calculate_leds_amount();
         let hardware_output_type = self.settings.hardware_output_type;
@@ -944,6 +976,8 @@ impl ConfigLoader {
             self.geometry_config, // Перенос владения
             self.screen_config,   // Перенос владения
         );
+
+        info!("Loading {:?} driver for your device", hardware_output_type,);
 
         match hardware_output_type {
             HardwareOutputType::Debug => {

@@ -24,13 +24,15 @@ pub mod config;
 
 use crate::{bootstrap::ConfigLoader, cli_flags::CLIFlagsManager};
 
-fn main() {
+fn main() {    
     // Считываем cli флаги
     let cli_flags = CLIFlagsManager::parse();
 
     // Переустанавливаем уровень логирования, если из cli пришёл новый
     let initial_log_level = cli_flags.max_log_level.unwrap_or(LogLevel::Warn);
     set_max_log_level(initial_log_level);
+
+    info!("Shinombra started");
 
     // Инициализируем конфиг
     let config_loader = ConfigLoader::load(cli_flags);
@@ -50,7 +52,7 @@ fn main() {
     // Обработчик прерывания
     let controller_for_ctrlc = controller.clone();
     ctrlc::set_handler(move || {
-        info!("Got signal");
+        debug!("Got signal");
         controller_for_ctrlc.shutdown();
     })
     .expect("Error setting Ctrl+C handler");
@@ -58,7 +60,7 @@ fn main() {
     // Запускаем инициализацию и `run_ambient_loop` в дальнейшем
     config_loader.run_stages(controller.clone());
 
-    info!("Shutting down...");
+    info!("Shutting down... Goodbye!");
 }
 
 /// Запуск цикла обработки
@@ -87,7 +89,7 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
     let mut hardware_output_ctx =
         HardwareOutputThread::new(hardware_output, led_amount, capture_thread.get_controller());
 
-    info!("The system is running!");
+    info!("Ambient loop is running!");
 
     let controller = capture_thread.get_controller();
 
@@ -103,6 +105,8 @@ pub fn run_ambient_loop<Formatter, Processor, Analyst, Filter, Output>(
             hardware_output_ctx.update_colors(colors);
         });
     }
+
+    info!("Ambient loop is stopped");
 
     hardware_output_ctx.stop();
 

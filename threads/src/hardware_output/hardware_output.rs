@@ -10,6 +10,7 @@ use algorithms::color::{
 };
 use common::core::{controller::CoreController, event_handlers::EventHandler};
 use hardware_output::HardwareOutput;
+use logger::*;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Condvar, Mutex,
@@ -17,6 +18,8 @@ use std::sync::{
 use std::thread;
 
 use crate::hardware_output::handler::{shutdown_error, HardwareHandler};
+
+const MODULE: &str = "HardwareOutput";
 
 /// Поток отправки данных на устройство
 ///
@@ -149,6 +152,7 @@ impl<Output: HardwareOutput + Send + 'static> HardwareOutputWorker<Output> {
     ///
     /// Когда `keep_running = false` на устройство отправляется сигнал завершения
     fn run(mut self) {
+        info!("Thread started!");
         while self.keep_running.load(Ordering::Relaxed) {
             {
                 let (lock, cvar) = &*self.mailbox;
@@ -180,5 +184,7 @@ impl<Output: HardwareOutput + Send + 'static> HardwareOutputWorker<Output> {
             // Ругаемся на ошибку, но всё равно просто завершаемся
             shutdown_error(error);
         }
+
+        info!("Thread shut down");
     }
 }
