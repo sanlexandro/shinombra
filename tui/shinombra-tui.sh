@@ -16,9 +16,9 @@ C_WARN=214
 C_ERR=196
 C_DIM=245
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Утилиты вывода
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 info()  { gum style --foreground "$C_ACCENT" "$@"; }
 ok()    { gum style --foreground "$C_OK" --bold "✔ $*"; }
@@ -31,9 +31,9 @@ die() {
   exit 1
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Проверка зависимостей
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 check_dependencies() {
   local missing=()
@@ -42,7 +42,7 @@ check_dependencies() {
     missing+=("gum (https://github.com/charmbracelet/gum)")
   fi
   if ! command -v yq >/dev/null 2>&1; then
-    missing+=("yq — the Go version by mikefarah (https://github.com/mikefarah/yq), not the Python jq-wrapper")
+    missing+=("yq - the Go version by mikefarah (https://github.com/mikefarah/yq), not the Python jq-wrapper")
   fi
 
   if [ ${#missing[@]} -gt 0 ]; then
@@ -54,9 +54,9 @@ check_dependencies() {
   fi
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Манифест: первый запуск / чтение
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 # Создаёт манифест с полным набором секций-заглушек, чтобы
 # последующие yq-запросы (.paths.*, .daemon_settings.*, .settings.*)
@@ -91,7 +91,7 @@ ensure_manifest_exists() {
   fi
 }
 
-# Проверяет, что манифест — валидный TOML, читаемый yq.
+# Проверяет, что манифест - валидный TOML, читаемый yq.
 # Без этого любая последующая yq-команда просто тихо упадёт с невнятной ошибкой.
 validate_manifest() {
   if ! yq -o toml '.' "$MANIFEST" >/dev/null 2>/tmp/shinombra_yq_err; then
@@ -121,9 +121,9 @@ read_current_overlays() {
   done < <(yq -r '(.paths.overlays // [])[]' "$MANIFEST" 2>/dev/null || true)
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Форматирование списков для вывода
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 # Печатает элементы массива через ", " или "<none>", если массив пуст.
 join_or_none() {
@@ -143,9 +143,9 @@ join_or_none() {
   echo "$out"
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Отображение состояния
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 show_header() {
   clear
@@ -168,9 +168,9 @@ show_state_block() {
     "Overlays  : $overlays_str"
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Файловые списки
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 list_files() {
   local dir="$1"
@@ -179,7 +179,7 @@ list_files() {
 
 # Приводит путь из манифеста (относительный к CONFIG_DIR, "~/...", или уже
 # абсолютный) к единому абсолютному пути. Используется везде, где нужно
-# сравнить "указывает ли путь X на тот же файл, что и файл Y" — так что
+# сравнить "указывает ли путь X на тот же файл, что и файл Y" - так что
 # неважно, в каком виде путь записан в манифесте.
 # realpath -m нормализует ".." и повторяющиеся "/", не требуя, чтобы файл
 # реально существовал (-m = "missing okay").
@@ -201,7 +201,7 @@ resolve_path() {
 
 # Проверяет, что каждый путь вида "configs/x.toml" / "overlays/y.toml"
 # реально существует относительно CONFIG_DIR. Печатает предупреждение и
-# возвращает не-ноль, если что-то отсутствует, но не прерывает скрипт —
+# возвращает не-ноль, если что-то отсутствует, но не прерывает скрипт -
 # решение остаётся за вызывающим кодом.
 validate_paths_exist() {
   local -n paths_ref=$1
@@ -225,9 +225,9 @@ validate_paths_exist() {
   return 0
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Выбор конфига
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 # Устанавливает глобальную FINAL_CONFIG.
 select_config() {
@@ -235,13 +235,13 @@ select_config() {
   local -n files_ref=$2
 
   if [ ${#files_ref[@]} -eq 0 ]; then
-    warn "No config files found in $CONFIG_DIR/configs — keeping current config."
+    warn "No config files found in $CONFIG_DIR/configs - keeping current config."
     FINAL_CONFIG="$current_config"
     return
   fi
 
   # Находим, какой пункт списка (basename) соответствует текущему конфигу,
-  # сравнивая по абсолютному пути — так что неважно, записан ли текущий
+  # сравнивая по абсолютному пути - так что неважно, записан ли текущий
   # путь в манифесте как "configs/x.toml", "~/.../x.toml" или "/abs/.../x.toml".
   local current_resolved
   current_resolved=$(resolve_path "$current_config")
@@ -261,16 +261,16 @@ select_config() {
     "${files_ref[@]}")
 
   if [[ -z "$selected" ]]; then
-    # Esc / пустой выбор — не теряем текущее значение
+    # Esc / пустой выбор - не теряем текущее значение
     FINAL_CONFIG="$current_config"
   else
     FINAL_CONFIG="configs/$selected"
   fi
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Выбор оверлеев
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 # Устанавливает глобальный массив FINAL_OVERLAYS.
 select_overlays() {
@@ -323,9 +323,9 @@ select_overlays() {
   done
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 # Сохранение
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 save_manifest() {
   local config="$1"
@@ -333,7 +333,7 @@ save_manifest() {
 
   local backup="${MANIFEST}.bak"
   if ! cp -- "$MANIFEST" "$backup"; then
-    err "Could not create backup before saving — aborting to be safe."
+    err "Could not create backup before saving - aborting to be safe."
     return 1
   fi
 
@@ -344,7 +344,7 @@ save_manifest() {
     cat /tmp/shinombra_yq_err >&2
     rm -f /tmp/shinombra_yq_err
     cp -- "$backup" "$MANIFEST"
-    err "Restored the manifest from backup — no changes were kept."
+    err "Restored the manifest from backup - no changes were kept."
     return 1
   fi
   unset FINAL_CONFIG
@@ -354,7 +354,7 @@ save_manifest() {
     cat /tmp/shinombra_yq_err >&2
     rm -f /tmp/shinombra_yq_err
     cp -- "$backup" "$MANIFEST"
-    err "Restored the manifest from backup — no changes were kept."
+    err "Restored the manifest from backup - no changes were kept."
     return 1
   fi
 
@@ -368,7 +368,7 @@ save_manifest() {
       cat /tmp/shinombra_yq_err >&2
       rm -f /tmp/shinombra_yq_err
       cp -- "$backup" "$MANIFEST"
-      err "Restored the manifest from backup — no changes were kept."
+      err "Restored the manifest from backup - no changes were kept."
       return 1
     fi
     unset OVERLAY
@@ -391,9 +391,52 @@ maybe_restart_service() {
   fi
 }
 
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
+# Проверка и очистка service.env перед перезапуском
+# -------------------------------------------------------------
+
+ENV_FILE="$CONFIG_DIR/service.env"
+
+# -------------------------------------------------------------
+# Проверка и очистка service.env перед перезапуском
+# -------------------------------------------------------------
+
+ENV_FILE="$CONFIG_DIR/service.env"
+
+check_and_clean_env_config_flag() {
+  # Если env-файла нет - ничего не делаем
+  [[ -f "$ENV_FILE" ]] || return 0
+
+  # Ищем --config с последующим пробелом
+  if grep -qE -- '--config[[:space:]]' "$ENV_FILE"; then
+    echo
+    warn "A '--config' flag was detected in $ENV_FILE!"
+    gum style --foreground "$C_DIM" \
+      "Your manifest already defines config/overlays." \
+      "Having '--config' in service.env sets 'simple mode' and overrides manifest logic."
+    echo
+
+    if gum confirm "Remove '--config' flag from service.env now?"; then
+      cp -- "$ENV_FILE" "${ENV_FILE}.bak"
+
+      # Удаляем --config и следующий за ним путь
+      # Работает для: --config /path/to/file
+      sed -i -E 's/--config[[:space:]]+[^[:space:]"]+//g' "$ENV_FILE"
+      
+      # Убираем двойные пробелы, если они образовались в строке
+      sed -i -E 's/[[:space:]]{2,}/ /g' "$ENV_FILE"
+
+      rm -f -- "${ENV_FILE}.bak"
+      ok "Removed '--config' flag from $ENV_FILE"
+    else
+      warn "Kept '--config' in service.env. Note that it will override manifest paths!"
+    fi
+  fi
+}
+
+# -------------------------------------------------------------
 # Main
-# ─────────────────────────────────────────────────────────────
+# -------------------------------------------------------------
 
 main() {
   check_dependencies
@@ -414,7 +457,7 @@ main() {
   mapfile -t config_files  < <(list_files "$CONFIG_DIR/configs")
   mapfile -t overlay_files < <(list_files "$CONFIG_DIR/overlays")
 
-  # Мягкое предупреждение, если то, что уже в манифесте, не существует на диске —
+  # Мягкое предупреждение, если то, что уже в манифесте, не существует на диске -
   # не блокирует работу, просто информирует до того, как пользователь начнёт выбирать.
   local current_all=("$current_config" "${current_overlays[@]:-}")
   validate_paths_exist current_all || true
@@ -432,10 +475,13 @@ main() {
   fi
 
   if ! save_manifest "$FINAL_CONFIG" FINAL_OVERLAYS; then
-    die "Manifest was not saved. Your original file should be intact — check the error above."
+    die "Manifest was not saved. Your original file should be intact - check the error above."
   fi
 
   ok "Manifest saved successfully."
+
+  check_and_clean_env_config_flag
+  
   maybe_restart_service
 }
 

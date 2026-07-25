@@ -19,12 +19,13 @@ use algorithms::{
     },
 };
 use ambient_core::config::*;
-use common::{names::*, paths::expand_tilde, units::*};
+use common::{names::*, paths::*, units::*};
 use config_gen::{__private::*, *};
 use hardware_output::{
     ddp::config::*, registry::*, shinombra_serial::config::*, wled_drgb::config::*,
 };
 use logger::*;
+use std::process::Command;
 use ui_gen::{__private::serde_json, add_js, generate_ui, Renderable};
 
 // Подключаем все тени
@@ -74,13 +75,13 @@ generate_ui!(
             vertical_led_amount: NumericField{1},
             horizontal_led_amount: NumericField{1}
         },
-        ScreenReadingConfig => {
-            deep_in: Wrapper(Millimeters, NumericField {0}),
-            deep_out: Wrapper(Millimeters, NumericField {0})
-        },
         FrameConnectionConfig => {
             start_from: Registry {"./algorithms/src/processing/registry.rs" => FrameElement},
             direction: Registry {"./algorithms/src/processing/registry.rs" => ClockDirection},
+        },
+        ScreenReadingConfig => {
+            deep_in: Wrapper(Millimeters, NumericField {0}),
+            deep_out: Wrapper(Millimeters, NumericField {0})
         },
         GeometryConfig => {},
         GeometryPlusScreenConfig => {},
@@ -235,10 +236,42 @@ async fn show_index(State(state): State<AppState>) -> axum::response::Response {
         <body>
             <form action="/save" method="post">
                 {}
-                <button type="submit">Save Config</button>
+                <div class="actions-group">
+                    <button type="button" class="btn-secondary" onclick="setServiceEnv()">Set Simple Mode in Service</button>
+                    <button type="button" class="btn-secondary" onclick="restartService()">Restart Service</button>
+                    <button type="submit">Save Config</button>
+                </div>
             </form>
             <script>
                 {}
+
+                async function setServiceEnv() {{
+                    try {{
+                        const res = await fetch('/set-env', {{ method: 'POST' }});
+                        if (res.ok) {{
+                            alert('Successfully set --config in service.env!');
+                        }} else {{
+                            const err = await res.text();
+                            alert('Error: ' + err);
+                        }}
+                    }} catch (e) {{
+                        alert('Network error: ' + e);
+                    }}
+                }}
+
+                async function restartService() {{
+                    try {{
+                        const res = await fetch('/restart-service', {{ method: 'POST' }});
+                        if (res.ok) {{
+                            alert('Shinombra service restarted successfully!');
+                        }} else {{
+                            const err = await res.text();
+                            alert('Failed to restart service: ' + err);
+                        }}
+                    }} catch (e) {{
+                        alert('Network error: ' + e);
+                    }}
+                }}
             </script>
         </body>
         </html>"#,
@@ -248,7 +281,6 @@ async fn show_index(State(state): State<AppState>) -> axum::response::Response {
         add_js()
     );
 
-    // Отправляем сформированную страницу
     Html(html).into_response()
 }
 
@@ -312,6 +344,67 @@ async fn style_css() -> impl IntoResponse {
         [(axum::http::header::CONTENT_TYPE, "text/css")],
         css,
     )
+}
+
+/// Записывает `--config /path/to/config` в `service.env`
+async fn set_env_config(State(state): State<AppState>) -> impl IntoResponse {
+    let config_path = state.config_path.read().await.clone();
+
+    let Some(config_path) = config_path else {
+        return (axum::http::StatusCode::BAD_REQUEST, "Config path not set").into_response();
+    };
+
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let env_dir = home
+        .map(|h| h.join(".config/shinombra"))
+        .unwrap_or_else(|| PathBuf::from("./.config/shinombra"));
+
+    if let Err(e) = std::fs::create_dir_all(&env_dir) {
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to create config dir: {}", e),
+        )
+            .into_response();
+    }
+
+    let env_file_path = env_dir.join("service.env");
+    let env_content = format!("SHINOMBRA_ARGS=\"--config {}\"\n", config_path.display());
+
+    if let Err(e) = std::fs::write(&env_file_path, env_content) {
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to write service.env: {}", e),
+        )
+            .into_response();
+    }
+
+    (axum::http::StatusCode::OK, "Successfully set env config").into_response()
+}
+
+/// Перезапускает пользовательский systemd сервис shinombra
+async fn restart_service() -> impl IntoResponse {
+    let output = Command::new("systemctl")
+        .args(["--user", "restart", "shinombra"])
+        .output();
+
+    match output {
+        Ok(out) if out.status.success() => {
+            (axum::http::StatusCode::OK, "Service restarted successfully").into_response()
+        }
+        Ok(out) => {
+            let err_msg = String::from_utf8_lossy(&out.stderr);
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to restart service: {}", err_msg),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Systemctl command failed: {}", e),
+        )
+            .into_response(),
+    }
 }
 
 /// Поддержка изображений
@@ -380,8 +473,9 @@ async fn main() {
         .route("/", get(show_index))
         .route("/config-path", axum::routing::post(set_config_path))
         .route("/style.css", get(style_css))
-        // .route("/image.jpg", get(image_imge))
         .route("/save", axum::routing::post(save_config))
+        .route("/set-env", axum::routing::post(set_env_config))
+        .route("/restart-service", axum::routing::post(restart_service))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))

@@ -245,13 +245,16 @@ input[type="checkbox"]:disabled {
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%; /* Растягиваем на всю ширину колонки 1fr */
-    grid-column: 2; /* Явно указываем вторую колонку, если вдруг сетка ломается */
+    width: 100%;
+    /* Растягиваем на всю ширину колонки 1fr */
+    grid-column: 2;
+    /* Явно указываем вторую колонку, если вдруг сетка ломается */
 }
 
 /* Компактное поле ввода слева */
 .slider-num {
-    width: 60px !important; /* Принудительно ограничиваем ширину */
+    width: 60px !important;
+    /* Принудительно ограничиваем ширину */
     flex-shrink: 0;
     text-align: center;
     color: var(--accent) !important;
@@ -262,7 +265,7 @@ input[type="checkbox"]:disabled {
     width: 60px !important;
     flex-shrink: 0;
     text-align: center;
-    color: var(--text-primary) !important; 
+    color: var(--text-primary) !important;
     background: var(--bg-input);
     border: 1px solid var(--border-default);
 }
@@ -286,7 +289,7 @@ input[type="checkbox"]:disabled {
     accent-color: var(--accent);
     min-width: 0;
     /* Уменьшаем высоту для Firefox */
-    height: 3px; 
+    height: 3px;
 }
 
 /* Уменьшаем высоту дорожки для Chrome/Webkit */
@@ -505,6 +508,49 @@ button[type="submit"]:hover {
 button[type="submit"]:active {
     transform: scale(0.97);
     opacity: 1;
+}
+
+/* Контейнер для кнопок действий внизу */
+.actions-group {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+/* Общий стиль вторичных кнопок (type="button") */
+button.btn-secondary {
+    height: 42px;
+    padding: 0 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+        border-color var(--transition),
+        background var(--transition),
+        transform var(--transition);
+}
+
+button.btn-secondary:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-input-focus);
+}
+
+button.btn-secondary:active {
+    transform: scale(0.97);
+}
+
+/* Исправление выравнивания главной кнопки при нахождении в контейнере */
+.actions-group button[type="submit"] {
+    margin-top: 0;
+    align-self: auto;
 }
 
 /* Скрытые элементы (data-show-if управляется через JS) */

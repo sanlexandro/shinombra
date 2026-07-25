@@ -9,7 +9,8 @@ PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
-ExecStart=/usr/bin/shinombra
+EnvironmentFile=-%h/.config/shinombra/service.env
+ExecStart=/usr/bin/shinombra $SHINOMBRA_ARGS
 Restart=on-failure
 RestartSec=5
 
