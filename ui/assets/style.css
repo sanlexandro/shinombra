@@ -240,6 +240,44 @@ input[type="checkbox"]:disabled {
     cursor: not-allowed;
 }
 
+/* 
+   Option<T> - чекбокс "включено" + сам вложенный виджет.
+   Растягивается на всю вторую колонку (значение), как обычные поля.
+*/
+.option-field {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+/* Чекбокс-переключатель не должен сжиматься при растяжении fieldset-а */
+.option-field>.option-toggle {
+    flex-shrink: 0;
+}
+
+/* Сбрасываем дефолтные браузерные стили fieldset и растягиваем его
+   на всё оставшееся место, чтобы вложенный виджет вёл себя как обычно */
+.option-field fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+    flex: 1;
+    display: flex;
+}
+
+/* Если внутри fieldset один input/select - пусть растягивается на всю ширину */
+.option-field fieldset>input,
+.option-field fieldset>select {
+    width: 100%;
+}
+
+.option-field fieldset:disabled {
+    opacity: 0.4;
+}
+
 /* Контейнер для ползунка и числового поля */
 .slider-group {
     display: flex;

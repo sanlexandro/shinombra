@@ -54,6 +54,7 @@ generate_ui!(
             analytics_type: Registry {"./algorithms/src/analytics/registry.rs" => ColorAnalystType },
             hardware_output_type: Registry {"./hardware_output/src/registry.rs" => HardwareOutputType },
             filter_chain: WrapperVec( Registry {"./algorithms/src/filters/registry.rs" => ColorFilterType} ),
+            max_fps: Option( NumericField {60} ),
         },
         Flags => {},
         Paths => {},
@@ -162,12 +163,17 @@ generate_ui!(
         @show_if(Settings.hardware_output_type == "WledDrgb")
         WledDrgbConfig => {
             ip: TextField {"ip or DNS-name"},
+            port: Option ( NumericField {} ),
+            timeout: Option ( NumericField {} ),
         }
     },
     "./hardware_output/src/ddp/config/config.rs" => {
         @show_if(Settings.hardware_output_type == "Ddp")
         DdpConfig => {
             ip: TextField {"ip or DNS-name"},
+            port: Option ( NumericField {} ),
+            timeout: Option ( NumericField {} ),
+            mtu: Option ( NumericField {} ),
         }
     },
 );

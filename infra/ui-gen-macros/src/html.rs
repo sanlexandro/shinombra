@@ -364,8 +364,106 @@ impl GenerateInputHTML for WidgetType {
             WidgetType::WrapperVec(_) => {
                 panic!("WrapperVec cannot generate standard HTML input directly")
             }
+            WidgetType::OptionField(_) => {
+                panic!("OptionField cannot generate standard HTML input directly")
+            }
         }
     }
+}
+
+/// Генерирует HTML/логику для поля `Option<T>`.
+///
+/// Идея: рендерим чекбокс "enabled" плюс сам вложенный виджет, обёрнутый
+/// в `<fieldset disabled>` когда значение отсутствует.
+///
+/// Данные на клиенте отправляются ДВУМЯ плоскими полями формы:
+/// - `Struct[field__enabled]` (bool, из самого чекбокса)
+/// - `Struct[field]` (значение T в обычном для вложенного виджета формате)
+///
+/// На бекенде (`apply_json_patch`) это восстанавливается в `Option<T>`:
+/// `enabled == false` => `None`, `enabled == true` => `Some(<распарсенное field>)`.
+///
+/// Вызывается напрямую из `FieldSetting::gen_html`, а не через
+/// `GenerateInputHTML for WidgetType`, т.к. этому виджету нужен доступ
+/// к самому полю `Option<T>` (для матчинга `Some`/`None`), а не просто
+/// к его "распакованному" значению, как остальным виджетам.
+///
+/// Ограничение: `Option(WrapperVec(...))` не поддерживается (как и вложенный
+/// `WrapperVec` внутри `Wrapper`) - `WrapperVec` не реализует `GenerateInputHTML`
+/// напрямую и требует отдельной обработки на уровне `FieldSetting`.
+pub(crate) fn gen_option_html(
+    inner: &WidgetType,
+    struct_name: String,
+    field_name: String,
+    access_path: proc_macro2::TokenStream,
+) -> (proc_macro2::TokenStream, String) {
+    // ВАЖНО: используем "плоские" имена полей ("field__enabled" / "field"),
+    // а НЕ вложенный объект вида "field[enabled]"/"field[value]".
+    // Причина: клиентская getFormData() в script.js жёстко трактует имя вида
+    // "Struct[field][subkey]" (3 части через [ ]) как элемент МАССИВА (это
+    // нужно для WrapperVec), а не как вложенный объект - так что схема
+    // {enabled, value} там просто не соберётся правильно. Вместо этого чекбокс
+    // получает отдельное имя "Struct[field__enabled]", а сам вложенный виджет
+    // использует своё обычное имя "Struct[field]", как будто Option тут ни при
+    // чём - тогда getFormData() отработает как для обычного поля.
+    let enabled_id = format!("{}_{}_enabled", struct_name, field_name);
+    let enabled_name = format!("{}[{}__enabled]", struct_name, field_name);
+    let toggle_target = format!("{}_{}_value_fieldset", struct_name, field_name);
+
+    let (inner_logic_some, inner_static) = inner.gen_html(
+        struct_name.clone(),
+        field_name.clone(),
+        quote! { inner_val },
+        None,
+    );
+
+    // <fieldset disabled> отключает ВСЕ вложенные input/select одним махом,
+    // независимо от того, какой конкретно виджет внутри (в т.ч. вложенные
+    // Wrapper/несколько input-ов у SliderField). Не нужно вручную обходить
+    // потомков, как для WrapperVec.
+    //
+    // Обёртка ".option-field" - блочный flex-контейнер (по аналогии с
+    // .slider-group), а не голый inline <fieldset>: без него checkbox и
+    // вложенное поле схлопывались бы в узкую inline-полоску вместо того,
+    // чтобы поле растягивалось на всю ширину grid-колонки значения.
+    // grid-column: 2 фиксирует, что элемент идёт именно во вторую колонку
+    // сетки формы (в отличие от WrapperVec, который растягивается на всю
+    // карточку через grid-column: 1 / -1).
+
+    // Статический HTML (режим Create): чекбокс выключен, вложенный fieldset disabled
+    let static_string = format!(
+        r#"<div class="option-field"><input type="checkbox" id="{enabled_id}" name="{enabled_name}" class="option-toggle" onchange="this.nextElementSibling.disabled = !this.checked" /><fieldset id="{toggle_target}" disabled>{inner_static}</fieldset></div>"#,
+    );
+
+    // Динамическая логика (режим Edit): в зависимости от Some/None по-разному
+    // рендерим чекбокс (checked/не checked) и disabled-статус fieldset-а
+    let dynamic_logic = quote! {
+        html.push(String::from(r#"<div class="option-field">"#));
+        match &(#access_path) {
+            Some(inner_val) => {
+                html.push(format!(
+                    r#"<input type="checkbox" id="{}" name="{}" class="option-toggle" checked onchange="this.nextElementSibling.disabled = !this.checked" /><fieldset id="{}">"#,
+                    #enabled_id, #enabled_name, #toggle_target
+                ));
+                #inner_logic_some
+                html.push(String::from("</fieldset>"));
+            }
+            None => {
+                html.push(format!(
+                    r#"<input type="checkbox" id="{}" name="{}" class="option-toggle" onchange="this.nextElementSibling.disabled = !this.checked" /><fieldset id="{}" disabled>"#,
+                    #enabled_id, #enabled_name, #toggle_target
+                ));
+                html.push(String::from(#inner_static));
+                html.push(String::from("</fieldset>"));
+            }
+        }
+        html.push(String::from("</div>"));
+    };
+
+    (
+        proc_macro2::TokenStream::from(dynamic_logic),
+        static_string,
+    )
 }
 
 impl FieldSetting {
@@ -380,6 +478,12 @@ impl FieldSetting {
 
         // В зависимости от типа поля вставляем необходимый html
         let (field_logic, field_static) = match &self.widget_type {
+            WidgetType::OptionField(inner) => gen_option_html(
+                inner,
+                struct_name.clone(),
+                self.field_name.to_string(),
+                quote! { data.#field_ident },
+            ),
             WidgetType::WrapperVec(inner) => {
                 let (inner_field_logic, inner_field_static) = inner.gen_html(
                     struct_name.clone(),

@@ -144,6 +144,51 @@ pub fn generate_ui(input_raw: TokenStream) -> TokenStream {
                                     }
                                 });
                             }
+                            WidgetType::OptionField(inner) => {
+                                // Клиент присылает ДВА плоских ключа на верхнем уровне
+                                // struct_obj: "<field>__enabled" (bool) и "<field>" (само
+                                // значение T, в обычном для этого виджета формате).
+                                // enabled == false (или отсутствует/не bool) => None.
+                                // enabled == true => пытаемся распарсить "<field>" как T (Some).
+                                // Если распарсить не удалось, поле не трогаем (аналогично
+                                // остальным веткам, где ошибка парсинга тихо игнорируется).
+                                let enabled_key = format!("{}__enabled", field_name_str);
+
+                                let value_construction = if let WidgetType::Wrapper(
+                                    wrapper_ident,
+                                    _,
+                                ) = inner.as_ref()
+                                {
+                                    // Option(Wrapper(...)) - оборачиваем распарсенное значение
+                                    // в теневую структуру обёртки, как и обычный Wrapper
+                                    let wrapper_shadow_ident =
+                                        quote::format_ident!("{}Shadow", wrapper_ident);
+                                    quote! {
+                                        if let Ok(parsed_val) = ::ui_gen::__private::serde_json::from_value::<_>(inner_val.clone()) {
+                                            target.#field_ident = Some(#wrapper_shadow_ident(parsed_val));
+                                        }
+                                    }
+                                } else {
+                                    quote! {
+                                        if let Ok(parsed_val) = ::ui_gen::__private::serde_json::from_value(inner_val.clone()) {
+                                            target.#field_ident = Some(parsed_val);
+                                        }
+                                    }
+                                };
+
+                                field_parsers.push(quote! {
+                                    let is_enabled = struct_obj
+                                        .get(#enabled_key)
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(false);
+
+                                    if !is_enabled {
+                                        target.#field_ident = None;
+                                    } else if let Some(inner_val) = struct_obj.get(#field_name_str) {
+                                        #value_construction
+                                    }
+                                });
+                            }
                             _ => {
                                 field_parsers.push(quote! {
                                     if let Some(val) = struct_obj.get(#field_name_str) {

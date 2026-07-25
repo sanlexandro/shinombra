@@ -41,6 +41,7 @@ pub(crate) enum WidgetType {
     SliderField(SliderFieldSettings),
     Wrapper(Ident, Box<WidgetType>),
     WrapperVec(Box<WidgetType>),
+    OptionField(Box<WidgetType>),
 }
 
 /// Описание одного поля: к какой переменной оно привязано и какой виджет использует.

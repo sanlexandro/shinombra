@@ -54,7 +54,7 @@ impl Parse for NumericFieldSettings {
             if input.peek(Token![,]) {
                 let _: Token![,] = input.parse()?;
 
-                // Если после запятой есть еще токены — это max
+                // Если после запятой есть еще токены - это max
                 if !input.is_empty() {
                     max = Some(parse_f32(input)?);
                 }
@@ -172,6 +172,16 @@ impl Parse for WidgetType {
                 } else {
                     Err(input
                         .error("Can`t find wrapper vec params. Usage: WrapperVec(InnerWidget)"))
+                }
+            }
+            "Option" => {
+                if input.peek(syn::token::Paren) {
+                    let content;
+                    syn::parenthesized!(content in input);
+                    let inner_widget: WidgetType = content.parse()?;
+                    Ok(WidgetType::OptionField(Box::new(inner_widget)))
+                } else {
+                    Err(input.error("Can`t find option params. Usage: Option(InnerWidget)"))
                 }
             }
             _ => Err(input.error(format!("Unknown widget_type type: {}", name))),
