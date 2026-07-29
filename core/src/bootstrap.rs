@@ -912,14 +912,14 @@ impl ConfigLoader {
                     .geometry_config
                     .calculate_chunk_config(self.screen_config);
 
-                // match alg_config.validate() {
-                //     Ok(warnings) => warn_validate(warnings, MODULE),
-                //     Err(error) => {
-                //         error!("{}", error);
-                //         capture_thread.stop();
-                //         exit(5);
-                //     }
-                // }
+                match alg_config.validate() {
+                    Ok(warnings) => warn_validate(warnings, MODULE),
+                    Err(error) => {
+                        error!("{}", error);
+                        capture_thread.stop();
+                        exit(5);
+                    }
+                }
 
                 let processor = DynamicCheckerboardScanner::new(alg_config, self.screen_config);
 
