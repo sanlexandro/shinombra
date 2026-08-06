@@ -3,7 +3,7 @@
 use std::{format, vec};
 
 use super::*;
-use common::{configs::*, units::*};
+use common::{configs::*, units::{logic::calculate_mm_to_px_k, *}};
 
 impl ConfigValidate for ScreenConfig {
     /// Проверка [ScreenConfig]
@@ -132,6 +132,7 @@ impl ConfigValidate for GeometryPlusScreenConfig {
     /// **Проверки:**
     /// - лента не выходит за границы экрана!
     /// - зона считывания не выходит за границы экрана
+    /// - проверка расчёта всех границ
     fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
         let geometry = self.geometry_config;
         let screen = self.screen_config;
@@ -213,6 +214,147 @@ impl ConfigValidate for GeometryPlusScreenConfig {
                     shorter_side - geometry.led_pos.gap
                 ),
             });
+        }
+
+        let geometry = &self.geometry_config;
+        let screen = &self.screen_config;
+
+        // Коэффициенты
+        let k_x = calculate_mm_to_px_k(screen.frame_width_mm, screen.frame_width_px);
+        let k_y = calculate_mm_to_px_k(screen.frame_height_mm, screen.frame_height_px);
+
+        let frame_w = screen.frame_width_px.0;
+        let frame_h = screen.frame_height_px.0;
+
+        let led_len_x = geometry.led_pos.led_length.as_pixels(k_x).0;
+        let led_len_y = geometry.led_pos.led_length.as_pixels(k_y).0;
+
+        // Вспомогательная макро-/функция проверки одного прямоугольника
+        let check_rect = |side: &str, x: usize, y: usize, w: usize, h: usize| -> Result<(), ValidationError> {
+            if x >= frame_w || y >= frame_h {
+                return Err(ValidationError::StructValue {
+                    section: "[screen_config] + [led_position_config] + [screen_reading_config]",
+                    message: format!(
+                        "Side {}: start position ({}, {}) is outside the frame ({}x{}). Check your parameters.",
+                        side, x, y, frame_w, frame_h
+                    ),
+                });
+            }
+            if x + w > frame_w || y + h > frame_h {
+                return Err(ValidationError::StructValue {
+                    section: "[screen_config] + [led_position_config] + [screen_reading_config]",
+                    message: format!(
+                        "Side {}: fragment rect (x={}, y={}, w={}, h={}) goes outside the frame ({}x{}). Check your parameters.",
+                        side, x, y, w, h, frame_w, frame_h
+                    ),
+                });
+            }
+            Ok(())
+        };
+
+        // ============================================================
+        // UP
+        // ============================================================
+        {
+            let horizontal_length_mm =
+                Millimeters(geometry.led_pos.horizontal_led_amount as u32) * geometry.led_pos.led_length.0;
+            let horizontal_offset_mm = (screen.frame_width_mm - horizontal_length_mm) / 2;
+
+            let start_x = horizontal_offset_mm.as_pixels(k_x).0;
+            let start_y = ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_y)
+                .round() as usize;
+
+            // Высота фрагмента ≈ deep_in + deep_out (самый частый вариант)
+            // Если у тебя другая формула размера фрагмента — подставь её сюда
+            let frag_h = ((geometry.reading.deep_in.0 + geometry.reading.deep_out.0) as f64 * k_y)
+                .round() as usize;
+            let frag_h = frag_h.max(1); // защита от нуля
+
+            for idx in 0..geometry.led_pos.horizontal_led_amount {
+                let x = start_x + led_len_x * idx;
+                check_rect("Up", x, start_y, led_len_x, frag_h)?;
+            }
+        }
+
+        // ============================================================
+        // RIGHT
+        // ============================================================
+        {
+            let vertical_length_mm =
+                Millimeters(geometry.led_pos.vertical_led_amount as u32) * geometry.led_pos.led_length;
+            let vertical_offset_mm = (screen.frame_height_mm - vertical_length_mm) / 2;
+
+            let start_x = ((screen.frame_width_mm.0
+                - geometry.led_pos.gap.0
+                - geometry.reading.deep_in.0) as f64
+                * k_x)
+                .round() as usize;
+            let start_y = vertical_offset_mm.as_pixels(k_y).0;
+
+            let frag_w = ((geometry.reading.deep_in.0 + geometry.reading.deep_out.0) as f64 * k_x)
+                .round() as usize;
+            let frag_w = frag_w.max(1);
+
+            for idx in 0..geometry.led_pos.vertical_led_amount {
+                let y = start_y + led_len_y * idx;
+                check_rect("Right", start_x, y, frag_w, led_len_y)?;
+            }
+        }
+
+        // ============================================================
+        // DOWN
+        // ============================================================
+        {
+            let horizontal_length_mm =
+                Millimeters(geometry.led_pos.horizontal_led_amount as u32) * geometry.led_pos.led_length.0;
+            let horizontal_offset_mm = (screen.frame_width_mm - horizontal_length_mm) / 2;
+
+            let start_x = ((screen.frame_width_mm.0
+                - horizontal_offset_mm.0
+                - geometry.led_pos.led_length.0) as f64
+                * k_x)
+                .round() as usize;
+            let start_y = ((screen.frame_height_mm.0
+                - geometry.led_pos.gap.0
+                - geometry.reading.deep_in.0) as f64
+                * k_y)
+                .round() as usize;
+
+            let frag_h = ((geometry.reading.deep_in.0 + geometry.reading.deep_out.0) as f64 * k_y)
+                .round() as usize;
+            let frag_h = frag_h.max(1);
+
+            for idx in 0..geometry.led_pos.horizontal_led_amount {
+                // В коде идёт вычитание, поэтому проверяем в обратном порядке
+                let x = start_x.saturating_sub(led_len_x * idx);
+                check_rect("Down", x, start_y, led_len_x, frag_h)?;
+            }
+        }
+
+        // ============================================================
+        // LEFT
+        // ============================================================
+        {
+            let vertical_length_mm =
+                Millimeters(geometry.led_pos.vertical_led_amount as u32) * geometry.led_pos.led_length;
+            let vertical_offset_mm = (screen.frame_height_mm - vertical_length_mm) / 2;
+
+            let start_x = ((geometry.led_pos.gap.0 - geometry.reading.deep_out.0) as f64 * k_x)
+                .round() as usize;
+            let start_y = ((screen.frame_height_mm.0
+                - vertical_offset_mm.0
+                - geometry.led_pos.led_length.0) as f64
+                * k_y)
+                .round() as usize;
+
+            let frag_w = ((geometry.reading.deep_in.0 + geometry.reading.deep_out.0) as f64 * k_x)
+                .round() as usize;
+            let frag_w = frag_w.max(1);
+
+            for idx in 0..geometry.led_pos.vertical_led_amount {
+                let y = start_y.saturating_sub(led_len_y * idx);
+                check_rect("Left", start_x, y, frag_w, led_len_y)?;
+            }
         }
 
         Ok(vec![])

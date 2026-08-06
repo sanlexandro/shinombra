@@ -313,7 +313,7 @@ impl ConfigLoader {
         )
         else {
             // В случае ошибки прерываем выполнение кода
-            panic!(
+            error!(
                 "Check sections: \
                 \n    [settings]; \
                 \n    [screen_reading_config]; \
@@ -321,6 +321,7 @@ impl ConfigLoader {
                 \n    [led_position_config]; \
                 \n    [frame_connection_config];"
             );
+            exit(1);
         };
 
         // При успехе преобразуем
@@ -342,15 +343,6 @@ impl ConfigLoader {
             frame_connection: frame_connection_config,
             reading: screen_reading_config,
         };
-
-        // Дополнительная совместная проверка
-        validate_config(
-            &GeometryPlusScreenConfig {
-                geometry_config: geometry_config,
-                screen_config: screen_config,
-            },
-            MODULE,
-        );
 
         // Пробуем считать секцию настроек процесса из конфига
         if let Some(daemon_settings_shadow) = shadow_root.daemon_settings.as_ref() {
@@ -677,6 +669,15 @@ impl ConfigLoader {
                 let _ = CString::from_raw(token_ptr);
             }
         }
+
+        // Дополнительная совместная проверка
+        validate_config(
+            &GeometryPlusScreenConfig {
+                geometry_config: self.geometry_config,
+                screen_config: self.screen_config,
+            },
+            MODULE,
+        );
 
         self.stage_4_select_formatter(capture_config, &mut capture_thread, analyst, filter);
     }

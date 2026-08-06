@@ -1,0 +1,115 @@
+# =============================================================================
+# Shinombra Preset: Dynamic Games
+# =============================================================================
+# Purpose:
+#   Designed for fast-paced games and highly dynamic content.
+#   Uses crawling Checkerboard so almost every pixel is eventually sampled,
+#   reducing missed details during rapid motion. Higher EMA alpha and stronger
+#   FlashGuard keep the reaction snappy while still suppressing extreme flashes.
+#   Histogram with moderate precision balances accuracy and CPU cost.
+#
+# How to use:
+#   1. Fill all REQUIRED geometry and connection fields (uncomment + set values).
+#   2. Choose and configure ONE hardware output protocol.
+#   3. Place this file wherever you want and launch with:
+#        shinombra --config /path/to/gaming.toml
+#   4. Or set the path in ~/.config/shinombra/service.env
+# =============================================================================
+
+[daemon_settings]
+log_level = "Warn"
+pipewire_conversion = false
+save_token = true
+
+[settings]
+chunk_processor_type = "CrawlCheckerboard"
+analytics_type = "Histogram"
+filter_chain = [
+    "BlackThreshold",
+    "SaturationBoost",
+    "FlashGuard",
+    "Median",
+    "Ema",
+    "WhiteBalance",
+    "Gamma",
+]
+# hardware_output_type = "Ddp"          # REQUIRED: choose one of "Ddp", "WledDrgb", "ShinombraSerial", "Debug"
+max_fps = 90
+
+# -----------------------------------------------------------------------------
+# REQUIRED geometry – measure your monitor and LED strip, then uncomment & fill
+# -----------------------------------------------------------------------------
+[screen_config]
+# frame_width_mm = 0      # REQUIRED: display width in millimetres (without bezels)
+# frame_height_mm = 0     # REQUIRED: display height in millimetres (without bezels)
+
+[led_position_config]
+# gap = 0                 # REQUIRED: distance from middle of LED to edge of display (mm)
+# led_length = 0          # REQUIRED: length of one LED block between cut points (mm)
+# vertical_led_amount = 0 # REQUIRED: number of LED blocks on one vertical side
+# horizontal_led_amount = 0 # REQUIRED: number of LED blocks on one horizontal side
+
+[frame_connection_config]
+# start_from = "Left"     # REQUIRED: "Left" | "Up" | "Right" | "Down"
+# direction = "Clockwise" # REQUIRED: "Clockwise" | "Counterclockwise"
+
+[screen_reading_config]
+# deep_in = 10            # REQUIRED: reading in center
+# deep_out = 10           # REQUIRED: reading from center
+
+# -----------------------------------------------------------------------------
+# Hardware output – choose ONE protocol, uncomment its block and fill values
+# -----------------------------------------------------------------------------
+# [ddp_config]
+# ip = "led.local"        # REQUIRED when hardware_output_type = "Ddp"
+# # port = 4048
+# # mtu = 1500
+
+# [wled_drgb_config]
+# ip = "led.local"        # REQUIRED when hardware_output_type = "WledDrgb"
+# # port = 21324
+# # timeout = 2
+
+# [shinombra_serial_config]
+# port_path = "/dev/ttyUSB0"  # REQUIRED when hardware_output_type = "ShinombraSerial"
+# baud_rate = 2000000
+
+# -----------------------------------------------------------------------------
+# Processor
+# -----------------------------------------------------------------------------
+[crawl_checkerboard_config]
+pixel_step = 8
+row_stride = 5
+column_crawl = 3
+row_crawl = 2
+
+# -----------------------------------------------------------------------------
+# Analytics
+# -----------------------------------------------------------------------------
+[histogram_config]
+precision_level = 12
+
+# -----------------------------------------------------------------------------
+# Filters
+# -----------------------------------------------------------------------------
+[black_threshold_config]
+threshold = 6
+fade_range = 10
+falloff_exponent = 1.4
+
+[saturation_boost_config]
+floor = 7
+boost_exponent = 1.55
+
+[flash_guard_config]
+alpha = 0.65
+sensitivity = 65
+
+[ema_config]
+alpha = 0.48
+
+[white_balance_config]
+kelvins = 4200
+
+[gamma_config]
+gamma = 2.1
