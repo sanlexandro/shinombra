@@ -19,5 +19,11 @@
     "rust-analyzer.rustfmt.extraArgs": [
         "--config",
         "error_on_unformatted=false"
-    ]
+    ],
+    "markdown.extension.toc.levels": "2..6",
+    "markdown.extension.toc.omittedFromToc": {
+        "./docs/manual.md": [
+            "## Оглавление"
+        ]
+    },
 }

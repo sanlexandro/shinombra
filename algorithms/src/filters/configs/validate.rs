@@ -210,7 +210,7 @@ impl ConfigValidate for WhiteBalanceConfig {
     /// Проверка [WhiteBalanceConfig]
     /// 
     /// **Проверки:**
-    /// - `kelvins > 1000` - это ограничение алгоритма Таннера Хеллэнда
+    /// - `kelvins > 1000` - это ограничение алгоритма Таннера-Хеллэнда
     /// - `kelvins > 20000` - могут быть очень странные цвета
     fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
         if self.kelvins < 1000 {

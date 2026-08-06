@@ -331,7 +331,10 @@ impl ConfigLoader {
         let frame_connection_config: FrameConnectionConfig = frame_connection_config_shadow.into();
 
         // Проверка (screen_config проверим после запуска потока захвата)
-        validate_configs(&[&screen_reading_config, &led_position_config], MODULE);
+        validate_configs(
+            &[&settings, &screen_reading_config, &led_position_config],
+            MODULE,
+        );
 
         // Объединяем конфигурацию
         let geometry_config = GeometryConfig {
@@ -397,7 +400,7 @@ impl ConfigLoader {
     /// **Поддерживается обработка для:**
     /// - [ColorAnalystType::Histogram]
     /// - [ColorAnalystType::Average]
-    /// - [ColorAnalystType::DebugRGB]
+    /// - [ColorAnalystType::DebugRgb]
     ///
     /// После подготовки запускается следующая ступень
     fn stage_1_select_color_analyst(self, controller: Arc<CoreController>) {
@@ -420,14 +423,14 @@ impl ConfigLoader {
                 let analyst = Average::new();
                 self.stage_2_select_filter(controller, analyst);
             }
-            ColorAnalystType::DebugRGB => {
-                let Some(shadow) = self.shadow_root.debug_r_g_b_config.as_ref() else {
-                    error!("Check section [debug_r_g_b_config]");
+            ColorAnalystType::DebugRgb => {
+                let Some(shadow) = self.shadow_root.debug_rgb_config.as_ref() else {
+                    error!("Check section [debug_rgb_config]");
                     exit(1);
                 };
-                let config: DebugRGBConfig = shadow.into();
+                let config: DebugRgbConfig = shadow.into();
 
-                let analyst = DebugRGB::new(config);
+                let analyst = DebugRgb::new(config);
                 self.stage_2_select_filter(controller, analyst);
             }
         }
@@ -900,14 +903,14 @@ impl ConfigLoader {
                     filter,
                 );
             }
-            ChunkProcessorType::DynamicCheckerboard => {
-                let Some(shadow) = self.shadow_root.dynamic_checkerboard_config.as_ref() else {
-                    error!("Check section [dynamic_checkerboard_config]");
+            ChunkProcessorType::CrawlCheckerboard => {
+                let Some(shadow) = self.shadow_root.crawl_checkerboard_config.as_ref() else {
+                    error!("Check section [crawl_checkerboard_config]");
                     capture_thread.stop();
                     exit(5);
                 };
 
-                let mut alg_config: DynamicCheckerboardConfig = shadow.into();
+                let mut alg_config: CrawlCheckerboardConfig = shadow.into();
                 alg_config.config = self
                     .geometry_config
                     .calculate_chunk_config(self.screen_config);
@@ -921,7 +924,7 @@ impl ConfigLoader {
                     }
                 }
 
-                let processor = DynamicCheckerboardScanner::new(alg_config, self.screen_config);
+                let processor = CrawlCheckerboardScanner::new(alg_config, self.screen_config);
 
                 self.stage_6_select_hardware_driver::<Formatter, _, _, _>(
                     capture_thread,

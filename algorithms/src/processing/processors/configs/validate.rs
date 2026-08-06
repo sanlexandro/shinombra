@@ -85,15 +85,15 @@ impl ConfigValidate for CheckerboardConfig {
     }
 }
 
-impl ConfigValidate for DynamicCheckerboardConfig {
-    /// Проверка [DynamicCheckerboardConfig]
+impl ConfigValidate for CrawlCheckerboardConfig {
+    /// Проверка [CrawlCheckerboardConfig]
     ///
     /// **Проверки:**
     /// - `pixel_step` и `row_stride` > 0. Нулевой шаг приведет к зависанию алгоритма на одном пикселе.
     /// - `pixel_step` или `row_stride` > 15 (предупреждение). Слишком большой шаг сканирования
     ///   делает выборку цветов разреженной, что приводит к потере деталей и "шумному" результату.
     fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
-        let section = "dynamic_checkerboard_config";
+        let section = "crawl_checkerboard_config";
 
         if self.pixel_step == 0 {
             return Err(ValidationError::InvalidValue {

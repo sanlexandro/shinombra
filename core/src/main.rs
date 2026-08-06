@@ -21,6 +21,7 @@ use threads::{
 pub mod bootstrap;
 pub mod cli_flags;
 pub mod config;
+pub mod validate;
 
 use crate::{bootstrap::ConfigLoader, cli_flags::CLIFlagsManager};
 

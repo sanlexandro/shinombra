@@ -11,8 +11,8 @@ fn print_debug_color(rgb: RGBPixel) {
     // \x1b[48;2;R;G;Bm — цвет фона (TrueColor)
     // \x1b[0m — сброс
     print!(
-        "\x1b[48;2;{};{};{}m      \x1b[0m", // 6 пробелов
-        rgb.red, rgb.green, rgb.blue
+        "\x1b[48;2;{};{};{}m({:<3}, {:<3}, {:<3})\x1b[0m", // 6 + 9 = 15 символов
+        rgb.red, rgb.green, rgb.blue, rgb.red, rgb.green, rgb.blue
     );
 }
 
@@ -43,7 +43,7 @@ impl HardwareOutput for Debug {
     /// - `colors`: &[RGBPixel] - массив цветов для вывода
     fn send_colors(&mut self, colors: &[RGBPixel]) -> Result<(), HardwareEvents> {
         // Верхняя строка
-        print!("       "); // 7 пробелов
+        print!(" {:15}", ""); // 15+1 пробелов
         for idx in 0..self.led_width {
             print_debug_color(colors[idx as usize]);
             print!(" ");
@@ -61,7 +61,7 @@ impl HardwareOutput for Debug {
             print!(" ");
 
             for _ in 0..self.led_width {
-                print!("       "); // 7 пробелов
+                print!(" {:15}", ""); // 15+1 пробелов
             }
 
             // Вывели кусочек правой стенки
@@ -70,7 +70,7 @@ impl HardwareOutput for Debug {
 
         // Нижняя строчка
         println!("");
-        print!("       "); // 7 пробелов
+        print!(" {:15}", ""); // 15+1 пробелов
         for idx in 0..self.led_width {
             print_debug_color(colors[(colors_amount - self.led_height - idx) as usize]);
             print!(" ");

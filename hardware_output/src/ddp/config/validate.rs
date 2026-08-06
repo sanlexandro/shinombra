@@ -11,7 +11,6 @@ impl ConfigValidate for DdpConfig {
     ///
     /// **Проверки:**
     /// - ip правильно десериализуется
-    /// - `timeout == 0` - предупреждение о возможной некорректной работе
     /// - если установили mtu, просто предупреждение о возможной некорректной работе
     fn validate(&self) -> Result<Vec<ValidationWarning>, ValidationError> {
         if let Err(err) =
@@ -25,14 +24,6 @@ impl ConfigValidate for DdpConfig {
         }
 
         let mut result = Vec::new();
-
-        if self.timeout.unwrap_or(100) == 0 {
-            result.push(ValidationWarning::InvalidValue {
-                section: "ddp_config",
-                field: "timeout",
-                message: "With zero timeout led can work with errors.".to_string(),
-            });
-        }
 
         if self.mtu.is_some() {
             result.push(ValidationWarning::InvalidValue {

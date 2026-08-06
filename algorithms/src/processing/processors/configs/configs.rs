@@ -40,7 +40,7 @@ pub struct CheckerboardConfig {
 /// - `column_crawl`: [usize] - шаг сдвига сетки по колонке
 /// - `row_crawl`: [usize]    - шаг сдвига сетки по строке
 #[derive(Default)]
-pub struct DynamicCheckerboardConfig {
+pub struct CrawlCheckerboardConfig {
     pub config: ChunkConfig,
     pub pixel_step: usize,
     pub row_stride: usize,

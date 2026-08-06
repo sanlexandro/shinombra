@@ -94,8 +94,8 @@ generate_ui!(
             pixel_step: NumericField{1},
             row_stride: NumericField{1}
         },
-        @show_if(Settings.chunk_processor_type == "DynamicCheckerboard")
-        DynamicCheckerboardConfig => {
+        @show_if(Settings.chunk_processor_type == "CrawlCheckerboard")
+        CrawlCheckerboardConfig => {
             pixel_step: NumericField{1},
             row_stride: NumericField{1},
 
@@ -109,8 +109,8 @@ generate_ui!(
         HistogramConfig => {
             precision_level: SliderField { 0.0, 20.0, 1 }
         },
-        @show_if(Settings.analytics_type == "DebugRGB")
-        DebugRGBConfig => {
+        @show_if(Settings.analytics_type == "DebugRgb")
+        DebugRgbConfig => {
             red: SliderField { 0, 255, 1 },
             green: SliderField { 0, 255, 1 },
             blue: SliderField { 0, 255, 1 }
@@ -172,7 +172,6 @@ generate_ui!(
         DdpConfig => {
             ip: TextField {"ip or DNS-name"},
             port: Option ( NumericField {} ),
-            timeout: Option ( NumericField {} ),
             mtu: Option ( NumericField {} ),
         }
     },

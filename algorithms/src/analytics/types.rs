@@ -54,6 +54,6 @@ pub struct Average {
 /// **Поля:**
 /// - `rgb`: [RGBPixel] - цвет для вывода
 #[derive(Clone)]
-pub struct DebugRGB {
+pub struct DebugRgb {
     pub(super) rgb: RGBPixel,
 }

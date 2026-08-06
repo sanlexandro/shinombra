@@ -63,7 +63,7 @@ body {
 /* Метка страницы - SERVICE_CONFIG сверху */
 
 body::before {
-    content: 'SERVICE_CONFIG';
+    content: 'SHINOMBRA_SERVICE_CONFIG';
     display: block;
     font-family: var(--font-mono);
     font-size: 10px;
@@ -462,7 +462,7 @@ label+.wrapper-vec-container {
     position: absolute;
     width: 10px;
     height: 1.5px;
-    background: currentColor;
+    background: light-dark(#000000, #ffffff);
     border-radius: 2px;
 }
 

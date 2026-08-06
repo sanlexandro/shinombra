@@ -4,7 +4,6 @@ use std::net::{SocketAddr, UdpSocket};
 
 pub const DEFAULT_PORT: u16 = 21324;
 pub const DEFAULT_TIMEOUT: u8 = 2;
-pub const DEFAULT_MAX_FPS: u16 = 30;
 
 /// Необходимые данные для работы WledDrgb
 ///

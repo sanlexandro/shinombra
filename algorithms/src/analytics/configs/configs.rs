@@ -14,7 +14,7 @@ pub struct HistogramConfig {
 /// Настройка отладочного аналитика
 /// 
 /// Принимает RGB
-pub struct DebugRGBConfig {
+pub struct DebugRgbConfig {
     pub red: u8,
     pub green: u8,
     pub blue: u8,

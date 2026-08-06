@@ -4,5 +4,5 @@
 pub enum ColorAnalystType {
     Histogram,
     Average,
-    DebugRGB,
+    DebugRgb,
 }

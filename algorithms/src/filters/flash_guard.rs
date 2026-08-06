@@ -62,7 +62,7 @@ impl ColorFilter for FlashGuard {
             // Определяем слагаемое
             let summand = self.terms[Self::calculate_position(abs_difference)];
 
-            // Если difference была отрицательной — мы вычитаем, если положительной — прибавляем
+            // Если difference была отрицательной - мы вычитаем, если положительной - прибавляем
             let new_value = if difference >= 0.0 {
                 self.previous_values[i] + summand
             } else {

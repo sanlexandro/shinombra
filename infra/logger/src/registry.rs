@@ -1,8 +1,9 @@
 /// Уровни ошибок
 #[derive(Copy, Clone, PartialEq)]
 pub enum LogLevel {
-    Error = 0,
-    Warn = 1,
-    Info = 2,
-    Debug = 3,
+    Off = 0,
+    Error = 1,
+    Warn = 2,
+    Info = 3,
+    Debug = 4,
 }

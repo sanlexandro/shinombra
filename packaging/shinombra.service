@@ -1,20 +1,17 @@
 [Unit]
 Description=Shinombra ambient lighting daemon by sanlexandro
-After=pipewire.service wireplumber.service xdg-desktop-portal.service
-Wants=pipewire.service wireplumber.service
-
-After=dbus.service
-Requisite=graphical-session.target
 PartOf=graphical-session.target
-After=graphical-session.target
+After=graphical-session.target pipewire.service wireplumber.service xdg-desktop-portal.service dbus.service
+Wants=pipewire.service wireplumber.service xdg-desktop-portal.service
 
 [Service]
 EnvironmentFile=-%h/.config/shinombra/service.env
+ExecStartPre=/usr/bin/gdbus wait --session --timeout=10 org.freedesktop.portal.Desktop
 ExecStart=/usr/bin/shinombra $SHINOMBRA_ARGS
 Restart=on-failure
 RestartSec=5
-
-ExecStartPre=/usr/bin/gdbus wait --session org.freedesktop.portal.Desktop 10
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=graphical-session.target

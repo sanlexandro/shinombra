@@ -1,7 +1,7 @@
 //! Реализация трейта для состояний
 
 use crate::processing::processors::{
-    types::{DynamicCheckerboardState, EmptyState},
+    types::{CrawlCheckerboardState, EmptyState},
     ChunkState,
 };
 
@@ -17,7 +17,7 @@ impl ChunkState for EmptyState {
 }
 
 /// Для состояние в динамической шахматке
-impl ChunkState for DynamicCheckerboardState {
+impl ChunkState for CrawlCheckerboardState {
     /// Конструктор
     ///
     /// Создаёт структуру с нулевыми полями

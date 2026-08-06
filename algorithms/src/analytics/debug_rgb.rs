@@ -3,13 +3,13 @@
 //! Получает цвет через конфиг и выводит только его
 
 use crate::{
-    analytics::{configs::DebugRGBConfig, types::DebugRGB, ColorAnalyst},
+    analytics::{configs::DebugRgbConfig, types::DebugRgb, ColorAnalyst},
     color::types::RGBPixel,
 };
 
-impl DebugRGB {
+impl DebugRgb {
     /// Конструкторы
-    pub fn new(config: DebugRGBConfig) -> Self {
+    pub fn new(config: DebugRgbConfig) -> Self {
         Self {
             rgb: RGBPixel {
                 red: config.red,
@@ -20,7 +20,7 @@ impl DebugRGB {
     }
 }
 
-impl ColorAnalyst for DebugRGB {
+impl ColorAnalyst for DebugRgb {
     type OutputFormat = RGBPixel;
 
     fn add_data(&mut self, _: RGBPixel) {}

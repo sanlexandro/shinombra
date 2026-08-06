@@ -3,5 +3,5 @@
 #[derive(Debug)]
 pub enum ChunkProcessorType {
     Checkerboard,
-    DynamicCheckerboard,
+    CrawlCheckerboard,
 }

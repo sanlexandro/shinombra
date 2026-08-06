@@ -19,6 +19,7 @@ macro_rules! log {
         // Сравниваем с глобальным порогом
         if msg_level <= $crate::MAX_LOG_LEVEL.load(std::sync::atomic::Ordering::Relaxed) {
             let (prefix, color, label) = match $level {
+                LogLevel::Off => ("_", "_", "_"),
                 LogLevel::Error => ("<3>", "\x1b[31m", "ERROR"),
                 LogLevel::Warn  => ("<4>", "\x1b[33m", "WARN "),
                 LogLevel::Info  => ("<6>", "\x1b[32m", "INFO "),

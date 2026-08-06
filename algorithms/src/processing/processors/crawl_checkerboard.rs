@@ -1,4 +1,4 @@
-//! Алгоритм обхода фрагмента в динамическом шахматном порядке
+//! Алгоритм обхода фрагмента в ползущем шахматном порядке
 //!
 //! Данный алгоритм обходит фрагмент так же, как и жёсткий шахматный, но на
 //! каждом фрагменте сдвигает эту жёсткую сетку на 1 шаг. Это позволяет
@@ -11,15 +11,15 @@ use crate::{
     processing::{
         configs::ScreenConfig,
         processors::{
-            configs::{ChunkTask, DynamicCheckerboardConfig},
-            types::{DynamicCheckerboardScanner, DynamicCheckerboardState},
+            configs::{ChunkTask, CrawlCheckerboardConfig},
+            types::{CrawlCheckerboardScanner, CrawlCheckerboardState},
             ChunkProcessor, Orientation,
         },
     },
 };
 
-/// Реализация методов DynamicCheckerboardConfig
-impl DynamicCheckerboardConfig {
+/// Реализация методов CrawlCheckerboardConfig
+impl CrawlCheckerboardConfig {
     /// Адаптация параметров под ориентацию фрагмента
     ///
     /// Возвращает кортеж: `(width, height, row_stride, pixel_step,
@@ -49,14 +49,14 @@ impl DynamicCheckerboardConfig {
     }
 }
 
-/// Реализация методов DynamicCheckerboardScanner
-impl DynamicCheckerboardScanner {
+/// Реализация методов CrawlCheckerboardScanner
+impl CrawlCheckerboardScanner {
     /// Конструктор
     ///
     /// **Поля:**
-    /// - `alg_config`: [DynamicCheckerboardConfig] - конфигурация для шахматки
+    /// - `alg_config`: [CrawlCheckerboardConfig] - конфигурация для шахматки
     /// - `screen_config`: [ScreenConfig]           - конфигурация экрана
-    pub fn new(alg_config: DynamicCheckerboardConfig, screen_config: ScreenConfig) -> Self {
+    pub fn new(alg_config: CrawlCheckerboardConfig, screen_config: ScreenConfig) -> Self {
         return Self {
             alg_config,
             screen_config,
@@ -64,16 +64,16 @@ impl DynamicCheckerboardScanner {
     }
 }
 
-/// Реализация трейта для DynamicCheckerboardScanner
+/// Реализация трейта для CrawlCheckerboardScanner
 impl<Formatter: PixelFormatter, Analyst: ColorAnalyst> ChunkProcessor<Formatter, Analyst>
-    for DynamicCheckerboardScanner
+    for CrawlCheckerboardScanner
 where
     // Waiting for RFC 2089
     ColorBuffer: From<Vec<Analyst::OutputFormat>>,
     Vec<Analyst::OutputFormat>: From<ColorBuffer>,
     ColorBuffer: AsMut<[Analyst::OutputFormat]>,
 {
-    type State = DynamicCheckerboardState;
+    type State = CrawlCheckerboardState;
 
     /// Обработка фрагмента (динамический шахматный порядок)
     ///
@@ -85,7 +85,7 @@ where
     /// - `byte_frame`: &[[u8]]                          - указатель на кадр
     ///   (массив пикселей)
     /// - `chunk_task`: &[ChunkTask]                     - "задание" фрагмента
-    /// - `chunk_state`: &mut [DynamicCheckerboardState] - пустое состояние
+    /// - `chunk_state`: &mut [CrawlCheckerboardState] - пустое состояние
     ///   фрагмента
     /// - `&mut analyst`: [ColorAnalyst]                 - указатель на
     ///   структуру (метод) накопления данных для дальнейшего определения
