@@ -13,8 +13,7 @@ Shinombra - это экстремально производительная а�
 
 Shinombra была создана как эффективная альтернатива существующим решениям (например, Hyperion), т.к. большинство из них не способны корректно поддерживать захват изображения с Wayland.
 
-
-## <span style="filter: grayscale(100%) brightness(35%)">⚡</span> Производительность
+## <img src="./docs/readme/icons/lightning.svg" width="24" height="24" align="center"> Производительность
 
 Архитектурный паттерн и использование Rust с C-FFI позволяет достичь максимальной производительности без утечек памяти. Shinombra захватывает DMA буфер, избегая копирование, а оптимизация алгоритмов позволяет сократить горячий цикл до минимума.
 
@@ -123,7 +122,7 @@ baud_rate = 2000000
 ```
 </details>
 
-## <span style="filter: grayscale(100%) contrast(40%) brightness(35%)">🛜</span> Протоколы
+## <img src="./docs/readme/icons/wire.svg" width="24" height="24" align="center"> Протоколы
 
 Shinombra нативно поддерживает:
  - **DDP**;
@@ -132,7 +131,7 @@ Shinombra нативно поддерживает:
 Также реализован собственный протокол **ShinombraSerial**
 
 
-## <span style="filter: grayscale(100%) contrast(40%) brightness(35%)">🚀</span> Быстрый старт
+## <img src="./docs/readme/icons/rocket.svg" width="24" height="24" align="center"> Быстрый старт
 
 Для старта shinombra достаточно всего пары минут.
 
@@ -180,7 +179,7 @@ systemctl --user daemon-reload
 
 После установки достаточно выполнить первые 4 шага [инструкции](./docs/manual.md), включающие в себя только замеры Вашего дисплея и настройка подключения к ленте!
 
-## <span style="filter: grayscale(100%) contrast(120%) brightness(60%)">🎮</span> Использование
+## <img src="./docs/readme/icons/target.svg" width="24" height="24" align="center"> Использование
 
 Подробнее об использовании читайте в [инструкции](./docs/manual.md).
 
@@ -210,7 +209,7 @@ systemctl --user stop shinombra.service
 ```
 
 
-## <span style="filter: grayscale(100%) contrast(120%) brightness(60%)">🪾</span> Структура проекта
+## <img src="./docs/readme/icons/tree.svg" width="24" height="24" align="center"> Структура проекта
 
 ```
 .
