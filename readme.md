@@ -13,7 +13,7 @@ Shinombra - это экстремально производительная а�
 
 Shinombra была создана как эффективная альтернатива существующим решениям (например, Hyperion), т.к. большинство из них не способны корректно поддерживать захват изображения с Wayland.
 
-## <img src="./docs/readme/icons/lightning.svg" width="20" height="20" align="center"> Производительность
+## <img src="./docs/readme/icons/lightning.svg" width="24" height="24"> Производительность
 
 Архитектурный паттерн и использование Rust с C-FFI позволяет достичь максимальной производительности без утечек памяти. Shinombra захватывает DMA буфер, избегая копирование, а оптимизация алгоритмов позволяет сократить горячий цикл до минимума.
 
@@ -122,7 +122,7 @@ baud_rate = 2000000
 ```
 </details>
 
-## <img src="./docs/readme/icons/wire.svg" width="20" height="20" align="center"> Протоколы
+## <img src="./docs/readme/icons/wire.svg" width="24" height="24"> Протоколы
 
 Shinombra нативно поддерживает:
  - **DDP**;
@@ -131,7 +131,7 @@ Shinombra нативно поддерживает:
 Также реализован собственный протокол **ShinombraSerial**
 
 
-## <img src="./docs/readme/icons/rocket.svg" width="20" height="20" align="center"> Быстрый старт
+## <img src="./docs/readme/icons/rocket.svg" width="24" height="24"> Быстрый старт
 
 Для старта shinombra достаточно всего пары минут.
 
@@ -179,7 +179,7 @@ systemctl --user daemon-reload
 
 После установки достаточно выполнить первые 4 шага [инструкции](./docs/manual.md), включающие в себя только замеры Вашего дисплея и настройка подключения к ленте!
 
-## <img src="./docs/readme/icons/target.svg" width="20" height="20" align="center"> Использование
+## <img src="./docs/readme/icons/target.svg" width="24" height="24"> Использование
 
 Подробнее об использовании читайте в [инструкции](./docs/manual.md).
 
@@ -209,7 +209,7 @@ systemctl --user stop shinombra.service
 ```
 
 
-## <img src="./docs/readme/icons/tree.svg" width="20" height="20" align="center"> Структура проекта
+## <img src="./docs/readme/icons/tree.svg" width="24" height="24"> Структура проекта
 
 ```
 .
