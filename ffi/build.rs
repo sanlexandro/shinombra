@@ -6,7 +6,7 @@ fn main() {
     // Подготавливаем пути к папкам
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
     let mut c_file_path = PathBuf::from(manifest_dir);
-    c_file_path.push("../ffi/src/pw-bridge/src/pw-bridge.c");
+    c_file_path.push("./src/pw-bridge/src/pw-bridge.c");
 
     // Говорим пересобирать проект при изменении файла
     println!("cargo:rerun-if-changed={}", c_file_path.display());
@@ -30,14 +30,4 @@ fn main() {
 
     // Завершаем сборку статической библиотеки
     build.compile("capture_worker");
-
-    // Явно указываем Cargo путь и имя библиотеки для линковки.
-    // cc::Build::compile() обычно делает это сам, но с некоторыми
-    // линкерами (например lld, в отличие от классического ld.bfd)
-    // порядок аргументов в командной строке линковки более строгий,
-    // и неявного вывода может быть недостаточно, чтобы гарантировать
-    // подключение статической библиотеки к финальному бинарнику.
-    let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR is not set");
-    println!("cargo:rustc-link-search=native={}", out_dir);
-    println!("cargo:rustc-link-lib=static=capture_worker");
 }
