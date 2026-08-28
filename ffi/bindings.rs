@@ -77,7 +77,15 @@ pub struct InitializingData {
 pub type CaptureEventCallback =
     extern "C" fn(user_data: *mut c_void, event: CaptureEvent, message: *const c_char);
 
-// Используем ф-ии из `C-worker`
+// Используем ф-ии из `C-worker`.
+//
+// Явный #[link(...)] здесь обязателен: одних директив cargo:rustc-link-lib
+// из threads/build.rs недостаточно, поскольку они действуют только при
+// компиляции самого крейта threads и не наследуются транзитивно другими
+// крейтами workspace (core, ui), которые зависят от threads через .rlib.
+// Атрибут ниже встраивает требование линковки прямо в метаданные крейта
+// ffi, откуда оно корректно пробрасывается дальше по графу зависимостей.
+#[link(name = "capture_worker", kind = "static")]
 extern "C" {
     /// Инициализация захвата экрана
     pub fn screen_capture_init(
