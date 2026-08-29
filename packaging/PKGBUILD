@@ -1,0 +1,63 @@
+# Maintainer: sanlexandro <sanlexandro@proton.me>
+pkgname=shinombra
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Extremely fast ambient lighting with native PipeWire support (Wayland/X11)"
+arch=('x86_64')
+url="https://github.com/sanlexandro/shinombra"
+license=('GPL-3.0-or-later')
+
+# Рантайм-зависимости:
+depends=(
+    'pipewire'
+    'libportal'
+    'glib2'
+    'jq'
+    'gum'
+)
+
+# Сборочные зависимости:
+makedepends=(
+    'cargo'
+    'gcc'
+    'pkgconf'
+)
+
+source=("$pkgname-$pkgver.tar.gz::https://github.com/sanlexandro/shinombra/archive/refs/tags/v$pkgver.tar.gz")
+
+sha256sums=('844256d9cb9e8b40811359de7f70b5d686def4e517d5ca054fe315b23d36c5da')
+
+# Директория после распаковки архива
+_srcdir="$pkgname-$pkgver"
+
+prepare() {
+    cd "$_srcdir"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "$_srcdir"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+
+    cargo build --release --frozen
+}
+
+package() {
+    cd "$_srcdir"
+
+    # Основные бинарники
+    install -Dm755 "target/release/shinombra" "$pkgdir/usr/bin/shinombra"
+    install -Dm755 "target/release/shinombra-ui" "$pkgdir/usr/bin/shinombra-ui"
+
+    # TUI-скрипт
+    install -Dm755 "tui/shinombra-tui.sh" "$pkgdir/usr/bin/shinombra-tui"
+
+    # Пользовательский systemd-юнит.
+    install -Dm644 "packaging/shinombra.service" \
+        "$pkgdir/usr/lib/systemd/user/shinombra.service"
+
+    # Лицензия
+    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
