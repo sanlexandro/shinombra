@@ -13,7 +13,8 @@ pkgbase = shinombra
 	depends = glib2
 	depends = jq
 	depends = gum
+	options = !lto
 	source = shinombra-0.1.0.tar.gz::https://github.com/sanlexandro/shinombra/archive/refs/tags/v0.1.0.tar.gz
-	sha256sums = d3465819d1d16aa1196800e32368593bb47e774953bfeec7b777f285bd1fe0f0
+	sha256sums = 091b6cd05e7259be805bdcd8adbf0b6dd1cd91612b0e80189aee54448117b2b3
 
 pkgname = shinombra

@@ -27,7 +27,7 @@ makedepends=(
 )
 
 source=("$pkgname-$pkgver.tar.gz::https://github.com/sanlexandro/shinombra/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('844256d9cb9e8b40811359de7f70b5d686def4e517d5ca054fe315b23d36c5da')
+sha256sums=('091b6cd05e7259be805bdcd8adbf0b6dd1cd91612b0e80189aee54448117b2b3')
 
 _srcdir="$pkgname-$pkgver"
 
