@@ -1,8 +1,0 @@
-[paths]
-config = "./cfg.toml"
-overlays = ["over.toml"]
-
-[daemon_settings]
-log_level = "Debug"
-pipewire_conversion = false
-save_token = true
