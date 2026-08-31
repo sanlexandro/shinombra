@@ -137,12 +137,12 @@ Shinombra нативно поддерживает:
 
 ### Arch
 
-Shinombra есть в AUR, поэтому для её установки Вам достаточно использовать свой любимый пакетный менеджер.
+К сожалению, из-за отключенной регистрации на AUR проект пока нельзя скачать с помощью пакетного менеджера. Однако Вы можете использовать установку напрямую из [PKGBUILD](./packaging/PKGBUILD):
 
 ```bash
-yay -S shinombra
-# или
-paur shinombra
+curl -O https://raw.githubusercontent.com/sanlexandro/shinombra/main/packaging/PKGBUILD
+
+makepkg -si
 ```
 
 ### Manual
@@ -225,7 +225,6 @@ systemctl --user stop shinombra.service
 ├── threads          <- Потоки захвата и отправки
 ├── tui              <- Интерфейс для сложной конфигурации
 ├── ui               <- Интерфейс для простой конфигурации
-├── contributing.md  <- Правила контрибьютинга
 ├── readme.md        <- Файл, который Вы читаете
 └── Cargo.toml       <- Описание workspace-а
 ```
