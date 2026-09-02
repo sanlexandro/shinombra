@@ -27,7 +27,7 @@ Shinombra была создана как эффективная альтерна
 
 
 <details>
-<summary><span style="color: light-dark( #343434a2, #c2c2c2a2);">Замеры проводились на данном железе<span></summary>
+<summary><span style="color: light-dark( #343434a2, #c2c2c2a2);">Замеры проводились на данном железе</span></summary>
 
 **PC:**
 ```
@@ -228,3 +228,16 @@ systemctl --user stop shinombra.service
 ├── readme.md        <- Файл, который Вы читаете
 └── Cargo.toml       <- Описание workspace-а
 ```
+
+
+## <img src="./docs/readme/icons/road.svg" width="24" height="24"> Roadmap
+
+### Bugs:
+ - [ ] Неочевидные ошибки при допустимых параметрах из-за неточностей и округлений при предварительном расчёте положения фрагментов;
+ - [ ] Отладочный вывод в консоль (HardwareOutput-Debug) имеет фиксированный порядок, тогда как лента может быть подключена иначе.
+
+
+## <img src="./docs/readme/icons/mail.svg" width="24" height="24"> Контакты:
+
+**Автор:** sanlexandro  
+**Почта:** sanlexandro@proton.me (пожалуйста, начинайте тему письма со слова "Shinombra")

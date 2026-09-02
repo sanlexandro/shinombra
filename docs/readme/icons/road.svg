@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 6.3499999 6.35"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   sodipodi:docname="road.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+   <sodipodi:namedview
+      id="namedview1"
+      pagecolor="#505050"
+      bordercolor="#eeeeee"
+      borderopacity="1"
+      inkscape:showpageshadow="0"
+      inkscape:pageopacity="0"
+      inkscape:pagecheckerboard="0"
+      inkscape:deskcolor="#505050"
+      inkscape:document-units="mm"
+      inkscape:zoom="16.925711"
+      inkscape:cx="5.2878133"
+      inkscape:cy="15.213541"
+      inkscape:window-width="1920"
+      inkscape:window-height="1052"
+      inkscape:window-x="0"
+      inkscape:window-y="0"
+      inkscape:window-maximized="1"
+      inkscape:current-layer="layer1" />
+   <defs
+      id="defs1">
+      <style
+         id="style1">
+         :root, svg {
+            color-scheme: light dark;
+         }
+         .icon-path {
+            stroke: #0a0a0a;
+         }
+         @media (prefers-color-scheme: dark) {
+            .icon-path {
+            stroke: #d1d1d1;
+            }
+         }
+      </style>
+   </defs>
+   <g
+      inkscape:label="Слой 1"
+      inkscape:groupmode="layer"
+      id="layer1">
+      <path
+         class="icon-path"
+         style="fill:none;fill-rule:evenodd;stroke-width:0.4;paint-order:markers fill stroke"
+         d="M 0.62528145,6.0652302 1.281827,3.1420392 4.9553555,0.32827277"
+         id="path1"
+         sodipodi:nodetypes="ccc" />
+      <path
+         class="icon-path"
+         style="fill:none;fill-rule:evenodd;stroke-width:0.4;paint-order:markers fill stroke"
+         d="M 3.2514636,6.1433902 3.5797364,4.1112256 6.0495982,2.2510133"
+         id="path2"
+         sodipodi:nodetypes="ccc" />
+      <path
+         class="icon-path"
+         style="fill:none;fill-rule:evenodd;stroke-width:0.3;stroke-dasharray:0.3, 0.3;stroke-dashoffset:0;paint-order:markers fill stroke"
+         d="M 1.9696366,5.9714378 2.4385977,3.6578966 5.4712126,1.2974591"
+         id="path3"
+         sodipodi:nodetypes="ccc" />
+   </g>
+</svg>
