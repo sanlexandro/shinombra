@@ -15,7 +15,7 @@ depends=(
     'pipewire'
     'libportal'
     'glib2'
-    'jq'
+    'go-yq'
     'gum'
 )
 
