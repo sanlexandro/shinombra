@@ -1,35 +1,37 @@
-# Инструкция по настройке и применению динамической подсветки `shinombra`
+[![Language: Russian](https://img.shields.io/badge/Lang-Русский-blue.svg)](./manual.ru.md)
 
-Данная инструкция содержит подробные шаги для полной настройки и дальнейшего применения `shinombra`.
+# Guide to Setting Up and Using `shinombra` Dynamic Backlighting
 
-Если Вы столкнулись с какой-либо нерешаемой проблемой, попробуйте найти схожий вопрос в `FAQ.md`. В иных случаях следуйте инструкции в логах - они всегда называют причину ошибки.
+This guide contains detailed steps for the complete setup and further use of `shinombra`.
 
-Не пугайтесь оглавления - для быстрой настройки достаточно будет выполнить только первые 4 шага =).
+If you run into an unsolvable problem, try to find a similar question in `FAQ.md`. In other cases, follow the guidance in the logs - they always state the cause of the error.
 
-## Оглавление
-- [Шаг 1. Выбор конфигурации](#шаг-1-выбор-конфигурации)
-- [Шаг 2. Размеры монитора, положение ленты и зона чтения](#шаг-2-размеры-монитора-положение-ленты-и-зона-чтения)
-  - [2.1. Размеры монитора](#21-размеры-монитора)
-  - [2.2. Положение ленты](#22-положение-ленты)
-  - [2.3 Зона чтения](#23-зона-чтения)
-- [Шаг 3. Подключение ленты](#шаг-3-подключение-ленты)
-  - [3.1. Подключение к контроллеру](#31-подключение-к-контроллеру)
-  - [3.2. Подключение к ПК](#32-подключение-к-пк)
+Don't be intimidated by the table of contents - for a quick setup, it's enough to complete only the first 4 steps =).
+
+## Table of Contents
+- [Step 1. Choosing a Configuration](#step-1-choosing-a-configuration)
+- [Step 2. Monitor Dimensions, Strip Position, and Reading Zone](#step-2-monitor-dimensions-strip-position-and-reading-zone)
+  - [2.1. Monitor Dimensions](#21-monitor-dimensions)
+  - [2.2. Strip Position](#22-strip-position)
+  - [2.3 Reading Zone](#23-reading-zone)
+- [Step 3. Connecting the Strip](#step-3-connecting-the-strip)
+  - [3.1. Connecting to the Controller](#31-connecting-to-the-controller)
+  - [3.2. Connecting to the PC](#32-connecting-to-the-pc)
     - [DDP](#ddp)
     - [DRGB](#drgb)
     - [ShinombraSerial](#shinombraserial)
     - [Debug](#debug)
-- [Шаг 4. Настройка сервиса](#шаг-4-настройка-сервиса)
-- [Как Shinombra обрабатывает кадр](#как-shinombra-обрабатывает-кадр)
-- [Шаг 5. Настройка процессора фрагмента](#шаг-5-настройка-процессора-фрагмента)
+- [Step 4. Configuring the Service](#step-4-configuring-the-service)
+- [How Shinombra Processes a Frame](#how-shinombra-processes-a-frame)
+- [Step 5. Configuring the Fragment Processor](#step-5-configuring-the-fragment-processor)
   - [Checkerboard](#checkerboard)
   - [CrawlCheckerboard](#crawlcheckerboard)
-- [Шаг 6. Настройка аналитика](#шаг-6-настройка-аналитика)
+- [Step 6. Configuring the Analyst](#step-6-configuring-the-analyst)
   - [Average](#average)
   - [Histogram](#histogram)
   - [DebugRgb](#debugrgb)
-- [Шаг 7. Ограничение FPS](#шаг-7-ограничение-fps)
-- [Шаг 8. Настройка фильтров](#шаг-8-настройка-фильтров)
+- [Step 7. Limiting FPS](#step-7-limiting-fps)
+- [Step 8. Configuring Filters](#step-8-configuring-filters)
   - [NoFilter](#nofilter)
   - [EMA](#ema)
   - [Gamma](#gamma)
@@ -39,88 +41,88 @@
   - [ChannelGain](#channelgain)
   - [FlashGuard](#flashguard)
   - [Median](#median)
-- [Итоговый вид конфига](#итоговый-вид-конфига)
+- [The Resulting Config](#the-resulting-config)
   - [Settings](#settings)
-  - [Простая](#простая)
-  - [Сложная](#сложная)
+  - [Simple](#simple)
+  - [Advanced](#advanced)
     - [1. Manifest](#1-manifest)
     - [2. Base config](#2-base-config)
     - [3. Overlays](#3-overlays)
 - [UI](#ui)
 - [TUI](#tui)
 - [ShinombraSerial](#shinombraserial-1)
-- [Заключение](#заключение)
+- [Conclusion](#conclusion)
 
-## Шаг 1. Выбор конфигурации
+## Step 1. Choosing a Configuration
 
-Прежде чем начать настраивать подсветку, необходимо определиться с желаемым режимом конфигурации. 
+Before you start setting up the backlight, you need to decide on the desired configuration mode.
 
-Вся конфигурация подсветки задаётся только в формате TOML.
+The entire backlight configuration is specified only in TOML format.
 
-Подсветка поддерживает 2 режима:
-1) простой - для настройки используется 1 файл;
-2) сложный (включён по умолчанию) - для настройки используется система из манифеста (`manifest`), содержащего настройки сервиса, а также пути до основного конфига (`base_config`) и путей до "накладываемых слоёв" (`overlays`). Подробнее о данной настройке написано в [разделе о конфигурации](#сложная).
+The backlight supports 2 modes:
+1) simple - a single file is used for configuration;
+2) advanced (enabled by default) - configuration uses a system based on a manifest (`manifest`), which contains the service settings, as well as the paths to the base config (`base_config`) and the paths to the "overlay layers" (`overlays`). More details on this setup are given in the [configuration section](#advanced).
 
-В зависимости от выбранного режима конфигурации для удобства существуют различные интерфейсы:
-1) для простого режима - web-UI `shinombra-ui`. О нём подробнее написано в [разделе о UI](#ui);
-2) для сложного режима можно использовать любой текстовый редактор и данную инструкцию, а также TUI `shinombra-tui` для удобного изменения манифеста. О нём подробнее написано в [разделе о TUI](#tui).
+Depending on the chosen configuration mode, various interfaces are available for convenience:
+1) for simple mode - the web UI `shinombra-ui`. More details on it are given in the [UI section](#ui);
+2) for advanced mode you can use any text editor along with this guide, as well as the TUI `shinombra-tui` for conveniently editing the manifest. More details on it are given in the [TUI section](#tui).
 
-После выбора удобного режима, следует снять размеры с экрана вашего монитора.
+After choosing a convenient mode, you should take measurements of your monitor screen.
 
-## Шаг 2. Размеры монитора, положение ленты и зона чтения
+## Step 2. Monitor Dimensions, Strip Position, and Reading Zone
 
-Для замеров монитора и положения ленты Вам понадобится любой удобный измерительный прибор: линейка, рулетка, штангенциркуль или что угодно другое, что имеет шкалу в миллиметрах.
+To measure the monitor and the strip position, you'll need any convenient measuring tool: a ruler, a tape measure, calipers, or anything else with a millimeter scale.
 
-Также необходимо ввести строгое понятие: ***блок светодиодов*** - это группа соседних светодиодов в количестве 1 + n, где n - натуральное, *(группа)* которая управляется одним цветом и не может быть раздроблена на блок меньшего размера. Т.е. это отрезок ленты, который управляется <u>одним</u> чипом (вроде `WS2811`), из-за чего все светодиоды на данном отрезке получают на вход одинаковый цвет. Обычно блок светодиодов ограничен с обеих сторон местом, где ленту можно отрезать без повреждения её работоспособности. Блок светодиодов показан на изображении ниже как отрезок ленты, обведённый в красный прямоугольник.
+It's also necessary to introduce a strict concept: an ***LED block*** is a group of adjacent LEDs numbering 1 + n, where n is a natural number, *(group)* which is controlled by a single color and cannot be split into a smaller block. In other words, it's a strip segment controlled by <u>one</u> chip (such as `WS2811`), which is why all the LEDs on that segment receive the same input color. Typically, an LED block is bounded on both sides by a spot where the strip can be cut without damaging its functionality. An LED block is shown in the image below as a strip segment outlined in a red rectangle.
 
 <p align="center">
   <img src="./manual/led_block_example.png" width="85%" alt="Пример блока светодиодов">
 </p>
 
-Программа автоматически спроектирует положение ленты за монитором на экран, поэтому корректность замеров напрямую влияет на правильность считывания зон захвата для каждого блока светодиода.
+The program will automatically project the strip's position behind the monitor onto the screen, so the accuracy of your measurements directly affects the correctness of the capture zone readings for each LED block.
 
-Строго следуйте пунктам ниже, для корректной настройки.
+Strictly follow the steps below for a correct setup.
 
-### 2.1. Размеры монитора
+### 2.1. Monitor Dimensions
 
-Размеры монитора заполняются в таблице `[screen_config]`.
+The monitor dimensions are filled in in the `[screen_config]` table.
 
-Необходимо снять размеры дисплея (поверхность, что способна отображать картинку) без пластмассовых/металлических рамок. Потребуются высота и ширина экрана в миллиметрах. Пример того, как именно снять размеры с экрана проиллюстрирован на рисунке ниже:
+You need to measure the display (the surface capable of displaying an image) without the plastic/metal bezels. You'll need the screen's height and width in millimeters. An example of exactly how to take these measurements from the screen is illustrated in the figure below:
 
 <p align="center">
   <img src="./manual/frame_sizes_example.drawio.svg" width="45%" alt="Пример снятия размеров монитора">
 </p>
 
-Полученные значения вносятся в соответствующие блоки `frame_width_mm` для ширины и `frame_height_mm` для высоты.
+The resulting values are entered into the corresponding fields: `frame_width_mm` for width and `frame_height_mm` for height.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [screen_config]
 frame_width_mm = 590
 frame_height_mm = 330
 ```
 
-После снятия размеров экрана можно приступить к замерам ленты.
+Once the screen dimensions are measured, you can move on to measuring the strip.
 
-### 2.2. Положение ленты
+### 2.2. Strip Position
 
-Положение ленты заносится в таблицу `[led_position_config]`.
+The strip position is entered in the `[led_position_config]` table.
 
-Предполагается, что лента имеет одинаковое количество светодиодов на параллельных сторонах, а также лента наклеена с одинаковым зазором от края дисплея на каждой стороне.
+It's assumed that the strip has the same number of LEDs on parallel sides, and that the strip is mounted with the same gap from the edge of the display on each side.
 
-Необходимо измерить и вписать 4 значения:
- - `gap` - зазор от середины ленты (т.е. от физической середины самого светодиода на ленте) до края дисплея (без учёта рамок). Если лента наклеена на экран с <u>разными</u> зазорами, следует указать <u>наименьший</u>, однако учтите, что в таком случае захват зон может быть менее точным;
- - `led_length` - размер одного блока светодиода именно между местами, в которых можно произвести разрез (что такое блок светодиодов можно прочитать в начале [второго шага](#шаг-2-размеры-монитора-и-положение-ленты));
- - `vertical_led_amount` - количество блоков светодиодов на одной вертикальной стороне ленты;
- - `horizontal_led_amount` - количество блоков светодиодов на одной горизонтальной стороне ленты.
+You need to measure and enter 4 values:
+ - `gap` - the gap from the middle of the strip (i.e., from the physical center of the LED itself on the strip) to the edge of the display (excluding bezels). If the strip is mounted with <u>different</u> gaps, specify the <u>smallest</u> one, but keep in mind that in this case the capture zones may be less accurate;
+ - `led_length` - the size of a single LED block measured exactly between the points where a cut can be made (what an LED block is can be read about at the start of [step two](#step-2-monitor-dimensions-strip-position-and-reading-zone));
+ - `vertical_led_amount` - the number of LED blocks on one vertical side of the strip;
+ - `horizontal_led_amount` - the number of LED blocks on one horizontal side of the strip.
 
-Схематичное измерение зазора `gap` изображено на рисунке ниже, где лента изображена синим цветом и намеренно увеличена.
+A schematic measurement of the `gap` is shown in the figure below, where the strip is depicted in blue and intentionally enlarged.
 
 <p align="center">
   <img src="./manual/gap_example.drawio.svg" width="60%" alt="Пример замера зазора gap">
 </p>
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [led_position_config]
 gap = 10
@@ -129,72 +131,72 @@ vertical_led_amount = 5
 horizontal_led_amount = 9
 ```
 
-### 2.3 Зона чтения
+### 2.3 Reading Zone
 
-Также здесь стоит настроить параметры считывания, чтобы зона захвата точно совпадала с лентой.
+You should also set up the reading parameters here so that the capture zone precisely matches the strip.
 
-Данная настройка сохраняется в таблице `[screen_reading_config]`. Обязательны 2 параметра:
- - `deep_in`: чтение к центру экрана (в мм);
- - `deep_out`: чтение от центра экрана (в мм. Обязательно $< gap$).
+This setting is stored in the `[screen_reading_config]` table. 2 parameters are required:
+ - `deep_in`: reading toward the center of the screen (in mm);
+ - `deep_out`: reading away from the center of the screen (in mm. Must be $< gap$).
 
 <p align="center">
   <img src="./manual/screen_reading_example.drawio.svg" width="60%" alt="Пример установки зоны чтения">
 </p>
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [screen_reading_config]
 deep_in = 10
 deep_out = 5
 ```
 
-Рекомендуемые параметры:
+Recommended parameters:
  - `deep_in`: ~10-20;
- - `deep_out`: ~50% от `gap`.
+ - `deep_out`: ~50% of `gap`.
 
-Рекомендуется поставить зону считывания шириной ~10-20 мм.
+It's recommended to set the reading zone to a width of ~10-20 mm.
 
-После замера положения ленты на мониторе и установке зоны чтения можно переходить к следующему шагу.
+After measuring the strip's position on the monitor and setting up the reading zone, you can move on to the next step.
 
-## Шаг 3. Подключение ленты
+## Step 3. Connecting the Strip
 
-Теперь необходимо разобраться с подключением ленты к контроллеру и компьютеру, чтобы `shinombra` могла корректно управлять подсветкой.
+Now you need to sort out connecting the strip to the controller and the computer so that `shinombra` can correctly control the backlight.
 
-### 3.1. Подключение к контроллеру
+### 3.1. Connecting to the Controller
 
-Параметры подключения ленты заносятся в таблицу `[frame_connection_config]`.
+The strip connection parameters are entered in the `[frame_connection_config]` table.
 
-Предполагается, что лента полностью опоясывает края монитора, т.е. не имеет разрывов, а также подключается в начале одной из сторон и дальше цепочкой. Любой другой формат на данный момент, увы, не поддерживается.
+It's assumed that the strip fully wraps around the edges of the monitor, i.e., it has no gaps, and that it's connected starting at one of the sides and continuing in a chain from there. Unfortunately, any other layout is not currently supported.
 
-**Важно:** стороны и направления определяются из положения, когда Вы смотрите <u>на экран монитора</u>, т.е. в обычном рабочем положении.
+**Important:** the sides and directions are determined based on the position when you're looking <u>at the monitor screen</u>, i.e., in a normal working position.
 
-Необходимо указать 2 параметра:
- - `start_from` - сторона, которая подключена к контроллеру;
- - `direction` - направление, в котором соединены стороны ленты между собой.
+You need to specify 2 parameters:
+ - `start_from` - the side that's connected to the controller;
+ - `direction` - the direction in which the sides of the strip are connected to each other.
 
-Для `start_from` есть 4 варианта, соответствующих сторонам:
+For `start_from` there are 4 options, corresponding to the sides:
  - `Left`
  - `Up`
  - `Right`
  - `Down`
 
-Для `direction` есть 2 варианта:
- - `Clockwise` - по часовой стрелке
- - `Counterclockwise` - против
+For `direction` there are 2 options:
+ - `Clockwise`
+ - `Counterclockwise`
 
-Простая таблица для быстрого определения направления (снова смотрим именно **на** дисплей):
-| Сторона ленты, к которой подключен контроллер | Откуда видно провод, идущий к контроллеру |     direction      |
-| :-------------------------------------------: | :---------------------------------------: | :----------------: |
-|                     Лево                      |                    Низ                    |    `Clockwise`     |
-|                     Лево                      |                   Верх                    | `Counterclockwise` |
-|                     Верх                      |                   Лево                    |    `Clockwise`     |
-|                     Верх                      |                   Право                   | `Counterclockwise` |
-|                     Право                     |                   Верх                    |    `Clockwise`     |
-|                     Право                     |                    Низ                    | `Counterclockwise` |
-|                      Низ                      |                   Право                   |    `Clockwise`     |
-|                      Низ                      |                   Лево                    | `Counterclockwise` |
+A simple table for quickly determining the direction (again, we're looking **at** the display):
+| Side of the strip the controller is connected to | Where you can see the wire going to the controller from |     direction      |
+| :----------------------------------------------: | :-----------------------------------------------------: | :----------------: |
+|                       Left                       |                         Bottom                          |    `Clockwise`     |
+|                       Left                       |                           Top                           | `Counterclockwise` |
+|                       Top                        |                          Left                           |    `Clockwise`     |
+|                       Top                        |                          Right                          | `Counterclockwise` |
+|                      Right                       |                           Top                           |    `Clockwise`     |
+|                      Right                       |                         Bottom                          | `Counterclockwise` |
+|                      Bottom                      |                          Right                          |    `Clockwise`     |
+|                      Bottom                      |                          Left                           | `Counterclockwise` |
 
-Пример заполнения таблицы для ленты, подключённой слева-снизу (т.е. по часовой стрелке), как на картинке ниже:
+Example of filling in the table for a strip connected at the bottom-left (i.e., clockwise), as shown in the picture below:
 ```toml
 [frame_connection_config]
 start_from = "Left"
@@ -205,33 +207,33 @@ direction = "Clockwise"
   <img src="./manual/led_connection_example.svg" width="50%" alt="Пример подключения ленты">
 </p>
 
-После указания подключения можно переходить к настройке протоколов связи с ПК.
+After specifying the connection, you can move on to configuring the PC communication protocols.
 
-### 3.2. Подключение к ПК
+### 3.2. Connecting to the PC
 
-Данная настройка указывается в таблице `[settings]` в поле `hardware_output_type`. Об остальных полях данной таблицы подробно написано в [разделе о конфигурации](#settings).
+This setting is specified in the `[settings]` table, in the `hardware_output_type` field. The other fields of this table are described in detail in the [configuration section](#settings).
 
-На данный момент лента поддерживает ограниченное число протоколов, а именно:
- - [DDP](#ddp-ddp_config);
- - [DRGB](#drgb-wled_drgb_config);
- - [ShinombraSerial](#shinombraserial-shinombra_serial_config) - кастомный протокол, о котором подробнее написано в [разделе о кастомном протоколе](#shinombraserial-1);
- - [Debug](#debug) - отладочный вывод в консоль.
+At the moment, the strip supports a limited number of protocols, namely:
+ - [DDP](#ddp);
+ - [DRGB](#drgb);
+ - [ShinombraSerial](#shinombraserial) - a custom protocol, described in more detail in the [section on the custom protocol](#shinombraserial-1);
+ - [Debug](#debug) - debug output to the console.
 
-В зависимости от протокола, который поддерживает ваше устройство, необходимо указать данные согласно одному из пунктов ниже.
+Depending on the protocol your device supports, you need to enter the data according to one of the sections below.
 
 #### DDP
 
-При выборе DDP протокола необходимо указать `hardware_output_type = "Ddp"`, настройки самого протокола внести в таблицу `[ddp_config]`.
+When choosing the DDP protocol, you need to set `hardware_output_type = "Ddp"`; the protocol's own settings go into the `[ddp_config]` table.
 
-Настройка требует только одного обязательного поля `ip`, в которое можно вписать как ip-адрес, так и dns-имя.
+The setting requires only one mandatory field, `ip`, into which you can enter either an IP address or a DNS name.
 
-Следующие настройки <u>не обязательны</u> и могут негативно сказаться на работе протокола. Указывайте их только, если уверены:
- - `port` - порт, на котором устройство ожидает принимать пакеты (по умолчанию выбран `4048`);
- - `mtu` - размер пакета в байтах в Вашей сети (по умолчанию `1500`). Зависит от роутера и способа подключения к сети. Необходим для корректного разбиения потока на пакеты.
+The following settings are <u>not mandatory</u> and may negatively affect the protocol's operation. Only specify them if you're sure:
+ - `port` - the port on which the device expects to receive packets (`4048` by default);
+ - `mtu` - the packet size in bytes on your network (`1500` by default). Depends on the router and the way you connect to the network. Needed for correctly splitting the stream into packets.
 
-Для корректной работы алгоритма рекомендуется ограничить FPS в пределах [60; 100] в зависимости от количества блоков светодиодов в Вашей ленте. Как это сделать можно прочитать в разделе [об ограничении FPS](#шаг-7-ограничение-fps).
+For the algorithm to work correctly, it's recommended to limit the FPS to within [60; 100] depending on the number of LED blocks in your strip. You can read about how to do this in the section [on limiting FPS](#step-7-limiting-fps).
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 hardware_output_type = "Ddp"
@@ -243,17 +245,17 @@ ip = "led.local"
 
 #### DRGB
 
-При выборе DRGB протокола от Wled необходимо указать `hardware_output_type = "WledDrgb"`, настройки самого протокола внести в таблицу `[wled_drgb_config]`.
+When choosing the DRGB protocol from Wled, you need to set `hardware_output_type = "WledDrgb"`; the protocol's own settings go into the `[wled_drgb_config]` table.
 
-Настройка требует только одного обязательного поля `ip`, в которое можно вписать как ip-адрес, так и dns-имя.
+The setting requires only one mandatory field, `ip`, into which you can enter either an IP address or a DNS name.
 
-Следующие настройки <u>не обязательны</u> и могут негативно сказаться на работе протокола. Указывайте их только, если уверены:
- - `port` - порт, на котором устройство ожидает принимать пакеты (по умолчанию выбран `21324`);
- - `timeout` - максимальное время ожидания пакета устройством (по умолчанию `2`). Если в течение установленного времени пакет не пришёл, устройство принимает решение на основе внутренней программы, обычно переходит в режим ожидания.
+The following settings are <u>not mandatory</u> and may negatively affect the protocol's operation. Only specify them if you're sure:
+ - `port` - the port on which the device expects to receive packets (`21324` by default);
+ - `timeout` - the maximum time the device waits for a packet (`2` by default). If a packet doesn't arrive within the set time, the device makes a decision based on its internal program, usually switching to standby mode.
 
-Для корректной работы алгоритма рекомендуется ограничить FPS в пределах [60; 100] в зависимости от количества блоков светодиодов в Вашей ленте. Как это сделать можно прочитать в разделе [об ограничении FPS](#шаг-7-ограничение-fps).
+For the algorithm to work correctly, it's recommended to limit the FPS to within [60; 100] depending on the number of LED blocks in your strip. You can read about how to do this in the section [on limiting FPS](#step-7-limiting-fps).
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 hardware_output_type = "WledDrgb"
@@ -265,15 +267,15 @@ ip = "led.local"
 
 #### ShinombraSerial
 
-При выборе протокола ShinombraSerial необходимо указать `hardware_output_type = "ShinombraSerial"`, настройки самого протокола внести в таблицу `[shinombra_serial_config]`. Подробнее о самом протоколе написано в [разделе о кастомном протоколе](#shinombraserial-1).
+When choosing the ShinombraSerial protocol, you need to set `hardware_output_type = "ShinombraSerial"`; the protocol's own settings go into the `[shinombra_serial_config]` table. More details on the protocol itself are given in the [section on the custom protocol](#shinombraserial-1).
 
-Настройка требует только двух параметров:
- - `port_path` - путь до устройства. Обычно `/dev/ttyUSBx`;
- - `baud_rate` - скорость обмена данными по Serial (подробнее читать в описании протокола).
+The setting requires only two parameters:
+ - `port_path` - the path to the device. Usually `/dev/ttyUSBx`;
+ - `baud_rate` - the data transfer rate over Serial (read more in the protocol description).
 
-Перед стартом, убедитесь, что Ваш пользователь есть в группе `uucp` для Arch или `dialout` для Debian.
+Before starting, make sure your user is in the `uucp` group for Arch or the `dialout` group for Debian.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 hardware_output_type = "ShinombraSerial"
@@ -286,47 +288,47 @@ baud_rate = 2000000
 
 #### Debug
 
-При выборе отладочного вывода необходимо указать `hardware_output_type = "Debug"`.
+When choosing debug output, you need to set `hardware_output_type = "Debug"`.
 
-Данный вариант не имеет собственных настроек. Он выводит в консоль рамку из блоков светодиодов, которые окрашены в цвет, полученный после аналитики и фильтрации. Необходим исключительно для отладки.
+This option has no settings of its own. It prints to the console a frame made up of LED blocks, colored with the values obtained after analytics and filtering. It's needed exclusively for debugging.
 
-Для его работы Ваш терминал должен поддерживать ANSI-символы.
+For it to work, your terminal must support ANSI characters.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 hardware_output_type = "Debug"
 ...
 ```
 
-После настройки связи с устройством можно перейти к настройке сервиса.
+After setting up the device connection, you can move on to configuring the service.
 
 
-## Шаг 4. Настройка сервиса
+## Step 4. Configuring the Service
 
-Изначально `shinombra` устанавливается как unit-сервис, однако при желании Вы можете использовать её как обычную программу, вызывая по имени в терминале.
+By default, `shinombra` is installed as a unit service, but if you wish, you can use it as a regular program by calling it by name in the terminal.
 
-В зависимости от выбранного режима конфигурации данные настройки должны располагаться в манифесте при сложном режиме или в файле-конфигурации при простом режиме. Подробнее об этом написано в [разделе о конфигурации](#итоговый-вид-конфига).
+Depending on the chosen configuration mode, these settings should be located in the manifest for advanced mode, or in the config file for simple mode. More details on this are given in the [configuration section](#the-resulting-config).
 
-Настройки сервиса указываются в таблице `[daemon_settings]`
+The service settings are specified in the `[daemon_settings]` table.
 
-Для запуска сервиса необходимо указать следующие параметры:
- - `log_level` - уровень логирования;
- - `pipewire_conversion` - разрешение на преобразование типов силами PipeWire (подробнее об этом можно прочитать в [разделе об обработке кадра](#как-shinombra-обрабатывает-кадр));
- - `save_token` - разрешение на сохранение токена сессии PipeWire (необходимо для автоматического старта сервиса без необходимости каждый раз разрешать захват экрана).
+To start the service, you need to specify the following parameters:
+ - `log_level` - the logging level;
+ - `pipewire_conversion` - permission for type conversion by PipeWire (you can read more about this in the [section on frame processing](#how-shinombra-processes-a-frame));
+ - `save_token` - permission to save the PipeWire session token (needed for automatically starting the service without having to grant screen capture permission every time).
 
-На выбор доступно несколько уровней логирования:
- - `Off` - логи полностью отключены;
- - `Error` - только критические ошибки;
- - `Warn` - предупреждения;
- - `Info` - информация о текущем состоянии;
- - `Debug` - отладочный вывод;
+Several logging levels are available:
+ - `Off` - logs are completely disabled;
+ - `Error` - critical errors only;
+ - `Warn` - warnings;
+ - `Info` - information about the current state;
+ - `Debug` - debug output;
 
-Каждый уровень логов ограничивает вывод так, что выводятся логи только схожего уровня или уровня выше выбранного. Т.е. при установке `log_level = Warn` будут выводиться как предупреждения, так и критические ошибки.
+Each log level limits the output so that only logs of a similar level or a level higher than the one chosen are shown. That is, when setting `log_level = Warn`, both warnings and critical errors will be shown.
 
-Флаг `save_token` управляет сохранением токена сессии PipeWire в бинарный файл по пути `~/.local/share/shinombra/session.bin`. Токен хранится в зашифрованном виде. Он необходим, чтобы при каждом запуске сервиса не появлялось окно выбора экрана.
+The `save_token` flag controls saving the PipeWire session token to a binary file at `~/.local/share/shinombra/session.bin`. The token is stored in encrypted form. It's needed so that the screen selection window doesn't appear every time the service starts.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [daemon_settings]
 log_level = "Warn"
@@ -334,20 +336,20 @@ pipewire_conversion = false
 save_token = true
 ```
 
-Дальнейшие главы нужны для более точной настройки ленты и понимания внутренних процессов. Если Вам уже не терпится попробовать `shinombra` в деле, рекомендую использовать [пресеты](./presets.md).
+The following chapters are needed for more precise strip configuration and understanding the internal processes. If you're already eager to try `shinombra` in action, I recommend using the [presets](./presets.ru.md).
 
-## Как Shinombra обрабатывает кадр
+## How Shinombra Processes a Frame
 
-Данный пункт является исключительно информативным и нужен только для большего понимания, как именно настройки будут влиять на работу программы. Однако при желании можно пропустить и сразу перейти к [следующему шагу](#шаг-5-настройка-процессора-фрагмента).
+This section is purely informational and is only needed to give you a better understanding of exactly how the settings affect the program's operation. However, if you wish, you can skip it and go straight to the [next step](#step-5-configuring-the-fragment-processor).
 
-Прежде чем говорить о внутренней логике работы программы, важно ввести строгие понятия:
- - ***кадр*** - массив пикселей, который программа обрабатывает (картинка на экране целиком);
- - ***фрагмент кадра*** - часть кадра в виде прямоугольной области, которая была закреплена за конкретным [блоком светодиодов](#шаг-2-размеры-монитора-и-положение-ленты) в результате проекции;
- - ***процессор / обходчик фрагмента*** - алгоритм, который специальным образом обходит фрагмент и отправляет данные на анализ;
- - ***аналитик*** - алгоритм, который занимается только анализом цвета, полученного из процессора. В результате анализа массива цветов из фрагмента вычисляет доминирующий цвет;
- - ***форматер*** - алгоритм, который превращает набор байт в цвет в RGB формате.
+Before discussing the internal logic of the program, it's important to introduce some strict concepts:
+ - a ***frame*** - the array of pixels the program processes (the entire picture on the screen);
+ - a ***frame fragment*** - part of a frame in the form of a rectangular area that was assigned to a specific [LED block](#step-2-monitor-dimensions-strip-position-and-reading-zone) as a result of the projection;
+ - a ***processor / fragment walker*** - an algorithm that traverses a fragment in a specific way and sends the data for analysis;
+ - an ***analyst*** - an algorithm that deals only with analyzing the color obtained from the processor. As a result of analyzing the array of colors from the fragment, it computes the dominant color;
+ - a ***formatter*** - an algorithm that turns a set of bytes into a color in RGB format.
 
-Прежде чем превратиться в электрические сигналы на Вашей ленте, кадр проходит определённую обработку (упрощённая схема):
+Before turning into electrical signals on your strip, a frame goes through a certain processing pipeline (simplified diagram):
 ```mermaid
 graph
     Capture[Захват кадра] --> Formatter[Превращения массива байт в массив цветов]
@@ -358,75 +360,75 @@ graph
 
 ```
 
-Причём обход и анализ каждого фрагмента происходит последовательно, что продиктовано архитектурными решениями. А захват происходит тогда и только тогда, когда PipeWire присылает обновлённый кадр, т.е. при смене кадра запускается обработка, если, конечно, не ограничен fps, о чём можно почитать в разделе про [ограничение fps](#шаг-7-ограничение-fps).
+Moreover, the traversal and analysis of each fragment happens sequentially, which is dictated by architectural decisions. And a capture happens if and only if PipeWire sends an updated frame, i.e., processing is triggered when the frame changes, unless, of course, the FPS is limited, which you can read about in the section on [limiting FPS](#step-7-limiting-fps).
 
-На данный момент программа поддерживает ограниченное число самых распространённых форматеров (все вариации RGB), однако есть вероятность, что в Вашей системе всё построено на другом формате. Именно для этого существует флаг `[daemon_settings] pipewire_conversion`, который позволяет PipeWire попробовать налету превратить формат Вашей системы, в понятный для `shinombra` вид. Однако данная настройка влечёт за собой увеличение расхода ресурсов, т.к., увы, PipeWire будет преобразовывать и копировать кадр целиком, несмотря на то, что обычно `shinombra` анализирует меньше ~10%.
+At the moment, the program supports a limited number of the most common formatters (all variations of RGB), but there's a chance that your system is built entirely on a different format. This is exactly why the `[daemon_settings] pipewire_conversion` flag exists, which allows PipeWire to try to convert your system's format on the fly into a form `shinombra` understands. However, this setting entails increased resource usage, since, unfortunately, PipeWire will convert and copy the entire frame, even though `shinombra` typically analyzes less than ~10% of it.
 
-Также важно сказать о том, что фильтры и аналитики могут работать в разных форматах, а именно в RGB и HSV. Для избежания лишних преобразований была создана умная обёртка, которая преобразует формат только тогда, когда это требуется. Однако важно учитывать, что от расположения фильтров зависит производительность. О том, в каком формате работает каждый фильтр можно узнать в разделе [о фильтрах](#шаг-8-настройка-фильтров) перед примером заполнения таблицы для каждого фильтра, а также в конце самого раздела.
+It's also important to mention that filters and analysts can work in different formats, namely RGB and HSV. To avoid unnecessary conversions, a smart wrapper was created that converts the format only when required. However, it's important to keep in mind that performance depends on the order of the filters. You can find out which format each filter works in in the section [on filters](#step-8-configuring-filters), right before the example of filling in the table for each filter, as well as at the end of that section.
 
-Составив общее представление о работе программы, можно перейти к её непосредственной настройке.
+Having formed a general picture of how the program works, you can move on to its direct configuration.
 
 
-## Шаг 5. Настройка процессора фрагмента
+## Step 5. Configuring the Fragment Processor
 
-Выбор процессора указывается в таблице `[settings]` в поле `chunk_processor_type`. Подробнее об этой таблице можно почитать в [разделе о конфигурации](#settings).
+The choice of processor is specified in the `[settings]` table, in the `chunk_processor_type` field. You can read more about this table in the [configuration section](#settings).
 
-На выбор есть:
- - [Checkerboard](#checkerboard) - для спокойных и размеренных видео / кино;
- - [CrawlCheckerboard](#dynamiccheckerboard) - для динамичных и резких сцен / активных игр.
+Available options:
+ - [Checkerboard](#checkerboard) - for calm and measured videos / movies;
+ - [CrawlCheckerboard](#crawlcheckerboard) - for dynamic and sharp scenes / active games.
 
-О каждом варианте подробно написано в соответствующих пунктах ниже.
+Each option is described in detail in the corresponding section below.
 
 ### Checkerboard
 
-Обход в статичном "шахматном" порядке или в виде "сетки". Данный процессор всегда пропускает определённое количество строк и столбцов, в результате чего на анализ попадает не весь фрагмент, а малая его часть. Принцип захвата проиллюстрирован на рисунке ниже, где синим отмечены те пиксели, которые попадают в анализ.
+Traversal in a static "checkerboard" order, or in the form of a "grid." This processor always skips a certain number of rows and columns, so that only a small part of the fragment, not the whole thing, is analyzed. The capture principle is illustrated in the figure below, where the pixels that go into the analysis are marked in blue.
 
 <p align="center">
   <img src="./manual/checkerboard_processor.drawio.svg" width="40%" alt="Принцип работы Checkerboard">
 </p>
 
-Данный процессор хорошо подходит для спокойных видео, кино, обычного скроллинга сети и подобных ситуаций, т.к. не создаёт помех и выдаёт стабильный результат. Однако важно учитывать, что из-за принципа его работы он может упускать мелкие детали.
+This processor is well suited for calm videos, movies, ordinary web browsing, and similar situations, since it doesn't create interference and produces a stable result. However, it's important to keep in mind that, due to how it works, it can miss small details.
 
-Настройки данного процессора сохраняются в таблице `[checkerboard_config]` (не забудьте указать выбранный процессор в таблице `[settings]`). Требуется заполнить 2 параметра:
- - Каждый пиксель с "номером", кратным `pixel_step`, будет считан;
- - Каждая строка с "номером", кратным `row_stride`, будет считана.
+The settings for this processor are stored in the `[checkerboard_config]` table (don't forget to specify the chosen processor in the `[settings]` table). 2 parameters need to be filled in:
+ - Every pixel whose "number" is a multiple of `pixel_step` will be read;
+ - Every row whose "number" is a multiple of `row_stride` will be read.
 
-Пример заполнения таблицы для параметров из рисунка:
+Example of filling in the table for the parameters from the figure:
 ```toml
 [settings]
 chunk_processor_type = "Checkerboard"
 ...
 
 [checkerboard_config]
-# Читается каждый третий пиксель в строке
+# Every third pixel in a row is read
 pixel_step = 3
-# Читается каждая четвёртая строка
+# Every fourth row is read
 row_stride = 4
 ```
 
-Рекомендуемые значения:
+Recommended values:
  - `pixel_step`: ~7-12;
  - `row_stride`: ~4-6.
 
-<u>Чем меньше</u> будут установлены значения, <u>тем больше</u> пикселей попадёт в анализ.
+<u>The smaller</u> the values set, <u>the more</u> pixels will go into the analysis.
 
 ### CrawlCheckerboard
 
-Данный процессор имеет схожий принцип работы, что и у [Checkerboard](#checkerboard), однако он не остаётся статическим, а постоянно сдвигает считывающую сетку с течением кадров. Принцип захвата проиллюстрирован на рисунке ниже, где синими всё также отмечены пиксели, попадающие в анализ, а серыми отмечены пиксели, которые захватывались на предыдущем кадре.
+This processor works on a principle similar to [Checkerboard](#checkerboard), but instead of staying static, it constantly shifts the reading grid over the course of the frames. The capture principle is illustrated in the figure below, where blue again marks the pixels that go into the analysis, and gray marks the pixels that were captured on the previous frame.
 
 <p align="center">
   <img src="./manual/crawl_checkerboard_processor.drawio.svg" width="85%" alt="Принцип работы CrawlCheckerboard">
 </p>
 
-Данный процессор хорошо подходит для очень динамичных игр и кино. За счёт смещения сетки анализ получается более честным и в кадр попадают практически все пиксели (в зависимости от настройки), однако из-за этого на статичных картинках светодиоды могут моргать. Для сглаживания данного негативного эффекта рекомендуется использовать фильтры: [EMA](#ema) и [Median](#median).
+This processor is well suited for very dynamic games and movies. Thanks to the grid shifting, the analysis turns out more fair and practically all pixels end up in the frame (depending on the settings), but because of this, the LEDs may flicker on static images. To smooth out this negative effect, it's recommended to use the [EMA](#ema) and [Median](#median) filters.
 
-Настройки данного процессора сохраняются в таблице `[crawl_checkerboard_config]` (не забудьте указать выбранный процессор в таблице `[settings]`). Требуется заполнить 4 параметра:
- - Каждый пиксель с "номером", кратным `pixel_step`, будет считан;
- - Каждая строка с "номером", кратным `row_stride`, будет считана;
- - `column_crawl` - число столбцов, на которое сместится сетка;
- - `row_crawl` - число строк, на которое сместится сетка.
+The settings for this processor are stored in the `[crawl_checkerboard_config]` table (don't forget to specify the chosen processor in the `[settings]` table). 4 parameters need to be filled in:
+ - Every pixel whose "number" is a multiple of `pixel_step` will be read;
+ - Every row whose "number" is a multiple of `row_stride` will be read;
+ - `column_crawl` - the number of columns the grid will shift by;
+ - `row_crawl` - the number of rows the grid will shift by.
 
-Пример заполнения таблицы для параметров из рисунка:
+Example of filling in the table for the parameters from the figure:
 
 ```toml
 [settings]
@@ -434,43 +436,43 @@ chunk_processor_type = "CrawlCheckerboard"
 ...
 
 [crawl_checkerboard_config]
-# Читается каждый третий пиксель в строке
+# Every third pixel in a row is read
 pixel_step = 3
-# Читается каждая четвёртая строка
+# Every fourth row is read
 row_stride = 4
-# На следующем кадре сетка сместится на 2 столбца
+# On the next frame, the grid will shift by 2 columns
 column_crawl = 2
-# На следующем кадре сетка сместится на 3 строки
+# On the next frame, the grid will shift by 3 rows
 row_crawl = 3
 ```
 
-Рекомендуемые значения:
+Recommended values:
  - `pixel_step`: ~7-12;
  - `row_stride`: ~4-6;
  - `column_crawl`: ~1-5;
  - `row_crawl`: ~1-5.
 
-Здесь, аналогично [Checkerboard](#checkerboard), <u>чем меньше</u> будут установлены значения, <u>тем больше</u> пикселей попадёт в анализ. Также для избежания моргания светодиодов не рекомендуется ставить параметры смещения сетки на слишком большие значения и не имеет смысла ставить `column_crawl = pixel_step` или `row_crawl = row_stride`. Это не сломает логику работы программы, но и не даст никакой пользы.
+Here, similarly to [Checkerboard](#checkerboard), <u>the smaller</u> the values set, <u>the more</u> pixels will go into the analysis. Also, to avoid LED flickering, it's not recommended to set the grid shift parameters to values that are too large, and there's no point setting `column_crawl = pixel_step` or `row_crawl = row_stride`. This won't break the program's logic, but it won't give any benefit either.
 
 
-## Шаг 6. Настройка аналитика
+## Step 6. Configuring the Analyst
 
-Выбор аналитика указывается в таблице `[settings]` в поле `analytics_type`. Подробнее об этой таблице можно почитать в [разделе о конфигурации](#settings).
+The choice of analyst is specified in the `[settings]` table, in the `analytics_type` field. You can read more about this table in the [configuration section](#settings).
 
-На выбор есть:
- - [Average](#average) - менее точный, но более производительный;
- - [Histogram](#histogram) - максимально точный, но менее производительный;
- - [DebugRgb](#debugrgb) - для отладки.
+Available options:
+ - [Average](#average) - less accurate, but more performant;
+ - [Histogram](#histogram) - maximally accurate, but less performant;
+ - [DebugRgb](#debugrgb) - for debugging.
 
-О каждом варианте подробно написано в соответствующем пункте ниже.
+Each option is described in detail in the corresponding section below.
 
 ### Average
 
-Простейшее среднее арифметическое. Для полученных пикселей вычисляется среднее значение по каналам red, green и blue.
+The simplest arithmetic mean. For the pixels obtained, the average value is calculated across the red, green, and blue channels.
 
-Данный алгоритм является максимально простым и сверх дешёвым по производительности. Однако большим его минусом является то, что он не вычисляет доминирующий цвет как таковой. Например, если на чёрной сцене попадётся белая линия, то алгоритм выдаст серый цвет.
+This algorithm is as simple as possible and extremely cheap in terms of performance. However, its major downside is that it doesn't compute a dominant color as such. For example, if a white line appears on a black scene, the algorithm will produce a gray color.
 
-Ниже представлены примеры работы на различных изображениях. Первым идёт исходное изображение, а затем за ним идёт то же полупрозрачное изображение с наложенными значениями блоков светодиодов (без фильтров): 
+Below are examples of how it performs on various images. First comes the source image, then followed by the same semi-transparent image with the LED block values overlaid (without filters):
 
 <p align="center">
   <img src="./manual/fish_example.jpg" width="100%" alt="Пример с рыбками">
@@ -479,11 +481,11 @@ row_crawl = 3
   <img src="./manual/average_curly_cat_example.svg" width="100%" alt="Расчёт примера с котиком">
 </p>
 
-\* изображённые блоки имеют намеренно гиперболизированный размер и в реальности в ~2 раза тоньше.
+\* the blocks shown are intentionally exaggerated in size and are in reality ~2 times thinner.
 
-Среднее арифметическое не имеет своего поля с настройками.
+The arithmetic mean has no settings field of its own.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 analytics_type = "Average"
@@ -492,11 +494,11 @@ analytics_type = "Average"
 
 ### Histogram
 
-Алгоритм расчёта доминирующего цвета на взвешенных гистограммах является одним из самых точных для определения доминирующего цвета. Он работает на системе голосования в пространстве HSV. Цветовой круг разбивается на условные зоны для голосования. Каждый пиксель, попавший в анализ, голосует за определённый участок на круге. Голосом служит произведение яркости на насыщенность, т.к. человеческий глаз видит более насыщенные и яркие цвета куда лучше и "доминантнее", чем тусклые и тёмные. Если пиксель тусклый, он голосует за отдельную выбранную корзину, необходимую для чёрного и белого цветов. При вычислении доминирующего цвета находится корзина с бОльшим количеством голосов, цвет тон берётся как середина участка круга, насыщенность и яркость как среднее по пикселям, голосовавшим за победившую корзину.
+The algorithm for calculating the dominant color based on weighted histograms is one of the most accurate for determining the dominant color. It works on a voting system in HSV space. The color wheel is divided into conditional zones for voting. Each pixel that goes into the analysis votes for a specific section of the wheel. The vote is the product of brightness and saturation, since the human eye perceives more saturated and bright colors as much better and "more dominant" than dull and dark ones. If a pixel is dull, it votes for a separate designated bucket, needed for black and white colors. When calculating the dominant color, the bucket with the most votes is found; the hue is taken as the middle of the wheel section, and the saturation and brightness as the average over the pixels that voted for the winning bucket.
 
-Данный алгоритм является очень точным, однако требует куда больше ресурсов чем [Average](#average). Зато результат получается максимально точным.
+This algorithm is very accurate, but requires far more resources than [Average](#average). In exchange, the result is as accurate as possible.
 
-Ниже представлены примеры работы на различных изображениях. Первым идёт исходное изображение, а затем за ним идёт то же полупрозрачное изображение с наложенными значениями блоков светодиодов (без фильтров): 
+Below are examples of how it performs on various images. First comes the source image, then followed by the same semi-transparent image with the LED block values overlaid (without filters):
 
 <p align="center">
   <img src="./manual/fish_example.jpg" width="100%" alt="Пример с рыбками">
@@ -505,11 +507,11 @@ analytics_type = "Average"
   <img src="./manual/histogram_curly_cat_example.svg" width="100%" alt="Расчёт примера с котиком">
 </p>
 
-\* изображённые блоки имеют намеренно гиперболизированный размер и в реальности в ~2 раза тоньше. Вычисления производились на максимальном уровне точности.
+\* the blocks shown are intentionally exaggerated in size and are in reality ~2 times thinner. The calculations were performed at the maximum accuracy level.
 
-Для данного алгоритма можно выбрать точность работы с помощью настройки `precision_level` в таблице `[histogram_config]`. Уровень точности ограничен [1; 20]. Результирующее количество корзин $= precision\_level \cdot 6$. Т.е. при установки `precision_level = 20` Вы получите анализ на 120 корзинах, что очень точно, т.к. на каждый участок для голосования выходит всего 3 градуса круга, что человеческий глаз практически не различает.
+For this algorithm, you can choose the accuracy level using the `precision_level` setting in the `[histogram_config]` table. The precision level is limited to [1; 20]. The resulting number of buckets $= precision\_level \cdot 6$. That is, setting `precision_level = 20` gives you an analysis over 120 buckets, which is very precise, since each voting section covers only 3 degrees of the wheel, something the human eye practically can't distinguish.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 analytics_type = "Histogram"
@@ -519,17 +521,17 @@ analytics_type = "Histogram"
 precision_level = 20
 ```
 
-Выбранная точность напрямую влияет на производительность. <u>Чем больше</u> точность, <u>тем больше</u> затрачивается ресурсов.
+The chosen precision directly affects performance. <u>The higher</u> the precision, <u>the more</u> resources are consumed.
 
 ### DebugRgb
 
-Это отладочный вывод. Подойдёт, если Вы хотите настроить точность отображения цвета и залить всю ленту одним цветом.
+This is debug output. It's useful if you want to fine-tune color accuracy or fill the entire strip with a single color.
 
-Данный вариант ничего не вычисляет и только выдаёт цвет из конфигурации.
+This option doesn't compute anything and simply outputs the color from the configuration.
 
-Конфигурация хранится в таблице `[debug_rgb_config]` и имеет 3 параметра: `red`, `green` и `blue` соответствующие обычному RGB пикселю. Данные значения ограничены в пределах [0; 255].
+The configuration is stored in the `[debug_rgb_config]` table and has 3 parameters: `red`, `green`, and `blue`, corresponding to a regular RGB pixel. These values are limited to the range [0; 255].
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 analytics_type = "DebugRgb"
@@ -541,55 +543,56 @@ green = 50
 blue = 50
 ```
 
-После выбора аналитика можно настроить ограничение по FPS.
+After choosing an analyst, you can set up the FPS limit.
 
 
-## Шаг 7. Ограничение FPS
+## Step 7. Limiting FPS
 
-В связи с тем, что некоторые протоколы не поддерживают передачу данных выше определённых значений FPS, а также в среднем человеческое боковое зрение не способно заметить разницу между обновлением картинки с частотой 60 Гц и любой другой выше, `shinombra` способна ограничивать частоту кадров на уровне захвата кадров, просто отсеивая тех, кто пришёл не вовремя.
+Since some protocols don't support data transmission above certain FPS values, and since on average the human peripheral vision can't notice the difference between a picture refreshing at 60 Hz and any rate above that, `shinombra` is able to limit the frame rate at the frame capture level, simply discarding frames that arrive at the wrong time.
 
-Данная настройка вносится в таблицу `[settings]` в поле `max_fps`. Подробнее об этой таблице можно почитать в [разделе о конфигурации](#settings).
+This setting is entered in the `[settings]` table, in the `max_fps` field. You can read more about this table in the [configuration section](#settings).
 
-Ограничение частоты является опциональным. Вы можете установить ограничение на любое натуральное значение больше нуля, либо не ограничивать вообще.
+The frame rate limit is optional. You can set the limit to any natural number greater than zero, or not limit it at all.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 max_fps = 60
 ...
 ```
 
-После ограничения FPS можно перейти к настройке фильтрации.
+After limiting the FPS, you can move on to configuring filtering.
 
-## Шаг 8. Настройка фильтров
 
-Из-за того, что цветопередача на мониторе и на светодиодной ленте обычно не совпадает, а также Вы можете сидеть напротив не идеально белой стены, а цветных обоев, `shinombra` поддерживает богатую систему фильтрации, обеспечивающую Вас красивой, настраиваемой картинкой.
+## Step 8. Configuring Filters
 
-Все фильтры заполняются в таблицу `[settings]` в поле `filter_chain` в виде массива в том порядке, в котором необходимо их применить слева на право.
+Because color reproduction on the monitor and on the LED strip usually doesn't match, and also because you might be sitting across from a wall that isn't perfectly white but instead colored wallpaper, `shinombra` supports a rich filtering system that provides you with a beautiful, customizable picture.
 
-Пример для последовательной фильтрации `EMA -> WhiteBalance -> Gamma`:
+All filters are entered into the `[settings]` table, in the `filter_chain` field, as an array in the order in which they need to be applied, left to right.
+
+Example for sequential filtering `EMA -> WhiteBalance -> Gamma`:
 ```toml
 [settings]
 filter_chain = ["Ema", "WhiteBalance", "Gamma"]
 ...
 ```
 
-Важно понимать, что фильтры можно располагать в любом порядке и дублировать, однако настройка для конкретного фильтра может быть всего 1 в соответствующем поле. Например, нельзя добавить в цепочку 2 EMA фильтра с разными `alpha` - это не поддерживает система конфигурации.
+It's important to understand that filters can be arranged in any order and duplicated, but the settings for a specific filter can only appear once, in the corresponding field. For example, you can't add 2 EMA filters with different `alpha` values to the chain - the configuration system doesn't support this.
 
-На выбор есть:
- - [NoFilter](#nofilter) - отсутствие фильтра;
- - [Ema](#ema) - делает изменение картинки более плавным;
- - [Gamma](#gamma) - корректирует яркость под человеческое восприятие;
- - [BlackThreshold](#blackthreshold) - умное отсечение тусклых цветов (через кусочную функцию);
- - [SaturationBoost](#saturationboost) - умное увеличение насыщенности;
- - [WhiteBalance](#whitebalance) - настройка баланса белого (теплота в кельвинах);
- - [ChannelGain](#channelgain) - точная регулировка каналов;
- - [FlashGuard](#flashguard) - защита от вспышек;
- - [Median](#median) - защита от случайных выбросов.
+Available options:
+ - [NoFilter](#nofilter) - no filter;
+ - [Ema](#ema) - makes the picture's changes smoother;
+ - [Gamma](#gamma) - corrects brightness for human perception;
+ - [BlackThreshold](#blackthreshold) - smart cutoff of dim colors (via a piecewise function);
+ - [SaturationBoost](#saturationboost) - smart saturation increase;
+ - [WhiteBalance](#whitebalance) - white balance setting (warmth in kelvins);
+ - [ChannelGain](#channelgain) - precise channel adjustment;
+ - [FlashGuard](#flashguard) - protection from flashes;
+ - [Median](#median) - protection from random outliers.
 
-О каждом фильтре подробно написано в соответствующих пунктах ниже.
+Each filter is described in detail in the corresponding section below.
 
-Для правильности понимания формул важно сразу обозначить диапазоны форматов представления:
+To correctly understand the formulas, it's important to first lay out the ranges for the representation formats:
  - **RGB**:
    - red: [0; 255]
    - green: [0; 255]
@@ -599,13 +602,13 @@ filter_chain = ["Ema", "WhiteBalance", "Gamma"]
    - saturation: [0; 1]
    - value: [0; 255]
 
-\* данные диапазоны были выбраны для удобства работы и понимания автора
+\* these ranges were chosen for the author's convenience of work and understanding
 
 ### NoFilter
 
-Полное отсутствие фильтра. Требуется, если Вам в целом не нужна фильтрация данных.
+The complete absence of a filter. Needed if you don't need any data filtering at all.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = ["NoFilter"]
@@ -614,26 +617,26 @@ filter_chain = ["NoFilter"]
 
 ### EMA
 
-EMA (экспоненциальное скользящее среднее) - это фильтр, необходимый для сглаживания резкой картинки. Он не даёт картинке измениться мгновенно, а слегка разглаживает пик изменения во времени, в результате чего картинка выглядит мягче и плавнее. Для расчёта каждого канала используется формула:
+EMA (exponential moving average) is a filter needed for smoothing a sharp picture. It doesn't let the picture change instantly, but instead slightly smooths the spike of change over time, so that the picture looks softer and smoother. The following formula is used to calculate each channel:
 
 $$C_{out} = C_{in} \cdot \alpha + C_{prev} \cdot (1 - \alpha)$$
 
-где:
- - $C_{in}$ - значение из канала (каждого из RGB отдельно), прешедшее в фильтр;
- - $C_{prev}$ - предыдущее значение канала, которое фильтр отдал;
- - $C_{out}$ - результат по каналу.
+where:
+ - $C_{in}$ - the channel value (each of RGB separately) coming into the filter;
+ - $C_{prev}$ - the previous channel value that the filter output;
+ - $C_{out}$ - the result for the channel.
 
-Данный фильтр имеет настройки в таблице `[ema_config]`. Единственный параметр `alpha` отвечает за то, насколько сильно новый цвет влияет на изменение, поэтому данный коэффициент ограничен в диапазоне $(0; 1]$. <u>Чем меньше</u> `alpha`, <u>тем более</u> плавной становится картинка.
+This filter has settings in the `[ema_config]` table. The single parameter `alpha` controls how strongly the new color affects the change, so this coefficient is limited to the range $(0; 1]$. <u>The smaller</u> `alpha`, <u>the smoother</u> the picture becomes.
 
-Также важно понимать, что EMA напрямую зависит от значения FPS. <u>Чем меньше</u> FPS, <u>тем больше</u> EMA сгладит картинку при одинаковом `alpha`.
+It's also important to understand that EMA depends directly on the FPS value. <u>The lower</u> the FPS, <u>the more</u> EMA will smooth the picture at the same `alpha`.
 
 <p align="center">
   <img src="./manual/ema.svg" width="85%" alt="Пример влияния ema">
 </p>
 
-EMA работает в RGB пространстве.
+EMA operates in RGB space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "Ema", ...]
@@ -643,29 +646,29 @@ filter_chain = [..., "Ema", ...]
 alpha = 0.1
 ```
 
-Рекомендуемые параметры:
- - Для динамичных игр `alpha`: 0.4-0.6 при FPS ~60;
- - Для спокойного кино `alpha`: 0.2-0.5 при FPS ~60.
+Recommended parameters:
+ - For dynamic games, `alpha`: 0.4-0.6 at FPS ~60;
+ - For calm movies, `alpha`: 0.2-0.5 at FPS ~60.
 
 ### Gamma
 
-Gamma - это стандартный фильтр, призванный корректировать изменения яркости, согласно строению человеческого глаза. В результате эволюции человек научился различать разницу в тусклом цвете сильнее, чем в ярком, т.е. изменение яркости ($[0; 255]$) $0 \to 1$ будет заметно сильнее, чем $254 \to 255$, поэтому gamma превращает результаты анализа кадра в приятные для человека цвета, используя степенную функцию (для нормированной яркости. Т.е. диапазон $[0; 1]$): 
+Gamma is a standard filter designed to correct brightness changes according to the structure of the human eye. As a result of evolution, humans learned to distinguish differences in dim colors more strongly than in bright ones, i.e., a change in brightness ($[0; 255]$) $0 \to 1$ will be noticeably stronger than $254 \to 255$, so gamma turns the results of frame analysis into colors that are pleasant for humans, using a power function (for normalized brightness, i.e., the range $[0; 1]$):
 
 $$V_{out} = V_{in}^{\gamma}$$
 
-где:
- - $V_{in}$ - яркость, пришедшая в фильтр;
- - $V_{out}$ - результат по яркости.
+where:
+ - $V_{in}$ - the brightness coming into the filter;
+ - $V_{out}$ - the resulting brightness.
 
-Данный фильтр имеет настройки в таблице `[gamma_config]`. Единственный параметр `gamma` отвечает за "крутизну" кривой преобразования яркости. <u>Чем больше</u> степень, <u>тем более</u> крутая выйдет кривая. Для настройки можно использовать простое правило: "если картинка по ощущению темнее, чем лента, значит `gamma` следует поднять. В ином случае опустить". Данный параметр ограничен в диапазоне $[0; \infty)$.
+This filter has settings in the `[gamma_config]` table. The single parameter `gamma` controls the "steepness" of the brightness conversion curve. <u>The higher</u> the exponent, <u>the steeper</u> the curve becomes. For tuning, you can use a simple rule: "if the picture feels darker than the strip, then `gamma` should be raised. Otherwise, lower it." This parameter is limited to the range $[0; \infty)$.
 
 <p align="center">
   <img src="./manual/gamma_curve.svg" width="85%" alt="Пример gamma кривых">
 </p>
 
-Gamma работает в RGB пространстве.
+Gamma operates in RGB space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "Gamma", ...]
@@ -675,12 +678,12 @@ filter_chain = [..., "Gamma", ...]
 gamma = 2.2
 ```
 
-Рекомендуемые параметры:
- - Для большинства светодиодных лент `gamma`: ~2.0-2.4.
+Recommended parameters:
+ - For most LED strips, `gamma`: ~2.0-2.4.
 
 ### BlackThreshold
 
-BlackThreshold - отсекатель тусклого - необходим для отсечения цветов, близких в чёрному. Принцип его работы перекликается с [Gamma-фильтром](#gamma), однако отсекатель позволяет регулировать поведение `shinombra` более точно, ведь работает на определённом участке. Также он позволяет создавать зону с более плавным изменением яркости и насыщенности, о чём более подробно написано ниже. Вычисления производятся по формуле:
+BlackThreshold - the dim-color cutoff - is needed for cutting off colors close to black. Its operating principle overlaps with the [Gamma filter](#gamma), but the cutoff filter allows for more precise control of `shinombra`'s behavior, since it works on a specific section. It also allows you to create a zone with a smoother change in brightness and saturation, described in more detail below. The calculations are performed using the formula:
 
 $$
 \begin{cases}  
@@ -699,32 +702,32 @@ k &= \frac{V_{in} - V_{threshold}}{V_{fade\_range}}
 \end{aligned}
 $$
 
-где:
- - $V_{in}$ - яркость, пришедшая в фильтр;
- - $S_{in}$ - насыщенность, пришедшая в фильтр;
- - $V_{out}$ - результат по яркости;
- - $S_{out}$ - результат по насыщенности.
+where:
+ - $V_{in}$ - the brightness coming into the filter;
+ - $S_{in}$ - the saturation coming into the filter;
+ - $V_{out}$ - the resulting brightness;
+ - $S_{out}$ - the resulting saturation.
 
-Настройки данного фильтра хранятся в `[black_threshold_config]`. Необходимо указать 3 параметра:
- - `threshold` - минимальный порог яркости, до которого все цвета считаются чёрными (в диапазоне $[0; 100]\%$);
- - `fade_range` - ширина диапазона после минимального порога, в которой работает плавное изменение цвета (в диапазоне $[0; 100 - threshold]\%$);
- - `falloff_exponent` - "крутизна" кривой, работающей в диапазоне (в диапазоне $[0; \infty)$ математически, но смысл имеет при значениях больше 1).
+This filter's settings are stored in `[black_threshold_config]`. 3 parameters need to be specified:
+ - `threshold` - the minimum brightness threshold below which all colors are considered black (in the range $[0; 100]\%$);
+ - `fade_range` - the width of the range after the minimum threshold in which the smooth color transition operates (in the range $[0; 100 - threshold]\%$);
+ - `falloff_exponent` - the "steepness" of the curve that operates within that range (in the range $[0; \infty)$ mathematically, but is meaningful at values greater than 1).
 
-\* В формулах, конечно, `threshold` и `fade_range` переводятся в соответствующий диапазон.
+\* In the formulas, of course, `threshold` and `fade_range` are converted to the corresponding range.
 
 <p align="center">
   <img src="./manual/black_threshold_params.svg" width="85%" alt="Принцип работы параметров">
 </p>
 
-Ниже представлены графики воздействия при `threshold = 10%`, `fade_range = 10%`, `falloff_exponent = 1.5`:
+Below are graphs of the effect at `threshold = 10%`, `fade_range = 10%`, `falloff_exponent = 1.5`:
 <p align="center">
   <img src="./manual/black_threshold_value.svg" width="85%" alt="Пример влияния black_threshold на яркость">
   <img src="./manual/black_threshold_saturation.svg" width="85%" alt="Пример влияния black_threshold на насыщенность">
 </p>
 
-BlackThreshold работает в HSV пространстве.
+BlackThreshold operates in HSV space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "BlackThreshold", ...]
@@ -736,14 +739,14 @@ fade_range = 10
 falloff_exponent = 1.5
 ```
 
-Рекомендуемые параметры:
+Recommended parameters:
 - `threshold`: 5-15%;
 - `fade_range`: 5-15%;
 - `falloff_exponent`: 1.2-2.0.
 
 ### SaturationBoost
 
-SaturationBoost - это фильтр, необходимый для увеличения насыщенности полученного цвета. Он компенсирует падение насыщенности, вызванное физическими свойствами и условиями расположения ленты. При прохождении через рассеиватель, а также при отражении от стены свет теряет насыщенность. Для корректировки используется формула:
+SaturationBoost is a filter needed to increase the saturation of the resulting color. It compensates for the saturation loss caused by the physical properties and placement conditions of the strip. When passing through a diffuser, as well as when reflecting off a wall, light loses saturation. The following formula is used for correction:
 
 $$
 \begin{cases}
@@ -756,22 +759,22 @@ $$
 S_{floor} = \frac{floor}{100} \quad \text{(перевод из процентов)}
 $$
 
-где:
- - $S_{in}$ - насыщенность, пришедшая в фильтр;
- - $S_{out}$ - результат по насыщенности.
+where:
+ - $S_{in}$ - the saturation coming into the filter;
+ - $S_{out}$ - the resulting saturation.
 
-Настройки данного фильтра хранятся в таблице `[saturation_boost_config]` и требуют указания 2-ух параметров:
- - `floor` - порог, ниже которого насыщенность приводится к 0 (в диапазоне $[0; 100)\%$);
- - `boost_exponent` - "крутизна" кривой, по которой увеличивается насыщенность (в диапазоне $[1; \infty)$ ).
+This filter's settings are stored in the `[saturation_boost_config]` table and require specifying 2 parameters:
+ - `floor` - the threshold below which saturation is brought down to 0 (in the range $[0; 100)\%$);
+ - `boost_exponent` - the "steepness" of the curve by which saturation is increased (in the range $[1; \infty)$).
 
-Ниже представлен график воздействия при `floor = 10%`, `boost_exponent = 1.5`:
+Below is a graph of the effect at `floor = 10%`, `boost_exponent = 1.5`:
 <p align="center">
   <img src="./manual/saturation_boost.svg" width="85%" alt="Пример влияния saturation_boost на насыщенность">
 </p>
 
-SaturationBoost работает в HSV пространстве.
+SaturationBoost operates in HSV space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "SaturationBoost", ...]
@@ -782,19 +785,19 @@ floor = 3
 boost_exponent = 1.6
 ```
 
-Рекомендуемые параметры:
+Recommended parameters:
  - `floor`: 7-12%;
  - `boost_exponent`: 1.4-1.8.
 
 ### WhiteBalance
 
-WhiteBalance - баланс белого - требуется для коррекции цветового тона ленты, т.к. обычно синие светодиоды для человека кажутся ярче, поэтому картинка становится холоднее.
+WhiteBalance - white balance - is needed to correct the color tone of the strip, since blue LEDs usually appear brighter to humans, which makes the picture colder.
 
-Настройки данного фильтра хранятся в таблице `[white_balance_config]`. Требуется указать единственный параметр `kelvins` - обычная теплота в кельвинах. Кельвины должны быть строго больше 1000К, что является ограничением используемого алгоритма Таннера-Хеллэнда. Также в связи с использованием данного алгоритма цвета корректно регулируются в пределах ~ $[1000; 20000]K$ (это математическое ограничение от аппроксимации), однако Вы можете ввести значение и больше 20000, т.к. математика от этого не сломается.
+This filter's settings are stored in the `[white_balance_config]` table. You need to specify a single parameter, `kelvins` - the usual warmth in kelvins. The kelvin value must be strictly greater than 1000K, which is a limitation of the Tanner-Helland algorithm used. Also, due to the use of this algorithm, colors are correctly adjusted within roughly $[1000; 20000]K$ (this is a mathematical limitation from the approximation), however you can enter a value greater than 20000, since the math won't break because of it.
 
-Данный фильтр работает в RGB пространстве.
+This filter operates in RGB space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "WhiteBalance", ...]
@@ -804,12 +807,12 @@ filter_chain = [..., "WhiteBalance", ...]
 kelvins = 4000
 ```
 
-Рекомендуемые значения:
- - `kelvins`: ~3500-4500 (сильно зависит от конкретной ленты и предпочтений).
+Recommended values:
+ - `kelvins`: ~3500-4500 (strongly depends on the specific strip and your preferences).
 
 ### ChannelGain
 
-ChannelGain - это точная регулировка выходных каналов. Фильтр позволяет задать коэффициенты для каждого из RGB канала. Может потребоваться в исключительных случаях, например, если у Вашей ленты один из каналов ярче остальных. Работает просто умножая канал на заданный коэффициент:
+ChannelGain is a precise adjustment of the output channels. This filter lets you set coefficients for each of the RGB channels. It may be needed in exceptional cases, for example, if one of the channels on your strip is brighter than the others. It works simply by multiplying the channel by the given coefficient:
 
 $$
   R_{out} = R_{in} * k\_red \\
@@ -817,18 +820,18 @@ $$
   B_{out} = B_{in} * k\_blue \\
 $$
 
-где:
- - $x_{in}$ - значение из канала (каждого из RGB отдельно), прешедшее в фильтр;
- - $x_{out}$ - результат по каналу.
+where:
+ - $x_{in}$ - the channel value (each of RGB separately) coming into the filter;
+ - $x_{out}$ - the result for the channel.
 
-Настройки хранятся в таблице `[channel_gain_config]`. Обязательные 3 параметра:
- - `k_red`: коэффициент для красного цвета (в диапазоне $[0; 1]$);
- - `k_green`: коэффициент для зелёного цвета (в диапазоне $[0; 1]$);
- - `k_blue`: коэффициент для синего цвета (в диапазоне $[0; 1]$).
+The settings are stored in the `[channel_gain_config]` table. 3 mandatory parameters:
+ - `k_red`: the coefficient for the red channel (in the range $[0; 1]$);
+ - `k_green`: the coefficient for the green channel (in the range $[0; 1]$);
+ - `k_blue`: the coefficient for the blue channel (in the range $[0; 1]$).
 
-Данный фильтр работает в RGB пространстве.
+This filter operates in RGB space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "ChannelGain", ...]
@@ -842,8 +845,7 @@ k_blue = 0.91
 
 ### FlashGuard
 
-FlashGuard - это защитник от вспышек. Он **не** обрезает яркость, а использует EMA сглаживание для яркости, если она выходит за допустимый предел. Т.е. он не притупляет вспышку, а растягивает её во времени и делает более плавной. Для работы используется формула ниже:
-
+FlashGuard is a flash guard. It does **not** clip the brightness, but instead uses EMA smoothing for brightness whenever it goes beyond the allowed limit. That is, it doesn't dull the flash, but stretches it out over time and makes it smoother. The formula below is used for this:
 $$
 \begin{cases}
 D = V_{in} - V_{prev} \quad \text{(разница с предыдущим значением)} \\
@@ -855,18 +857,18 @@ $$
 S = \frac{sensitivity \cdot 255}{100} \quad \text{(перевод из процентов)}
 $$
 
-Настройки данного фильтра хранятся в таблице `[flash_guard_config]`. Требуется заполнить 2 значения:
- - `alpha` - "плавность" сглаживания, как в [EMA-фильтре](#ema) (в диапазоне $[0; 1]$);
- - `sensitivity` - разница при которой срабатывает фильтр, т.е. чувствительность (в диапазоне $[0; 100]\%$). <u>Чем больше</u> `sensitivity`, <u>тем более</u> резкие вспышки будут сглаживаться, т.е. при `sensitivity = 50%` будут сглаживаться вспышки с разницей более чем в половину от максимальной яркости. Но также важно понимать, что фильтр в целом всегда сглаживает вспышки, только меньшие вспышки сглаживаются слабее (динамический alpha для EMA).
+This filter's settings are stored in the `[flash_guard_config]` table. 2 values need to be filled in:
+ - `alpha` - the "smoothness" of the smoothing, as in the [EMA filter](#ema) (in the range $[0; 1]$);
+ - `sensitivity` - the difference at which the filter triggers, i.e., the sensitivity (in the range $[0; 100]\%$). <u>The higher</u> `sensitivity`, <u>the sharper</u> the flashes that get smoothed, i.e., at `sensitivity = 50%`, flashes with a difference of more than half the maximum brightness will be smoothed. But it's also important to understand that the filter overall always smooths flashes, it's just that smaller flashes are smoothed more weakly (a dynamic alpha for EMA).
 
-Ниже представлен график воздействия при `alpha = 0.5`, `sensitivity = 50%`:
+Below is a graph of the effect at `alpha = 0.5`, `sensitivity = 50%`:
 <p align="center">
   <img src="./manual/flash_guard.svg" width="85%" alt="Пример воздействия flash_guard на яркость">
 </p>
 
-Данный фильтр работает в HSV пространстве.
+This filter operates in HSV space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "FlashGuard", ...]
@@ -877,24 +879,24 @@ alpha = 0.5
 sensitivity = 40
 ```
 
-Рекомендуемые значения:
+Recommended values:
  - `alpha`: 0.5-0.8;
  - `sensitivity`: 50-80%.
 
 ### Median
 
-Median - простой медианный фильтр - необходим для сглаживания резких случайных выбросов. Выступает в роли защиты от мерцания, необходимой для некоторых аналитиков. Данная реализация сделана на жёстком окне из 3-ёх элементов, что позволяет не задерживать изменение картинки слишком долго, и эффективно удалять случайные сработки.
+Median - a simple median filter - is needed for smoothing sharp random outliers. It acts as protection against flickering, needed for some analysts. This implementation is built on a fixed window of 3 elements, which allows it to avoid delaying a picture change for too long while still effectively removing random spikes.
 
-Данный фильтр не имеет настроек.
+This filter has no settings.
 
-Ниже представлен пример воздействия:
+Below is an example of its effect:
 <p align="center">
   <img src="./manual/median.svg" width="85%" alt="Пример воздействия Median">
 </p>
 
-Данный фильтр работает в RGB пространстве.
+This filter operates in RGB space.
 
-Пример заполнения таблицы:
+Example of filling in the table:
 ```toml
 [settings]
 filter_chain = [..., "Median", ...]
@@ -903,28 +905,28 @@ filter_chain = [..., "Median", ...]
 
 ---
 
-Вот маленькая табличка по пространствам, в которых работает каждый фильтр для любителей выжать из системы максимальную производительность:
-|               Фильтр                | Пространство |
-| :---------------------------------: | :----------: |
-|        [NoFilter](#nofilter)        |     RGB      |
-|             [EMA](#ema)             |     RGB      |
-|           [Gamma](#gamma)           |     RGB      |
-|  [BlackThreshold](#blackthreshold)  |     HSV      |
-| [SaturationBoost](#saturationboost) |     HSV      |
-|    [WhiteBalance](#whitebalance)    |     RGB      |
-|     [ChannelGain](#channelgain)     |     RGB      |
-|      [FlashGuard](#flashguard)      |     HSV      |
-|          [Median](#median)          |     RGB      |
+Here's a small table of the color spaces each filter operates in, for those who love squeezing maximum performance out of the system:
+|               Filter                | Space |
+| :---------------------------------: | :---: |
+|        [NoFilter](#nofilter)        |  RGB  |
+|             [EMA](#ema)             |  RGB  |
+|           [Gamma](#gamma)           |  RGB  |
+|  [BlackThreshold](#blackthreshold)  |  HSV  |
+| [SaturationBoost](#saturationboost) |  HSV  |
+|    [WhiteBalance](#whitebalance)    |  RGB  |
+|     [ChannelGain](#channelgain)     |  RGB  |
+|      [FlashGuard](#flashguard)      |  HSV  |
+|          [Median](#median)          |  RGB  |
 
 
-Рекомендуемый порядок фильтров:
- 1) [BlackThreshold](#blackthreshold) - сразу отсекает тусклые цвета;
- 2) [SaturationBoost](#saturationboost) - увеличивает насыщенность;
- 3) [FlashGuard](#flashguard) - чистит вспышки;
- 4) [Median](#median) - удаляет выбросы;
- 5) [Ema](#ema) - сглаживает картинку;
- 6) [WhiteBalance](#whitebalance) - корректирует готовую картинку по теплоте;
- 7) [Gamma](#gamma) - адаптирует яркость.
+Recommended filter order:
+ 1) [BlackThreshold](#blackthreshold) - immediately cuts off dim colors;
+ 2) [SaturationBoost](#saturationboost) - increases saturation;
+ 3) [FlashGuard](#flashguard) - cleans up flashes;
+ 4) [Median](#median) - removes outliers;
+ 5) [Ema](#ema) - smooths the picture;
+ 6) [WhiteBalance](#whitebalance) - corrects the finished picture's warmth;
+ 7) [Gamma](#gamma) - adapts brightness.
 
 ```toml
 [settings]
@@ -932,26 +934,26 @@ filter_chain = ["BlackThreshold", "SaturationBoost", "FlashGuard", "Median", "Em
 ...
 ```
 
-Поздравляю, теперь подсветка полностью настроена! 🎉
+Congratulations, the backlight is now fully configured! 🎉
 
-Следующие главы подробнее раскроют принципы использования UI и TUI, а также расскажут, как в итоге должна выглядеть полная конфигурация.
+The following chapters will go into more detail on how to use the UI and TUI, and will explain what the final complete configuration should look like.
 
 
-## Итоговый вид конфига
+## The Resulting Config
 
-В зависимости от выбранного режима конфигурации она будет выглядеть по разному. Подробно о каждом варианте написано в соответствующих пунктах ниже.
+Depending on the chosen configuration mode, it will look different. Each variant is described in detail in the corresponding sections below.
 
 ### Settings
-Сразу важно сказать про таблицу `[settings]`, т.к. она нигде ещё не была описана целиком.
+It's important to say right away about the `[settings]` table, since it hasn't yet been fully described anywhere.
 
-Данная таблица содержит настройки всего конвеера обработки цвета и содержит:
- - `chunk_processor_type` - [тип процессора](#шаг-5-настройка-процессора-фрагмента);
- - `analytics_type` - [тип аналитика](#шаг-6-настройка-аналитика);
- - `filter_chain` - [массив фильтров](#шаг-8-настройка-фильтров);
- - `hardware_output_type` - [тип вывода на устройство](#32-подключение-к-пк);
- - `max_fps` - опционально [ограничение fps](#шаг-7-ограничение-fps).
+This table contains the settings for the entire color processing pipeline and contains:
+ - `chunk_processor_type` - [the processor type](#step-5-configuring-the-fragment-processor);
+ - `analytics_type` - [the analyst type](#step-6-configuring-the-analyst);
+ - `filter_chain` - [the array of filters](#step-8-configuring-filters);
+ - `hardware_output_type` - [the device output type](#32-connecting-to-the-pc);
+ - `max_fps` - optionally, [the FPS limit](#step-7-limiting-fps).
 
-Пример заполнения:
+Example of filling it in:
 ```toml
 [settings]
 chunk_processor_type = "CrawlCheckerboard"
@@ -960,32 +962,32 @@ filter_chain = ["BlackThreshold", "SaturationBoost", "FlashGuard", "Median", "Em
 hardware_output_type = "ShinombraSerial"
 ```
 
-### Простая
+### Simple
 
-При выборе простой конфигурации <u>все</u> настройки содержатся в одном файле, это значит, что он должен содержать обязательные таблицы:
+When choosing the simple configuration, <u>all</u> settings are contained in a single file, which means it must contain the mandatory tables:
  - `[daemon_settings]`;
  - `[settings]`;
  - `[screen_config]`;
  - `[frame_connection_config]`;
  - `[screen_reading_config]`.
 
-А также остальные необходимые таблицы в зависимости от выбранных настроек.
+As well as any other necessary tables depending on the chosen settings.
 
-**Важно!** При простом режиме работы необходимо добавить флаг `--config <path/to/file>` в файл окружения (~/.config/shinombra/service.env) или напрямую в сервис, т.к. по умолчанию программа работает со сложным режимом конфигурации. 
+**Important!** In simple mode, you need to add the `--config <path/to/file>` flag to the environment file (~/.config/shinombra/service.env) or directly to the service, since by default the program runs in advanced configuration mode.
 
-### Сложная
+### Advanced
 
-При выборе сложной конфигурации `shinombra` начинает собирать пути из разных файлов:
+When choosing the advanced configuration, `shinombra` starts assembling paths from different files:
 
 #### 1. Manifest
 
-Манифест - это точка сбора всей конфигурации. Содержит 2 таблицы:
- - `[paths]` - пути до конфигурации. Поля:
-   - `config` - основной файл конфигурации;
-   - `overlays` - массив путей до всех оверлеев.
- - `[daemon_settings]` - таблица с [настройками сервиса](#шаг-4-настройка-сервиса).
+The manifest is the collection point for the entire configuration. It contains 2 tables:
+ - `[paths]` - paths to the configuration. Fields:
+   - `config` - the main configuration file;
+   - `overlays` - an array of paths to all the overlays.
+ - `[daemon_settings]` - a table with the [service settings](#step-4-configuring-the-service).
 
-Пример заполнения манифеста:
+Example of filling in the manifest:
 ```toml
 [paths]
 config = "configs/usual.toml"
@@ -999,99 +1001,99 @@ save_token = true
 
 #### 2. Base config
 
-Основной конфиг - это место, где Вы можете хранить любую конфигурацию, описанную в шагах выше.
+The base config is the place where you can store any configuration described in the steps above.
 
 #### 3. Overlays
 
-Оверлеи - это слои, которые будут перекрывать собранную конфигурацию. Вам не обязательно заполнять таблицы целиком, достаточно заполнить только поле, которое необходимо переписать.
+Overlays are layers that will override the assembled configuration. You don't need to fill in entire tables - it's enough to fill in only the field that needs to be overridden.
 
-Допустим в основном конфиге содержится таблица:
+Say the base config contains the table:
 ```toml
 [frame_connection_config]
 start_from = "Up"
 direction = "Clockwise"
 ```
 
-А в оверлее:
+And in the overlay:
 ```toml
 [frame_connection_config]
 start_from = "Down"
 ```
 
-Тогда в результате получим таблицу:
+Then, as a result, we get the table:
 ```toml
 [frame_connection_config]
 start_from = "Down"
 direction = "Clockwise"
 ```
 
-Оверлеи накладываются в порядке записи. Учитывайте это, т.к. оверлеи могут накладываться друг на друга.
+Overlays are applied in the order they're listed. Keep this in mind, since overlays can override each other.
 
 ---
 
-`Shinombra` по умолчанию работает в режиме сложной конфигурации и ищет манифест по пути ~/.config/shinombra/manifest.toml. Если Вы хотите явно указать путь до своего манифеста, добавьте в файл окружения (~/.config/shinombra/service.env) флаг `--manifest <path/to/file>`.
+`Shinombra` runs in advanced configuration mode by default and looks for the manifest at the path \~/.config/shinombra/manifest.toml. If you want to explicitly specify the path to your own manifest, add the `--manifest <path/to/file>` flag to the environment file (\~/.config/shinombra/service.env).
 
 
 ## UI
 
-Пользовательский интерфейс выполнен в виде простого сайта, который позволяет удобно заполнить поля настроек. В зависимости от выбранных опций интерфейс будет показывать структуры, необходимые для заполнения.
+The user interface is implemented as a simple website that lets you conveniently fill in the setting fields. Depending on the chosen options, the interface will show the structures that need to be filled in.
 
-Для запуска интерфейса выполните в терминале:
+To launch the interface, run in the terminal:
 ```bash
 shinombra-ui
 ```
-И перейдите по ссылке, которую получите в выводе. Обычно вывод выглядит так:
+And go to the link you get in the output. The output usually looks like this:
 ```
 Server running on http://localhost:3000
 ```
 
-При запуске Вы увидите окно, которое предложит ввести путь до файла конфигурации. Если вы хотите пропустить этот шаг, запускайте UI командой:
+On launch, you'll see a window prompting you to enter the path to the configuration file. If you want to skip this step, launch the UI with the command:
 ```bash
 shinombra-ui --config <path/to/config>
 ```
 
-В самом низу расположены 3 кнопки: 
- 1) `Set Simple Mode in Service` - автоматическая запись необходимых флагов в файл окружения для переключения `shinombra` в режим простой конфигурации. Требуется нажать при первом запуске;
- 2) `Restart Service` - быстрый перезапуск сервиса. Необходим для применения новых сохранённых настроек;
- 3) `Save Settings` - сохранение настроек в открытый файл
+At the very bottom there are 3 buttons:
+ 1) `Set Simple Mode in Service` - automatically writes the necessary flags to the environment file to switch `shinombra` into simple configuration mode. Needs to be clicked on first launch;
+ 2) `Restart Service` - a quick service restart. Needed to apply newly saved settings;
+ 3) `Save Settings` - saves the settings to the open file
 
-Если Вам необходимо запустить сервер на другом порту, воспользуйтесь флагом `--port <port>`.
+If you need to run the server on a different port, use the `--port <port>` flag.
 
 <details>
-  <summary>Нажмите, чтобы посмотреть внешний вид конфигурации</summary>
+  <summary>Click to see what the configuration looks like</summary>
   <image src="./manual/ui.png">
 </details>
 
 
 ## TUI
 
-TUI является bash-скриптом, основанным на `yq` и `gum`. Он выполняет роль удобного редактора манифеста для быстрого переключения конфигурации в сложном режиме.
+The TUI is a bash script based on `yq` and `gum`. It serves as a convenient manifest editor for quickly switching configurations in advanced mode.
 
-Для запуска выполните:
+To launch it, run:
 ```bash
 shinombra-tui
 ```
 
-С помощью TUI можно:
-1) выбрать [основной конфиг](#2-base-config);
-2) выбрать [оверлеи](#3-overlays);
-3) перезапустить сервис;
+With the TUI you can:
+1) choose the [base config](#2-base-config);
+2) choose the [overlays](#3-overlays);
+3) restart the service;
 
-Если TUI обнаружит в стандартном файле окружения (~/.config/shinombra/service.env) флаг `--config`, активирующий простой режим конфигурации, скрипт предложит удалить данный флаг.
+If the TUI detects the `--config` flag, which enables simple configuration mode, in the standard environment file (~/.config/shinombra/service.env), the script will offer to remove that flag.
 
 
 ## ShinombraSerial
 
-ShinombraSerial - это простой кастомный протокол, использующий для передачи данных Serial порт.
+ShinombraSerial is a simple custom protocol that uses a Serial port for data transmission.
 
-Пакет данных в данном протоколе представляет из себя последовательности из синхрослова `AD` (AmbientData) и массива данных в  RGB формате:
-| Синхрослово |  R_1  |  G_1  |  B_1  |  R_2  |  G_2  |  B_2  |  ...  |
-| :---------: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|     AD      | data  | data  | data  | data  | data  | data  |  ...  |
+The data packet in this protocol consists of a sequence formed by the `AD` (AmbientData) sync word and an array of data in RGB format:
+| Sync word |  R_1  |  G_1  |  B_1  |  R_2  |  G_2  |  B_2  |  ...  |
+| :-------: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+|    AD     | data  | data  | data  | data  | data  | data  |  ...  |
  
-Было решено не делать проверочных сумм и прочего, т.к. вероятность помехи в коротком проводе на Serial протоколе $\to 0$.
+It was decided not to implement checksums or the like, since the probability of interference on a short wire over the Serial protocol $\to 0$.
 
-Протокол основан на простой последовательности синхронизирующих сигналов. При стандартной отправке компьютер ждёт от контроллера сигнал о готовности `[READY]` и, получив его, отправляет пакет данных:
+The protocol is based on a simple sequence of synchronization signals. In the standard sending process, the computer waits for a readiness signal, `[READY]`, from the controller, and upon receiving it, sends a data packet:
 ```mermaid
 sequenceDiagram
   autonumber
@@ -1103,7 +1105,7 @@ sequenceDiagram
   PC-->>LC: Отправка пакета данных
 ```
 
-Если же ПК не прислал пакет данных, контроллер будет повторять свой запрос пока пакет не будет прислан.
+If the PC hasn't sent a data packet, the controller will keep repeating its request until a packet is sent.
 ```mermaid
 sequenceDiagram
   autonumber
@@ -1116,14 +1118,14 @@ sequenceDiagram
   LC->>PC: Отправка сигнала [READY]
 ```
 
-Для корректного завершения работы протокол поддерживает сигнал `[TERM]`, который заставляет контроллер выключить ленту. Однако после этого сигнала контроллер не прекратит слать `[READY]`, что сделано для удобства использования (не требуется перезапускать контроллер).
+For a proper shutdown, the protocol supports a `[TERM]` signal, which makes the controller turn off the strip. However, after this signal, the controller won't stop sending `[READY]`, which is done for convenience of use (there's no need to restart the controller).
 
-Из-за простоты данного протокола он позволяет использовать ленту на высоких частотах.
+Because of the simplicity of this protocol, it allows the strip to be used at high frequencies.
 
 
-## Заключение
+## Conclusion
 
-Надеюсь, благодаря данной инструкции Вы сможете настроить подсветку так, чтобы она принесла максимум удовольствия.
+I hope that, thanks to this guide, you'll be able to set up the backlight so that it brings you maximum enjoyment.
 
-Благодарю за использование Shinombra!  
-С уважением, Sanlexandro 🐈‍⬛
+Thank you for using Shinombra!  
+Best regards, Sanlexandro 🐈‍⬛

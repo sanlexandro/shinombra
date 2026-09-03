@@ -1,33 +1,35 @@
-# Пресеты Shinombra
+[![Language: Russian](https://img.shields.io/badge/Lang-Русский-blue.svg)](./presets.ru.md)
 
-Готовые конфигурации для быстрого старта.  
-Каждый файл - **полная** простая конфигурация (один `.toml`).  
-Вам остаётся только:
+# Shinombra Presets
 
- 1. Заполнить геометрию монитора и ленты  
- 2. Выбрать протокол вывода и указать его параметры  
- 3. Запустить сервис с нужным файлом
+Ready-made configurations for a quick start.  
+Each file is a **complete** simple configuration (a single `.toml`).  
+All you need to do is:
 
----
-
-## Список пресетов
-
-| Файл           | Назначение                      | Когда использовать                                          |
-| -------------- | ------------------------------- | ----------------------------------------------------------- |
-| `cinema.toml`  | Кино / спокойное видео          | Фильмы, сериалы, спокойный контент                          |
-| `gaming.toml`  | Динамичные игры                 | Шутеры, гонки, экшен                                        |
-| `desktop.toml` | Рабочий стол / браузинг         | Повседневная работа, код, интернет                          |
-| `night.toml`   | Ночной режим                    | Поздний вечер / ночь, чтобы не слепить                      |
-| `bright.toml`  | Яркий / насыщенный              | Вечеринки, яркий контент, когда хочется "вау"               |
-| `minimal.toml` | Минимальный / энергосберегающий | Слабое железо или когда подсветка должна быть едва заметной |
+ 1. Fill in the geometry of the monitor and the strip  
+ 2. Choose the output protocol and specify its parameters  
+ 3. Start the service with the desired file
 
 ---
 
-## Как пользоваться
+## List of Presets
 
-### 1. Заполните геометрию
+| File           | Purpose                         | When to use it                                               |
+| -------------- | -------------------------------- | ------------------------------------------------------------ |
+| `cinema.toml`  | Movies / calm video               | Movies, TV shows, calm content                               |
+| `gaming.toml`  | Dynamic games                    | Shooters, racing games, action                                |
+| `desktop.toml` | Desktop / browsing                | Everyday work, coding, browsing the web                       |
+| `night.toml`   | Night mode                        | Late evening / night, so it doesn't blind you                 |
+| `bright.toml`  | Bright / vivid                    | Parties, vibrant content, when you want the "wow" effect      |
+| `minimal.toml` | Minimal / power-saving            | Weak hardware, or when the backlight should be barely noticeable |
 
-В каждом файле найдите блоки:
+---
+
+## How to Use It
+
+### 1. Fill in the geometry
+
+In each file, find the blocks:
 
 ```toml
 [screen_config]
@@ -36,89 +38,89 @@
 [screen_reading_config]
 ```
 
-Раскомментируйте поля и укажите **свои** значения (как описано в [основной
-инструкции](./manual.md) в шагах 1-4).
+Uncomment the fields and enter **your own** values (as described in the [main
+manual](./manual.ru.md), steps 1-4).
 
-### 2. Выберите протокол вывода
+### 2. Choose the output protocol
 
-В секции `[settings]` раскомментируйте и заполните:
+In the `[settings]` section, uncomment and fill in:
 
 ```toml
-hardware_output_type = "Ddp"   # или "WledDrgb" / "ShinombraSerial" / "Debug"
+hardware_output_type = "Ddp"   # or "WledDrgb" / "ShinombraSerial" / "Debug"
 ```
 
-После этого раскомментируйте **соответствующий** блок внизу файла (`[ddp_config]`, `[wled_drgb_config]` или `[shinombra_serial_config]`) и укажите IP / порт / baud rate.
+After that, uncomment the **corresponding** block at the bottom of the file (`[ddp_config]`, `[wled_drgb_config]`, or `[shinombra_serial_config]`) and specify the IP / port / baud rate.
 
-### 3. Запуск
+### 3. Launch
 
 ```bash
-# Временно
-shinombra --config /путь/к/пресету.toml
+# Temporarily
+shinombra --config /path/to/preset.toml
 
-# Или пропишите путь в service.env
+# Or set the path in service.env
 # ~/.config/shinombra/service.env
-# SHINOMBRA_ARGS="--config /путь/к/пресету.toml"
+# SHINOMBRA_ARGS="--config /path/to/preset.toml"
 
-# Или используйте UI / TUI
+# Or use the UI / TUI
 # shinombra-ui
 # shinombra-tui
 ```
 
-После изменения конфига перезапустите сервис.
+After changing the config, restart the service.
 
 ---
 
-## Краткое описание логики каждого пресета
+## A Brief Description of the Logic Behind Each Preset
 
-### `cinema.toml` - Кино
- - **Процессор**: Checkerboard (статичная сетка) - нет мерцания на статичных кадрах
- - **Аналитик**: Histogram (высокая точность)
- - **Фильтры**: полный рекомендованный набор, умеренное сглаживание (EMA α = 0.28)
+### `cinema.toml` - Cinema
+ - **Processor**: Checkerboard (static grid) - no flickering on static frames
+ - **Analyst**: Histogram (high accuracy)
+ - **Filters**: full recommended set, moderate smoothing (EMA α = 0.28)
  - **FPS**: 60
- - Идеально для спокойного просмотра
+ - Perfect for calm viewing
 
-### `gaming.toml` - Игры
- - **Процессор**: CrawlCheckerboard (сетка постоянно смещается)
- - **Аналитик**: Histogram (средняя точность - баланс качества и нагрузки)
- - **Фильтры**: полный набор, более резкая реакция (EMA α = 0.48) + усиленный FlashGuard
+### `gaming.toml` - Gaming
+ - **Processor**: CrawlCheckerboard (grid constantly shifts)
+ - **Analyst**: Histogram (medium accuracy - a balance of quality and load)
+ - **Filters**: full set, sharper response (EMA α = 0.48) + boosted FlashGuard
  - **FPS**: 90
- - Хорошо ловит быстрые движения
+ - Catches fast motion well
 
-### `desktop.toml` - Рабочий стол
- - **Процессор**: Checkerboard
- - **Аналитик**: Histogram (средняя точность - баланс качества и нагрузки)
- - **Фильтры**: полный набор, средние значения
+### `desktop.toml` - Desktop
+ - **Processor**: Checkerboard
+ - **Analyst**: Histogram (medium accuracy - a balance of quality and load)
+ - **Filters**: full set, medium values
  - **FPS**: 60
- - Низкая нагрузка, приятные стабильные цвета
+ - Low load, pleasant stable colors
 
-### `night.toml` - Ночь
- - **Процессор**: Checkerboard
- - **Аналитик**: Histogram
- - **Фильтры**: повышенный BlackThreshold + Gamma 2.5 + тёплый WhiteBalance (3500K) + сильное сглаживание
+### `night.toml` - Night
+ - **Processor**: Checkerboard
+ - **Analyst**: Histogram
+ - **Filters**: increased BlackThreshold + Gamma 2.5 + warm WhiteBalance (3500K) + strong smoothing
  - **FPS**: 45
- - Подсветка становится значительно темнее и спокойнее
+ - The backlight becomes significantly darker and calmer
 
-### `bright.toml` - Яркий / насыщенный
- - **Процессор**: CrawlCheckerboard
- - **Аналитик**: Histogram
- - **Фильтры**: пониженный BlackThreshold, сильный SaturationBoost, чуть более холодный баланс
+### `bright.toml` - Bright / Vivid
+ - **Processor**: CrawlCheckerboard
+ - **Analyst**: Histogram
+ - **Filters**: lowered BlackThreshold, strong SaturationBoost, a slightly cooler balance
  - **FPS**: 90
- - Цвета "выпрыгивают", реакция быстрая
+ - Colors "pop," reaction is fast
 
-### `minimal.toml` - Минимальный
- - **Процессор**: Checkerboard с крупным шагом (мало пикселей)
- - **Аналитик**: Average
- - **Фильтры**: только BlackThreshold + Ema + Gamma (самый короткий набор)
+### `minimal.toml` - Minimal
+ - **Processor**: Checkerboard with a large step (few pixels)
+ - **Analyst**: Average
+ - **Filters**: only BlackThreshold + Ema + Gamma (the shortest set)
  - **FPS**: 30
- - Минимальная нагрузка на систему
+ - Minimal load on the system
 
 ---
 
-## Важные замечания
+## Important Notes
 
-Если какой-то пресет хочется сделать чуть ярче/темнее/плавнее - достаточно
-изменить 1–2 параметра (обычно `gamma`, `alpha` у EMA или `threshold` у
-BlackThreshold).
+If you'd like to make a preset a bit brighter/darker/smoother, it's enough to
+change 1-2 parameters (usually `gamma`, the EMA's `alpha`, or BlackThreshold's
+`threshold`).
 
-Приятного использования!  
-С уважением, Sanlexandro 🐈‍⬛
+Enjoy using it!  
+Best regards, Sanlexandro 🐈‍⬛

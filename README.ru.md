@@ -1,3 +1,5 @@
+[![Language: English](https://img.shields.io/badge/Lang-English-blue.svg)](README.md)
+
 # Shinombra &mdash; экстремально быстрая и лёгкая амбиентная подсветка
 
 <img width="100%" alt="Demo" src="https://github.com/user-attachments/assets/b18b2048-80cd-4524-aa6a-27b18bddfec4" />
@@ -6,7 +8,7 @@
   <summary>Посмотреть полное видео</summary>
   <video src="https://github.com/user-attachments/assets/3f40ef33-ac1f-4e66-aee5-8baea5a20e20"> </video>
 
-  *Оригинальное видео: https://www.youtube.com/watch?v=1ZT6yWl3LPM*
+  *Оригинальное видео: [https://www.youtube.com/watch?v=1ZT6yWl3LPM](https://www.youtube.com/watch?v=1ZT6yWl3LPM)*
 </details>
 
 Shinombra - это экстремально производительная амбиентная подсветка, с **нативной поддержкой PipeWire**, благодаря чему она способна работать с любым сервером (X11 и Wayland).
@@ -177,11 +179,11 @@ cp packaging/shinombra.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 ```
 
-После установки достаточно выполнить первые 4 шага [инструкции](./docs/manual.md), включающие в себя только замеры Вашего дисплея и настройка подключения к ленте!
+После установки достаточно выполнить первые 4 шага [инструкции](./docs/manual.ru.md), включающие в себя только замеры Вашего дисплея и настройка подключения к ленте!
 
 ## <img src="./docs/readme/icons/target.svg" width="24" height="24"> Использование
 
-Подробнее об использовании читайте в [инструкции](./docs/manual.md).
+Подробнее об использовании читайте в [инструкции](./docs/manual.ru.md).
 
 ### Запуск через web-UI:
 Выполните команду:
