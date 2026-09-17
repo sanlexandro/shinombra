@@ -2,13 +2,13 @@
 
 # Shinombra &mdash; an extremely fast and lightweight ambient backlight
 
-<img width="100%" alt="Demo" src="https://github.com/user-attachments/assets/b18b2048-80cd-4524-aa6a-27b18bddfec4" />
+<img width="100%" alt="Demo" src="https://github.com/sanlexandro/shinombra/releases/download/v0.1.0/shinombra-demo.webp" />
 
 <details>
   <summary>Watch the full video</summary>
-  <video src="https://github.com/user-attachments/assets/3f40ef33-ac1f-4e66-aee5-8baea5a20e20"> </video>
+  <video src="https://github.com/sanlexandro/shinombra/releases/download/v0.1.0/shinombra-demo-full.mp4"> </video>
 
-  *Original video: [https://www.youtube.com/watch?v=1ZT6yWl3LPM](https://www.youtube.com/watch?v=1ZT6yWl3LPM)*
+  *Original video on the screen: [https://www.youtube.com/watch?v=1ZT6yWl3LPM](https://www.youtube.com/watch?v=1ZT6yWl3LPM)*
 </details>
 
 Shinombra is an extremely high-performance ambient backlight with **native PipeWire support**, which allows it to work with any display server (X11 and Wayland).

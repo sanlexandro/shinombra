@@ -2,13 +2,13 @@
 
 # Shinombra &mdash; экстремально быстрая и лёгкая амбиентная подсветка
 
-<img width="100%" alt="Demo" src="https://github.com/user-attachments/assets/b18b2048-80cd-4524-aa6a-27b18bddfec4" />
+<img width="100%" alt="Demo" src="https://github.com/sanlexandro/shinombra/releases/download/v0.1.0/shinombra-demo.webp" />
 
 <details>
   <summary>Посмотреть полное видео</summary>
-  <video src="https://github.com/user-attachments/assets/3f40ef33-ac1f-4e66-aee5-8baea5a20e20"> </video>
+  <video src="https://github.com/sanlexandro/shinombra/releases/download/v0.1.0/shinombra-demo-full.mp4"> </video>
 
-  *Оригинальное видео: [https://www.youtube.com/watch?v=1ZT6yWl3LPM](https://www.youtube.com/watch?v=1ZT6yWl3LPM)*
+  *Оригинальное видео на экране: [https://www.youtube.com/watch?v=1ZT6yWl3LPM](https://www.youtube.com/watch?v=1ZT6yWl3LPM)*
 </details>
 
 Shinombra - это экстремально производительная амбиентная подсветка, с **нативной поддержкой PipeWire**, благодаря чему она способна работать с любым сервером (X11 и Wayland).
