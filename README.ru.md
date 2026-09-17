@@ -6,7 +6,8 @@
 
 <details>
   <summary>Посмотреть полное видео</summary>
-  <video src="https://github.com/sanlexandro/shinombra/releases/download/v0.1.0/shinombra-demo-full.mp4"> </video>
+  
+  *Full demo (1.5 min): [https://www.youtube.com/watch?v=BLWcwlYHnp0](https://www.youtube.com/watch?v=BLWcwlYHnp0)*
 
   *Оригинальное видео на экране: [https://www.youtube.com/watch?v=1ZT6yWl3LPM](https://www.youtube.com/watch?v=1ZT6yWl3LPM)*
 </details>
